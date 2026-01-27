@@ -103,7 +103,6 @@ def execute_transaction(call: Callable, *args, **kwargs):
         with conn.cursor() as cur:
             return call(cur, *args, **kwargs)
 
-
 # ============ 异步 API ============
 
 
