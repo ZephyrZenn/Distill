@@ -1,7 +1,7 @@
 """System-level scheduler for maintenance tasks (separate from user schedules)."""
 
 import logging
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from apps.backend.crons import check_feed_health
@@ -10,14 +10,14 @@ from apps.backend.services.feed_service import retrieve_new_feeds
 
 logger = logging.getLogger(__name__)
 
-_system_scheduler: BackgroundScheduler | None = None
+_system_scheduler: AsyncIOScheduler | None = None
 
 
 def init_system_scheduler():
     """初始化系统定时任务调度器"""
     global _system_scheduler
     if _system_scheduler is None:
-        _system_scheduler = BackgroundScheduler()
+        _system_scheduler = AsyncIOScheduler()
         _system_scheduler.start()
         logger.info("System scheduler started")
 

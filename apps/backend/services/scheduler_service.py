@@ -5,14 +5,14 @@ import uuid
 from datetime import time
 from typing import List, Optional, Tuple, Union
 
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from apps.backend.crons import generate_scheduled_brief
 from core.db.pool import get_connection
 
 logger = logging.getLogger(__name__)
 
-_scheduler: Optional[BackgroundScheduler] = None
+_scheduler: Optional[AsyncIOScheduler] = None
 
 
 class Schedule:
@@ -53,11 +53,11 @@ class Schedule:
         )
 
 
-def _get_scheduler() -> BackgroundScheduler:
+def _get_scheduler() -> AsyncIOScheduler:
     """Lazily instantiate and return the global scheduler."""
     global _scheduler
     if _scheduler is None:
-        _scheduler = BackgroundScheduler()
+        _scheduler = AsyncIOScheduler()
     return _scheduler
 
 

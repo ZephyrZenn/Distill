@@ -255,7 +255,16 @@ def generate_brief_for_groups(group_ids: list[int], focus: str = ""):
     from agent import get_agent
 
     logger.info(f"Generating brief for groups {group_ids} with focus: {focus}")
-    brief, ext_info = asyncio.run(get_agent().summarize(24, group_ids, focus))
+    try:
+        # 若已存在事件循环（例如在异步上下文中调用），禁止同步包装，避免跨 loop 池复用
+        asyncio.get_running_loop()
+        raise RuntimeError(
+            "generate_brief_for_groups cannot run inside an active event loop; "
+            "use await generate_brief_for_groups_async instead"
+        )
+    except RuntimeError:
+        # 无运行中的 loop，安全地创建独立 loop 执行
+        brief, ext_info = asyncio.run(get_agent().summarize(24, group_ids, focus))
     if not brief:
         logger.warning("No brief generated for groups %s", group_ids)
         return

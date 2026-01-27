@@ -5,7 +5,7 @@ from typing import Optional
 
 from core.constants import SUMMARY_LENGTH
 from core.crawler import fetch_all_contents
-from core.db.pool import execute_transaction, get_connection
+from core.db.pool import get_async_connection, execute_transaction, get_connection
 from core.models.feed import Feed
 from core.parsers import parse_feed, parse_opml
 
@@ -27,7 +27,7 @@ def import_opml_config(file_url: Optional[str] = None, content: Optional[str] = 
     execute_transaction(_insert_feeds, feeds)
 
 
-def retrieve_new_feeds(group_ids: list[int] = None):
+async def retrieve_new_feeds(group_ids: list[int] = None):
     """
     Retrieves new feeds from websites and update the databases.
     Args:
@@ -35,22 +35,18 @@ def retrieve_new_feeds(group_ids: list[int] = None):
 
     """
     feeds = []
-    with get_connection() as conn:
-        with conn.cursor() as cur:
+    async with get_async_connection() as conn:
+        async with conn.cursor() as cur:
             if not group_ids:
-                cur.execute(
+                await cur.execute(
                     """
                             SELECT id, title, url, last_updated, description, status
                             from feeds
                             """
                 )
-                feeds = [
-                    Feed(row[0], row[1], row[2], row[3], row[4], row[5])
-                    for row in cur.fetchall()
-                ]
-                # logger.info("Get feeds: {}", feeds)
+                rows = await cur.fetchall()
             else:
-                cur.execute(
+                await cur.execute(
                     """
                             SELECT id, title, url, last_updated, description, status
                             from feeds
@@ -60,13 +56,13 @@ def retrieve_new_feeds(group_ids: list[int] = None):
                             """,
                     (group_ids,),
                 )
-                feeds = [
-                    Feed(row[0], row[1], row[2], row[3], row[4], row[5])
-                    for row in cur.fetchall()
-                ]
+                rows = await cur.fetchall()
+            feeds = [Feed(row[0], row[1], row[2], row[3], row[4], row[5]) for row in rows]
     if not feeds:
         return
-    articles = parse_feed(feeds)
+    # feedparser 是阻塞操作，放到线程池避免阻塞事件循环
+    loop = asyncio.get_running_loop()
+    articles = await loop.run_in_executor(None, parse_feed, feeds)
     cutoff = datetime.datetime.now() - datetime.timedelta(days=7)
     filtered_articles = {}
     for feed_title, feed_articles in articles.items():
@@ -79,13 +75,13 @@ def retrieve_new_feeds(group_ids: list[int] = None):
             a.id for feed_articles in articles.values() for a in feed_articles if a.id
         }
         if candidate_ids:
-            with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
+            async with get_async_connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
                         """SELECT id FROM feed_items WHERE id = ANY(%s)""",
                         (list(candidate_ids),),
                     )
-                    existing_ids = {row[0] for row in cur.fetchall()}
+                    existing_ids = {row[0] for row in await cur.fetchall()}
             if existing_ids:
                 deduped_articles = {}
                 for feed_title, feed_articles in articles.items():
@@ -98,7 +94,7 @@ def retrieve_new_feeds(group_ids: list[int] = None):
     urls = {
         a.url: a for arts in articles.values() for a in arts if not a.has_full_content
     }
-    contents = asyncio.run(fetch_all_contents(list(urls.keys())))
+    contents = await fetch_all_contents(list(urls.keys()))
     for url, content in contents.items():
         if not content:
             continue
@@ -107,44 +103,56 @@ def retrieve_new_feeds(group_ids: list[int] = None):
         if not article.summary:
             article.summary = content[:SUMMARY_LENGTH]
 
-    def insert_new_articles(cursor):
-        for feed in feeds:
-            if feed.title not in articles:
-                continue
-            feed_articles = articles[feed.title]
-            logger.info(
-                "Retrieving %d articles for feed %s", len(feed_articles), feed.title
+    async with get_async_connection() as conn:
+        async with conn.cursor() as cur:
+            for feed in feeds:
+                if feed.title not in articles:
+                    continue
+                feed_articles = articles[feed.title]
+                logger.info(
+                    "Retrieving %d articles for feed %s", len(feed_articles), feed.title
+                )
+                item_sql = """
+                           INSERT INTO feed_items (id, feed_id, title, link, pub_date, summary)
+                           VALUES (%s, %s, %s, %s, %s, %s)
+                           ON CONFLICT (id) DO NOTHING \
+                           """
+                item_content_sql = """
+                                   INSERT INTO feed_item_contents (feed_item_id, content)
+                                   VALUES (%s, %s)
+                                   ON CONFLICT (feed_item_id) DO NOTHING \
+                                   """
+                await cur.executemany(
+                    item_sql,
+                    [
+                        (a.id, feed.id, a.title, a.url, a.pub_date, a.summary)
+                        for a in feed_articles
+                    ],
+                )
+                await cur.executemany(
+                    item_content_sql, [(a.id, a.content) for a in feed_articles]
+                )
+            update_feed_sql = """
+                              UPDATE feeds
+                              SET last_updated = %s
+                              WHERE id = %s \
+                              """
+            await cur.executemany(
+                update_feed_sql, [(datetime.datetime.now(), feed.id) for feed in feeds]
             )
-            item_sql = """
-                       INSERT INTO feed_items (id, feed_id, title, link, pub_date, summary)
-                       VALUES (%s, %s, %s, %s, %s, %s)
-                       ON CONFLICT (id) DO NOTHING \
-                       """
-            item_content_sql = """
-                               INSERT INTO feed_item_contents (feed_item_id, content)
-                               VALUES (%s, %s)
-                               ON CONFLICT (feed_item_id) DO NOTHING \
-                               """
-            cursor.executemany(
-                item_sql,
-                [
-                    (a.id, feed.id, a.title, a.url, a.pub_date, a.summary)
-                    for a in feed_articles
-                ],
-            )
-            cursor.executemany(
-                item_content_sql, [(a.id, a.content) for a in feed_articles]
-            )
-        update_feed_sql = """
-                          UPDATE feeds
-                          SET last_updated = %s
-                          WHERE id = %s \
-                          """
-        cursor.executemany(
-            update_feed_sql, [(datetime.datetime.now(), feed.id) for feed in feeds]
-        )
+            await conn.commit()
 
-    execute_transaction(insert_new_articles)
+
+def retrieve_new_feeds_sync(group_ids: list[int] = None):
+    """同步包装：仅供脚本/测试使用，避免在运行事件循环内调用。"""
+    try:
+        asyncio.get_running_loop()
+        raise RuntimeError(
+            "retrieve_new_feeds_sync cannot be called when an event loop is running; use await retrieve_new_feeds instead"
+        )
+    except RuntimeError:
+        # no running loop
+        return asyncio.run(retrieve_new_feeds(group_ids))
 
 
 def get_all_feeds():

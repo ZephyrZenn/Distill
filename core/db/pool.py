@@ -14,6 +14,7 @@ _pool_logger.setLevel(logging.DEBUG)
 
 _sync_pool: ConnectionPool | None = None
 _async_pool: AsyncConnectionPool | None = None
+_async_pool_loop: asyncio.AbstractEventLoop | None = None
 
 _pool_monitor_task: asyncio.Task | None = None
 
@@ -127,6 +128,8 @@ async def get_async_pool() -> AsyncConnectionPool | None:
             raise
     
     global _async_pool
+    global _async_pool_loop
+    loop = asyncio.get_running_loop()
     if _async_pool is None:
         try:
             logger.debug(f"Creating async connection pool: {_get_conninfo_masked()}")
@@ -141,10 +144,21 @@ async def get_async_pool() -> AsyncConnectionPool | None:
                 open=False,
             )
             await _async_pool.open()
-            logger.info("Async connection pool created successfully")
+            _async_pool_loop = loop
+            logger.info(
+                "Async connection pool created successfully on loop id=%s",
+                id(loop),
+            )
         except Exception as e:
             logger.error(f"Error creating async connection pool: {e}", exc_info=True)
             return None
+    else:
+        if _async_pool_loop and _async_pool_loop is not loop:
+            logger.warning(
+                "Async pool loop mismatch detected: pool_loop=%s current_loop=%s",
+                id(_async_pool_loop),
+                id(loop),
+            )
     return _async_pool
 
 
@@ -184,6 +198,14 @@ async def get_async_connection(*, autocommit: bool = False):
     pool = await get_async_pool()
     if pool is None:
         raise RuntimeError("Failed to create async connection pool")
+
+    current_loop = asyncio.get_running_loop()
+    if _async_pool_loop and _async_pool_loop is not current_loop:
+        logger.warning(
+            "get_async_connection loop mismatch: pool_loop=%s current_loop=%s",
+            id(_async_pool_loop),
+            id(current_loop),
+        )
 
     # 记录获取连接前的池状态
     _log_pool_stats(pool, "before get_connection")
@@ -259,6 +281,7 @@ def close_pool():
 
 async def close_async_pool():
     global _async_pool
+    global _async_pool_loop
     if _async_pool:
         try:
             # 记录关闭前的池状态
@@ -269,6 +292,7 @@ async def close_async_pool():
             logger.error(f"Error closing async connection pool: {e}", exc_info=True)
         finally:
             _async_pool = None
+            _async_pool_loop = None
 
 
 async def get_async_pool_stats() -> dict | None:
