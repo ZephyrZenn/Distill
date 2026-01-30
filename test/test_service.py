@@ -5,7 +5,10 @@ from dotenv import load_dotenv
 
 from agent import init_agent
 from core.config.loader import load_config
-from apps.backend.services.feed_service import import_opml_config, retrieve_new_feeds
+from apps.backend.services.feed_service import (
+    import_opml_config,
+    retrieve_new_feeds_sync,
+)
 from apps.backend.services.group_service import create_group
 
 # Load environment variables before importing any modules that might use them
@@ -42,4 +45,4 @@ class FeedServiceTest(unittest.TestCase):
         create_group("Test", "Test Group", [1, 2])
         
     def test_retrieve_new_feeds(self):
-        retrieve_new_feeds()
+        retrieve_new_feeds_sync()

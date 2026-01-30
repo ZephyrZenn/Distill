@@ -48,14 +48,3 @@ class AgentTest(unittest.TestCase):
         from agent.tools.memory_tool import backfill_embeddings
         result = asyncio.run(backfill_embeddings())
         print(result)
-        
-    def test_boost_agent(self):
-        from agent import init_boost_agent, get_boost_agent
-        init_boost_agent()
-        agent = get_boost_agent()
-        def on_step(message: str):
-            print(f"[STEP] {message}")
-        result = asyncio.run(agent.run(focus="分析当前世界局势对美股的影响，并阐述清楚这些因素是如何造成影响的", hour_gap=24, on_step=on_step))
-        print(result)
-        with open("result.md", "w") as f:
-            f.write(result)

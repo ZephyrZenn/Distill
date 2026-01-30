@@ -95,3 +95,20 @@ class AgentCriticResult(TypedDict):
     findings: list[AgentCriticFinding]
     overall_comment: str
     
+
+class StructureFocalPoint(TypedDict):
+    """Refined focal point for the Structure Phase, separating sources explicitly."""
+    priority: int
+    topic: str
+    match_type: Literal["FOCUS_MATCH", "GLOBAL_STRATEGIC", "HISTORICAL_CONTINUITY"]
+    relevance_to_focus: str
+    strategy: Literal["DEEP_DIVE", "FLASH_NEWS"]
+    rss_ids: list[str]
+    web_ids: list[str]
+    memory_ids: list[str] 
+    reasoning: str
+    writing_guide: str
+
+class StructurePlanResult(TypedDict):
+    daily_overview: str
+    focal_points: list[StructureFocalPoint]
