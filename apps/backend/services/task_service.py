@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional, List
 from enum import Enum
 
-from core.brief_generator import APIKeyNotConfiguredError
+from core.llm_client import APIKeyNotConfiguredError
 
 logger = logging.getLogger(__name__)
 

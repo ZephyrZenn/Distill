@@ -5,8 +5,8 @@ from agent.context import ContentOptimizer
 from agent.models import AgentPlanResult, AgentState, log_step
 from agent.prompts import PLANNER_USER_PROMPT, PLANNER_SYSTEM_PROMPT
 from agent.utils import extract_json
-from agent.tools import filter_tool, memory_tool
-from core.brief_generator import AIGenerator
+from agent.tools import find_keywords_with_llm, search_memory
+from core.llm_client import LLMClient
 from core.config import get_config
 from core.models.llm import Message
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class AgentPlanner:
-    def __init__(self, client: AIGenerator):
+    def __init__(self, client: LLMClient):
         self.client = client
         # 初始化内容优化器（传入client以支持LLM关键词提取）
         config = get_config()
@@ -28,11 +28,11 @@ class AgentPlanner:
 
     async def plan(self, state: AgentState) -> AgentPlanResult:
         result = None
-        keywords = await filter_tool.find_keywords_with_llm(
+        keywords = await find_keywords_with_llm(
             self.client, state["raw_articles"]
         )
         log_step(state, f"🔍 提取到 {len(keywords)} 个关键词: {keywords}")
-        memories = await memory_tool.search_memory(keywords)
+        memories = await search_memory(keywords)
         memory_topics = [m["topic"] for m in memories.values()] if memories else []
         log_step(state, f"🔍 从记忆中找到 {len(memories)} 个相关记忆: {memory_topics}")
         state["history_memories"] = memories

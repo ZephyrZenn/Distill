@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 import typer
 
-from agent.tools import ToolBox, fetch_web_contents_tool, web_search_tool
 from core.config.loader import load_config
 from core.constants import SUMMARY_LENGTH
 from core.crawler.crawler import fetch_all_contents
@@ -58,13 +57,6 @@ def sumup(
     with open(out, "w") as f:
         f.write(brief)
 
-def create_toolbox():
-    toolbox = ToolBox()
-    
-    if os.getenv("TAVILY_API_KEY"):
-        toolbox.register(fetch_web_contents_tool, tags=["web", "crawler"])
-        toolbox.register(web_search_tool, tags=["web", "search"])
-    return toolbox
 
 if __name__ == "__main__":
     cmd_tool()

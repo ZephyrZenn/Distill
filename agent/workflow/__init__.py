@@ -1,10 +1,10 @@
 import logging
 from typing import Optional
 from agent.models import AgentState, RawArticle, StepCallback, log_step
-from agent.tools import db_tool, memory_tool
+from agent.tools import get_recent_group_update, save_current_execution_records
 from agent.workflow.executor import AgentExecutor
 from agent.workflow.planner import AgentPlanner
-from core.brief_generator import build_generator
+from core.llm_client import build_client
 from core.models.feed import FeedGroup
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class SummarizeAgenticWorkflow:
             APIKeyNotConfiguredError: If the API key is not configured.
         """
         if self._client is None:
-            self._client = build_generator()
+            self._client = build_client()
             self._planner = AgentPlanner(self._client)
             self._executor = AgentExecutor(self._client)
     
@@ -57,7 +57,7 @@ class SummarizeAgenticWorkflow:
         # This will raise APIKeyNotConfiguredError if API key is not set
         self._init_client()
         
-        groups, articles = await db_tool.get_recent_group_update(hour_gap, group_ids, focus)
+        groups, articles = await get_recent_group_update(hour_gap, group_ids, focus)
 
         self.state = self._build_state(groups, articles, focus, on_step)
         log_step(
@@ -78,7 +78,7 @@ class SummarizeAgenticWorkflow:
         if not results:
             return "", []
         # 使用工具保存执行记录
-        await memory_tool.save_current_execution_records(self.state)
+        await save_current_execution_records(self.state)
         
         # 返回简报内容和外部搜索结果
         ext_info = self.state.get("ext_info", [])

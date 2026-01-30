@@ -9,7 +9,7 @@ from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
 from agent.models import RawArticle, SummaryMemory
-from core.brief_generator import AIGenerator
+from core.llm_client import LLMClient
 from core.embedding import (
     embed_text,
     embed_texts,
@@ -54,7 +54,7 @@ class ContentOptimizer:
         article_max_length: int = 500,
         summary_max_length: int = 200,
         memory_max_length: int = 300,
-        client: Optional[AIGenerator] = None,
+        client: Optional[LLMClient] = None,
     ):
         """Initialize the content optimizer.
         

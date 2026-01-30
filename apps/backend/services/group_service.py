@@ -121,13 +121,6 @@ def _add_feeds_to_group(cur, group_id, feed_ids):
 def delete_group(group_id: int):
     def _delete(cur):
         cur.execute(
-            """SELECT is_default FROM feed_groups WHERE id = %s""",
-            (group_id,),
-        )
-        res = cur.fetchone()
-        if not res:
-            raise BizException(f"Group {group_id} not found")
-        cur.execute(
             "DELETE FROM feed_group_items WHERE feed_group_id = %s",
             (group_id,),
         )

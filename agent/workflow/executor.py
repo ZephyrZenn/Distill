@@ -8,9 +8,9 @@ from agent.models import (
     AgentCriticResult,
     log_step,
 )
-from agent.tools import search_tool, get_article_content
-from agent.tools.writing_tool import WriteArticleTool, ReviewArticleTool
-from core.brief_generator import AIGenerator
+from agent.tools import search_web, fetch_web_contents, is_search_engine_available, get_article_content
+from agent.tools.writing_tool import write_article, review_article
+from core.llm_client import LLMClient
 from core.models.search import SearchResult
 
 logger = logging.getLogger(__name__)
@@ -18,11 +18,9 @@ logger = logging.getLogger(__name__)
 
 class AgentExecutor:
 
-    def __init__(self, client: AIGenerator, max_retries: int = 3):
+    def __init__(self, client: LLMClient, max_retries: int = 3):
         self.client = client
         self.max_retries = max_retries
-        self.write_tool = WriteArticleTool(client)
-        self.review_tool = ReviewArticleTool(client)
 
     async def execute(self, state: AgentState) -> list[tuple[str, bool]]:
         plan = state["plan"]
@@ -82,18 +80,22 @@ class AgentExecutor:
     async def handle_search_enhance(self, point: FocalPoint, state: AgentState) -> str:
         log_step(state, f"🔍 [SEARCH_ENHANCE] 处理话题: {point['topic']}")
         
-        if search_tool.is_search_engine_available():
+        if is_search_engine_available():
             log_step(state, f"   ↳ 搜索扩展信息: '{point['search_query']}'")
-            search_results = await search_tool.search_web(point["search_query"])
+            search_results = await search_web(point["search_query"])
+            total = len(search_results)
             log_step(
-                state, f"   ↳ 获取到 {len(search_results)} 条搜索结果，正在抓取内容..."
+                state, f"   ↳ 获取到 {total} 条搜索结果，正在抓取内容..."
             )
             urls = [result["url"] for result in search_results]
-            contents = await search_tool.fetch_web_contents(urls)
+            contents = await fetch_web_contents(urls)
             for result in search_results:
                 result["content"] = contents.get(result["url"], "")
             # 过滤掉抓取失败的结果
             search_results = [r for r in search_results if r.get("content")]
+            success = len(search_results)
+            failed = total - success
+            log_step(state, f"📊 抓取统计: 成功 {success}/{total}, 失败 {failed} 条")
             # 收集外部搜索结果到 state
             if "ext_info" not in state:
                 state["ext_info"] = []
@@ -152,26 +154,22 @@ class AgentExecutor:
     async def _write_article(
         self, writing_material: WritingMaterial, review: AgentCriticResult | None = None
     ) -> str:
-        """使用 WriteArticleTool 撰写文章"""
-        result = await self.write_tool.execute(
+        """撰写文章"""
+        return await write_article(
+            client=self.client,
             writing_material=writing_material,
             review=review,
         )
-        if result.success:
-            return result.data
-        raise RuntimeError(f"写作失败: {result.error}")
 
     async def _review_article(
         self, draft_content: str, material: WritingMaterial
     ) -> AgentCriticResult:
-        """使用 ReviewArticleTool 审查文章"""
-        result = await self.review_tool.execute(
+        """审查文章"""
+        return await review_article(
+            client=self.client,
             draft_content=draft_content,
             writing_material=material,
         )
-        if result.success:
-            return result.data
-        raise RuntimeError(f"审查失败: {result.error}")
 
     def build_writing_material(
         self,
@@ -196,8 +194,11 @@ class AgentExecutor:
             if article["id"] in point["article_ids"]
         ]
         log_step(state, f"   ↳ 获取 {len(raw_articles)} 篇文章内容...")
+        history_memory_ids = point.get("history_memory_id", [])
         history_memory = [
-            state["history_memories"][hid] for hid in point["history_memory_id"]
+            state["history_memories"][hid]
+            for hid in history_memory_ids
+            if hid in state["history_memories"]
         ]
         if history_memory:
             log_step(state, "   ↳ 获取到历史记忆，将历史记忆融入到文章中")

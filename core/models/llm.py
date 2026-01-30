@@ -33,26 +33,29 @@ ToolChoice = Union[Literal["auto", "none"], dict]
 @dataclass
 class ToolCall:
     """表示工具调用
-    
+
     Attributes:
         id: 工具调用ID
         name: 函数名称
         arguments: 函数参数（JSON字符串）
+        type: 工具调用类型（OpenAI 兼容格式）
     """
     id: str
     name: str
     arguments: str
-    
+    type: str = "function"
+
     def to_dict(self) -> dict:
         """转换为字典格式"""
         return {
             "id": self.id,
+            "type": self.type,
             "function": {
                 "name": self.name,
                 "arguments": self.arguments,
-            }
+            },
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict) -> "ToolCall":
         """从字典创建"""
@@ -61,6 +64,7 @@ class ToolCall:
             id=data.get("id", ""),
             name=func.get("name", ""),
             arguments=func.get("arguments", "{}"),
+            type=data.get("type", "function"),
         )
 
 

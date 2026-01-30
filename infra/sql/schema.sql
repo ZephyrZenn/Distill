@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS feed_groups
                VARCHAR(64) UNIQUE NOT NULL,
     "desc"
                VARCHAR(512)       NOT NULL,
-    is_default   BOOLEAN             NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP          NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP          NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -94,7 +93,6 @@ CREATE TABLE IF NOT EXISTS schedules
 CREATE INDEX idx_feed_items_feed_id_pub_date ON feed_items (feed_id, pub_date);
 CREATE UNIQUE INDEX idx_group_items_group_feed_id ON feed_group_items (feed_group_id, feed_id);
 CREATE INDEX idx_feed_brief_group_ids ON feed_brief USING GIN (group_ids);
-CREATE UNIQUE INDEX idx_is_default_unique ON feed_groups (is_default) WHERE is_default = TRUE;
 CREATE INDEX idx_summary_memories_topic ON summary_memories USING GIN (topic gin_trgm_ops);
 CREATE INDEX idx_excluded_feed_item_ids_item_id ON excluded_feed_item_ids (item_id);
 CREATE INDEX idx_excluded_feed_item_ids_group_ids ON excluded_feed_item_ids USING GIN (group_ids);
