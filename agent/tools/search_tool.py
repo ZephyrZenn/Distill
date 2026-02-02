@@ -36,6 +36,8 @@ async def search_web(
     query: str,
     time_range: Literal["day", "week", "month", "year"] = "week",
     max_results: int = 5,
+    include_raw_content: bool = False,
+    topic: Literal["general", "news", "finance"] = "general",
 ) -> list[SearchResult]:
     """搜索网页
 
@@ -46,9 +48,12 @@ async def search_web(
         query: 搜索查询语句
         time_range: 搜索结果的时间范围限制 ('day', 'week', 'month', 'year')
         max_results: 期望返回的最大结果数量
+        include_raw_content: 是否获取原始网页内容（Tavily 特性）
+        topic: 搜索类别 ('general', 'news', 'finance')
 
     Returns:
-        搜索结果列表，每个结果包含 title、url、content（摘要）、score
+        搜索结果列表，每个结果包含 title、url、content（摘要）、score，
+        如果启用 include_raw_content 还可能包含 raw_content（原始网页内容）
     """
     if not query or not query.strip():
         raise ValueError("搜索查询不能为空")
@@ -64,6 +69,8 @@ async def search_web(
         query,
         time_range=time_range,
         max_results=max_results,
+        include_raw_content=include_raw_content,
+        topic=topic,
     )
 
     if not search_results:

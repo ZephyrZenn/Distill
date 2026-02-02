@@ -8,7 +8,12 @@ from agent.models import (
     AgentCriticResult,
     log_step,
 )
-from agent.tools import search_web, fetch_web_contents, is_search_engine_available, get_article_content
+from agent.tools import (
+    search_web,
+    fetch_web_contents,
+    is_search_engine_available,
+    get_article_content,
+)
 from agent.tools.writing_tool import write_article, review_article
 from core.llm_client import LLMClient
 from core.models.search import SearchResult
@@ -79,19 +84,26 @@ class AgentExecutor:
 
     async def handle_search_enhance(self, point: FocalPoint, state: AgentState) -> str:
         log_step(state, f"🔍 [SEARCH_ENHANCE] 处理话题: {point['topic']}")
-        
+
         if is_search_engine_available():
             log_step(state, f"   ↳ 搜索扩展信息: '{point['search_query']}'")
-            search_results = await search_web(point["search_query"])
-            total = len(search_results)
-            log_step(
-                state, f"   ↳ 获取到 {total} 条搜索结果，正在抓取内容..."
+            # 不获取 raw_content，仅获取摘要
+            search_results = await search_web(
+                point["search_query"], include_raw_content=False
             )
+            total = len(search_results)
+
+            log_step(state, f"   ↳ 获取到 {total} 条搜索结果，正在抓取全文...")
+
+            # 抓取所有搜索结果的全文
             urls = [result["url"] for result in search_results]
             contents = await fetch_web_contents(urls)
             for result in search_results:
-                result["content"] = contents.get(result["url"], "")
-            # 过滤掉抓取失败的结果
+                fetched_content = contents.get(result["url"], "")
+                if fetched_content:
+                    result["content"] = fetched_content
+
+            # 过滤掉没有内容的结果
             search_results = [r for r in search_results if r.get("content")]
             success = len(search_results)
             failed = total - success
@@ -103,8 +115,10 @@ class AgentExecutor:
         else:
             log_step(state, "   ↳ 搜索引擎不可用，跳过搜索扩展")
             search_results = []
-        
-        writing_material = self.build_writing_material(point, state, "DEEP", search_results)
+
+        writing_material = self.build_writing_material(
+            point, state, "DEEP", search_results
+        )
         log_step(state, "   ↳ 正在撰写深度内容...")
         result = await self.write_with_review(writing_material, state, point)
         log_step(state, f"   ↳ ✅ 话题 '{point['topic']}' 撰写完成")

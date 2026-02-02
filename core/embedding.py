@@ -45,6 +45,11 @@ EMBEDDING_DIMENSIONS = {
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_EMBEDDING_DIMENSION = 1536
 
+# Context length limits for embedding models (tokens)
+# Conservative estimate: ~4 chars per token for Chinese/English mixed content
+EMBEDDING_MAX_CHARS = 6000  # Safe limit for 8192 token models
+EMBEDDING_BATCH_SIZE = 20   # Max texts per batch to avoid total token overflow
+
 
 class EmbeddingError(Exception):
     """Raised when embedding generation fails."""
@@ -128,47 +133,64 @@ class OpenAIEmbeddingService(EmbeddingService):
             raise EmbeddingError(f"Failed to generate embedding: {e}") from e
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """Generate embeddings for multiple texts."""
+        """Generate embeddings for multiple texts with batching and truncation."""
         if not texts:
             return []
-        
-        # Filter out empty texts but keep track of indices
+
+        # Truncate texts to safe length and track valid indices
         valid_texts = []
         valid_indices = []
         for i, text in enumerate(texts):
             if text and text.strip():
-                valid_texts.append(text)
+                # Truncate to safe length to avoid context overflow
+                truncated = text[:EMBEDDING_MAX_CHARS]
+                valid_texts.append(truncated)
                 valid_indices.append(i)
-        
+
         if not valid_texts:
             raise EmbeddingError("All texts are empty")
-        
-        try:
-            response = await self.client.embeddings.create(
-                model=self.model,
-                input=valid_texts,
-            )
-            
-            # Build result list with embeddings in original order
-            # For empty texts, we could either raise error or return zero vector
-            # Here we raise error if any text was empty (already filtered above)
-            embeddings = [data.embedding for data in response.data]
-            
-            # Re-map to original indices
-            result = [None] * len(texts)
-            for idx, embedding in zip(valid_indices, embeddings):
-                result[idx] = embedding
-            
-            # Fill in None values with zero vectors (for empty strings)
-            zero_vector = [0.0] * self._dimension
-            for i in range(len(result)):
-                if result[i] is None:
-                    result[i] = zero_vector
-            
-            return result
-        except Exception as e:
-            logger.error(f"Error generating batch embeddings: {e}", exc_info=True)
-            raise EmbeddingError(f"Failed to generate batch embeddings: {e}") from e
+
+        # Process in batches to avoid total token overflow
+        all_embeddings: list[list[float]] = []
+        batch_start = 0
+
+        while batch_start < len(valid_texts):
+            batch_end = min(batch_start + EMBEDDING_BATCH_SIZE, len(valid_texts))
+            batch_texts = valid_texts[batch_start:batch_end]
+
+            try:
+                response = await self.client.embeddings.create(
+                    model=self.model,
+                    input=batch_texts,
+                )
+                batch_embeddings = [data.embedding for data in response.data]
+                all_embeddings.extend(batch_embeddings)
+
+                logger.debug(
+                    "Embedded batch %d-%d/%d (batch_size=%d)",
+                    batch_start, batch_end, len(valid_texts), len(batch_texts)
+                )
+            except Exception as e:
+                logger.error(
+                    "Error generating batch embeddings (batch %d-%d): %s",
+                    batch_start, batch_end, e, exc_info=True
+                )
+                raise EmbeddingError(f"Failed to generate batch embeddings: {e}") from e
+
+            batch_start = batch_end
+
+        # Re-map to original indices
+        result = [None] * len(texts)
+        for idx, embedding in zip(valid_indices, all_embeddings):
+            result[idx] = embedding
+
+        # Fill in None values with zero vectors (for empty strings)
+        zero_vector = [0.0] * self._dimension
+        for i in range(len(result)):
+            if result[i] is None:
+                result[i] = zero_vector
+
+        return result
 
 
 # Singleton instance
