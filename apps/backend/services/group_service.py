@@ -128,6 +128,14 @@ def delete_group(group_id: int):
             "DELETE FROM feed_groups WHERE id = %s",
             (group_id,),
         )
+        cur.execute(
+            """
+            UPDATE schedules 
+            SET group_ids = array_remove(group_ids, %s::int)
+            WHERE group_ids @> ARRAY[%s::int]
+            """,
+            (group_id, group_id)
+        )
 
     execute_transaction(_delete)
 
