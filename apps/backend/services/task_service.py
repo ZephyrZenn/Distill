@@ -91,7 +91,7 @@ async def execute_brief_generation_task(task_id: str):
             group_ids=task.group_ids,
             focus=task.focus,
             on_step=on_step,
-            boost_mode=task.boost_mode
+            # boost_mode=task.boost_mode
         )
         
         # 再次检查任务是否存在（可能在执行过程中被清理）
