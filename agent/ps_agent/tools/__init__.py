@@ -13,6 +13,7 @@ import json
 import logging
 import math
 import re
+import time
 from difflib import SequenceMatcher
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -27,11 +28,11 @@ from agent.tools import (
     search_memory as _search_memory,
     search_web as _search_web,
 )
-from agent.utils import extract_json
+from agent.utils import extract_json, get_query_embedding
 from core.embedding import EmbeddingError, embed_texts, is_embedding_configured
 from core.models.llm import FunctionDefinition, Message, Tool, ToolCall
 
-from .state import Citation, PSAgentState, ResearchItem
+from agent.ps_agent.state import Citation, PSAgentState, ResearchItem
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ def build_tool_schemas(*, current_date: str) -> list[Tool]:
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "检索关键词，可为空表示广泛扫描。",
+                            "description": "检索关键词，可为空表示广泛扫描。支持 -关键词 排除语法（如 'OpenAI -百度'）",
                         },
                         "hour_gap": {
                             "type": "integer",
@@ -170,6 +171,16 @@ def build_tool_schemas(*, current_date: str) -> list[Tool]:
                             "default": 8,
                             "minimum": 1,
                             "maximum": 20,
+                        },
+                        "topic": {
+                            "type": "string",
+                            "enum": ["news", "finance"],
+                            "description": (
+                                "搜索类别："
+                                "'news' 用于实时新闻（政治、体育、重大时事）；"
+                                "'finance' 用于金融相关；"
+                            ),
+                            "default": "news",
                         },
                         "exclude_keywords": {
                             "type": "array",
@@ -258,15 +269,68 @@ def build_tool_schemas(*, current_date: str) -> list[Tool]:
 # ---------------------------------------------------------------------------
 
 
+def _parse_query_exclusions(query: str) -> tuple[str, list[str]]:
+    """Extract exclusion keywords from query string.
+
+    Parses search engine exclusion syntax (-keyword) and separates them
+    from the main query. This allows LLMs to use natural search syntax
+    while properly routing exclusions to the exclude_keywords parameter.
+
+    Examples:
+        "OpenAI GPT-5 -百度 -阿里" -> ("OpenAI GPT-5", ["百度", "阿里"])
+        "科技股 AI -A股 -港股" -> ("科技股 AI", ["A股", "港股"])
+        "Tech news" -> ("Tech news", [])
+
+    Args:
+        query: Raw query string that may contain -keyword exclusions
+
+    Returns:
+        Tuple of (cleaned_query, exclusion_keywords_list)
+    """
+    import re
+
+    if not query:
+        return "", []
+
+    # Match -keyword or -"multi word" patterns
+    # Pattern explanation:
+    #   -([^\s"]+)  matches -keyword (single word)
+    #   -"([^"]+)"   matches -"multi word phrase"
+    exclude_pattern = r'-([^\s"]+)|-"([^"]+)"'
+    exclusions = re.findall(exclude_pattern, query)
+
+    exclude_keywords = []
+    for single_quote, double_quote in exclusions:
+        exclude_keywords.append(single_quote or double_quote)
+
+    # Remove exclusions from query
+    clean_query = re.sub(exclude_pattern, '', query).strip()
+    # Normalize whitespace (collapse multiple spaces)
+    clean_query = re.sub(r'\s+', ' ', clean_query)
+
+    if exclude_keywords:
+        logger.info(
+            f"[search_feeds] Parsed exclusions from query: {exclude_keywords}"
+        )
+
+    return clean_query, exclude_keywords
+
+
 async def _handle_search_feeds(args: dict, state: PSAgentState) -> dict:
     run_id = state.get("run_id", "-")
     query = str(args.get("query", "") or "").strip()
     hour_gap = int(args.get("hour_gap", 24) or 24)
     limit = int(args.get("limit", 30) or 30)
     exclude_keywords = args.get("exclude_keywords") or []
+    is_patch = bool(args.get("is_patch", False))
 
     if isinstance(exclude_keywords, str):
         exclude_keywords = [exclude_keywords]
+
+    # NEW: Parse exclusions from query (support -keyword syntax)
+    parsed_query, query_exclusions = _parse_query_exclusions(query)
+    query = parsed_query
+    exclude_keywords = list(exclude_keywords) + query_exclusions
 
     feeds = await get_all_feeds()
     if not feeds:
@@ -282,14 +346,16 @@ async def _handle_search_feeds(args: dict, state: PSAgentState) -> dict:
         kept_articles = []
         for art in articles:
             # Check title and summary
-            text = (str(art.get("title", "")) + " " + str(art.get("summary", ""))).lower()
+            text = (
+                str(art.get("title", "")) + " " + str(art.get("summary", ""))
+            ).lower()
             if not any(k.lower() in text for k in exclude_keywords):
                 kept_articles.append(art)
-        
+
         logger.info(
-            "[tool:search_feeds] Exclusion filter dropped %d items (keywords=%s)", 
-            len(articles) - len(kept_articles), 
-            exclude_keywords
+            "[tool:search_feeds] Exclusion filter dropped %d items (keywords=%s)",
+            len(articles) - len(kept_articles),
+            exclude_keywords,
         )
         articles = kept_articles
 
@@ -337,7 +403,7 @@ async def _handle_search_feeds(args: dict, state: PSAgentState) -> dict:
             },
         },
         "feeds": [f.__dict__ for f in feeds_result],
-        "articles": articles,
+        "articles": _normalize_feed_articles(articles, is_patch=is_patch),
     }
 
 
@@ -377,32 +443,53 @@ async def _handle_search_web(args: dict, state: PSAgentState) -> dict:
 
     time_range = str(args.get("time_range", "day") or "day")
     max_results = int(args.get("max_results", 8) or 8)
+    topic = str(args.get("topic", "news") or "news")
     exclude_keywords = args.get("exclude_keywords") or []
+    is_patch = bool(args.get("is_patch", False))
 
     if isinstance(exclude_keywords, str):
         exclude_keywords = [exclude_keywords]
 
     # For web search, we can try to add negative prompt to query if supported,
     # but doing post-filtering is safer and engine-agnostic.
-    results = await _search_web(query, time_range=time_range, max_results=max_results + len(exclude_keywords))
+    # Patch 搜索启用 include_raw_content 直接获取全文，避免后续 fetch_content 调用
+    # 对于补丁搜索，限制结果数量以控制成本
+    include_raw_content = is_patch
+    actual_max_results = min(max_results, 5) if is_patch else max_results + len(exclude_keywords)
+
+    results = await _search_web(
+        query,
+        time_range=time_range,
+        max_results=actual_max_results,
+        include_raw_content=include_raw_content,
+        topic=topic,
+    )
     normalized = [r.__dict__ if hasattr(r, "__dict__") else dict(r) for r in results]
 
     # Apply Exclusion Filter (P1 Feature)
     if exclude_keywords:
         kept_results = []
         for res in normalized:
-            text = (str(res.get("title", "")) + " " + str(res.get("content", ""))).lower()
+            text = (
+                str(res.get("title", "")) + " " + str(res.get("content", ""))
+            ).lower()
             if not any(k.lower() in text for k in exclude_keywords):
                 kept_results.append(res)
         normalized = kept_results[:max_results]
     else:
         normalized = normalized[:max_results]
 
-    # search_web returns snippet/summary; store snippet but也返回 url/title，后续可自动补全文
+    # 截断过长的摘要
     for row in normalized:
         content = str(row.get("content", "") or "").strip()
         if len(content) > WEB_RESULT_SNIPPET_MAX_CHARS:
             row["content"] = content[:WEB_RESULT_SNIPPET_MAX_CHARS] + "..."
+
+    logger.info(
+        "[tool:search_web] query=%s count=%d",
+        query,
+        len(normalized),
+    )
 
     return {
         "meta": {
@@ -516,7 +603,12 @@ def _compute_score(
 ) -> float:
     """统一的评分函数：基础分 + 时效加成 + 匹配度 + 额外权重。"""
     base = _base_score_for_source(source)
-    return base + _recency_bonus(published_at, now=now) + float(match_score or 0.0) + float(extra or 0.0)
+    return (
+        base
+        + _recency_bonus(published_at, now=now)
+        + float(match_score or 0.0)
+        + float(extra or 0.0)
+    )
 
 
 def _base_score_for_source(source: str) -> float:
@@ -660,9 +752,13 @@ async def _rank_feed_articles(
     return scored
 
 
-def _normalize_feed_articles(articles: list[dict]) -> list[ResearchItem]:
+def _normalize_feed_articles(
+    articles: list[dict], *, is_patch: bool = False
+) -> list[ResearchItem]:
     now = datetime.now()
     items: list[ResearchItem] = []
+    filtered_no_summary = 0
+
     for article in articles:
         url = str(article.get("url", "") or "").strip()
         title = str(article.get("title", "") or "").strip()
@@ -671,6 +767,11 @@ def _normalize_feed_articles(articles: list[dict]) -> list[ResearchItem]:
         content = str(article.get("content", "") or "").strip()
         article_id = str(article.get("id", "") or "").strip()
         match_score = float(article.get("match_score", 0.0) or 0.0)
+
+        # 过滤：剔除没有 summary 的文章
+        if not summary:
+            filtered_no_summary += 1
+            continue
 
         score = _compute_score(
             source="feed",
@@ -690,20 +791,43 @@ def _normalize_feed_articles(articles: list[dict]) -> list[ResearchItem]:
                 content=content,
                 score=score,
                 tags=[],
+                is_patch=is_patch,
+                relevance=0.0,
+                freshness=0.0,
+                quality=0.0,
+                novelty=0.0,
             )
         )
+
+    if filtered_no_summary > 0:
+        logger.info(
+            "[_normalize_feed_articles] Filtered %d articles without summary",
+            filtered_no_summary
+        )
+
     return items
 
 
-def _normalize_web_results(results: list[dict]) -> list[ResearchItem]:
+def _normalize_web_results(
+    results: list[dict], *, is_patch: bool = False, time_range: str = "week"
+) -> list[ResearchItem]:
     now = datetime.now()
     items: list[ResearchItem] = []
+    filtered_no_summary = 0
+
     for result in results:
         url = str(result.get("url", "") or "").strip()
         title = str(result.get("title", "") or "").strip()
         snippet = str(result.get("content", "") or "").strip()
+        raw_content = str(result.get("raw_content", "") or "").strip()
         published_at = str(result.get("published_at", "") or "").strip()
         score_val = float(result.get("score", 0.0) or 0.0)
+
+        # 过滤：剔除没有 snippet/summary 的文章
+        # snippet 是搜索结果的摘要，raw_content 是可选的全文
+        if not snippet:
+            filtered_no_summary += 1
+            continue
 
         score = _compute_score(
             source="web",
@@ -712,6 +836,10 @@ def _normalize_web_results(results: list[dict]) -> list[ResearchItem]:
             now=now,
         )
 
+        # 如果有 raw_content（Tavily 返回的全文），直接使用它作为 content
+        # 这样就不需要后续调用 fetch_content 来抓取网页
+        has_full_content = raw_content and len(raw_content) > 100
+
         items.append(
             ResearchItem(
                 id=url or title,
@@ -719,17 +847,30 @@ def _normalize_web_results(results: list[dict]) -> list[ResearchItem]:
                 url=url,
                 source="web",
                 published_at=published_at,
-                # search_web returns snippet/summary; full content should be fetched via fetch_content.
                 summary=snippet,
-                content="",
+                content=raw_content if has_full_content else "",
                 score=score,
-                tags=[],
+                tags=["has_full_content"] if has_full_content else [],
+                is_patch=is_patch,
+                relevance=0.0,
+                freshness=0.0,
+                quality=0.0,
+                novelty=0.0,
+                time_range_hint=time_range,  # Store search time range for freshness fallback
             )
         )
+
+    if filtered_no_summary > 0:
+        logger.info(
+            "[_normalize_web_results] Filtered %d results without summary",
+            filtered_no_summary
+        )
+
     return items
 
 
 def _normalize_memories(memories: list[Any]) -> list[ResearchItem]:
+    now = datetime.now()
     items: list[ResearchItem] = []
     for memory in memories:
         if hasattr(memory, "__dict__"):
@@ -762,6 +903,10 @@ def _normalize_memories(memories: list[Any]) -> list[ResearchItem]:
                 content=content,
                 score=score,
                 tags=["memory"],
+                relevance=0.0,
+                freshness=0.0,
+                quality=0.0,
+                novelty=0.0,
             )
         )
     return items
@@ -1172,6 +1317,16 @@ def get_registered_tools(*, current_date: str) -> list[Tool]:
     return [entry.schema for entry in registry.values()]
 
 
+def get_researcher_tools(*, current_date: str) -> list[Tool]:
+    """Get tools for the researcher node (search_feeds and search_web only).
+
+    The researcher only needs to plan searches, not execute fetch_content or
+    search_memory. finish_research is signaled by returning no tool calls.
+    """
+    registry = _tool_registry(current_date)
+    return [registry["search_feeds"].schema, registry["search_web"].schema]
+
+
 async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) -> dict:
     """Execute tool calls and return state updates.
 
@@ -1197,8 +1352,9 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
     messages: list[Message] = []
     research_items = list(state.get("research_items", []))
     recent_web_queries = list(state.get("recent_web_queries", []) or [])
-    ready_to_write = bool(state.get("ready_to_write", False))
-    research_brief = state.get("research_brief")
+
+    # P1: Initialize query_history for spiral collection
+    query_history = list(state.get("query_history", []) or [])
 
     for call in tool_calls:
         entry = registry.get(call.name)
@@ -1215,6 +1371,12 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
             continue
 
         args = _parse_arguments(call.arguments)
+
+        # AUTO: Add is_patch=True for search tools in PATCH_MODE
+        # This is managed by the system, not set by LLM
+        if state.get("execution_mode") == "PATCH_MODE" and call.name in ("search_feeds", "search_web"):
+            args["is_patch"] = True
+
         _emit(f"🔧 tool: {call.name} args={json.dumps(args, ensure_ascii=False)[:240]}")
         logger.info(
             "[tool] run_id=%s name=%s call_id=%s args=%s",
@@ -1263,29 +1425,40 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
             articles = payload.get("articles", []) or []
             new_items = _normalize_feed_articles(articles)
             research_items = _merge_items(research_items, new_items)
-        elif call.name == "finish_research":
-            # Tool-call based stage switch: no parsing of assistant strings needed.
-            ready_to_write = True
-            research_brief = {
-                "key_findings": payload.get("key_findings", []) or [],
-                "open_questions": payload.get("open_questions", []) or [],
-                "notes": payload.get("notes", "") or "",
-            }
         elif call.name == "search_web":
+            query_text = str(args.get("query", "") or "")
             recent_web_queries = _push_recent_query(
-                recent_web_queries, str(args.get("query", "") or "")
+                recent_web_queries, query_text
             )
             results = payload.get("results", []) or []
-            new_items = _normalize_web_results(results)
-            research_items = _merge_items(research_items, new_items)
-            # 自动抓取少量高分 web 结果正文，截断后写回 content
-            research_items, auto_meta = await _auto_fetch_fulltext_for_web_items(
-                research_items,
-                max_items=AUTO_FETCH_WEB_MAX_ITEMS,
-                summary_max_chars=FETCHED_CONTENT_MAX_CHARS,
+
+            # P1: Record query to query_history with embedding
+            
+                # query_embedding = await get_query_embedding(query_text)
+            # TODO: 需要重新添加 embedding
+            query_history.append({
+                "query": query_text,
+                "timestamp": time.time(),
+                "results_count": len(results),
+            })
+            logger.info(
+                f"[tool] Recorded query to history: '{query_text[:50]}...' "
+                f"results={len(results)}"
             )
-            if auto_meta.get("auto_fetch"):
-                _emit(f"🔧 tool: auto fetch content {auto_meta['auto_fetch']} items")
+            new_items = _normalize_web_results(results, is_patch=bool(args.get("is_patch", False)))
+            research_items = _merge_items(research_items, new_items)
+            # Patch 搜索模式（include_raw_content=True）已获取全文，跳过 auto-fetch
+            # Tavily 返回 raw_content 后无需再用 httpx 抓取
+            # is_patch = bool(args.get("is_patch", False))
+            # if not is_patch:
+            #     # 自动抓取少量高分 web 结果正文，截断后写回 content
+            #     research_items, auto_meta = await _auto_fetch_fulltext_for_web_items(
+            #         research_items,
+            #         max_items=AUTO_FETCH_WEB_MAX_ITEMS,
+            #         summary_max_chars=FETCHED_CONTENT_MAX_CHARS,
+            #     )
+            #     if auto_meta.get("auto_fetch"):
+            #         _emit(f"🔧 tool: auto fetch content {auto_meta['auto_fetch']} items")
         elif call.name == "search_memory":
             memories = payload.get("memories", []) or []
             new_items = _normalize_memories(memories)
@@ -1294,15 +1467,14 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
             research_items = _merge_fetch_content(research_items, payload)
 
         logger.info(
-            "[tool] run_id=%s after=%s research_items=%d citations=%d ready_to_write=%s",
+            "[tool] run_id=%s after=%s research_items=%d citations=%d",
             run_id,
             call.name,
             len(research_items),
             len(_citations_from_items(research_items)),
-            ready_to_write,
         )
         _emit(
-            f"🔧 tool: after {call.name} research_items={len(research_items)} ready_to_write={ready_to_write}"
+            f"🔧 tool: after {call.name} research_items={len(research_items)}"
         )
 
     citations = _citations_from_items(research_items)
@@ -1311,10 +1483,9 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
         "log_history": log_history,
         "messages": messages,
         "recent_web_queries": recent_web_queries,
-        "ready_to_write": ready_to_write,
-        "research_brief": research_brief,
         "research_items": research_items,
         "citations": citations,
+        "query_history": query_history,  # P1: Query history with embeddings
         "tool_call_count": state.get("tool_call_count", 0) + len(tool_calls),
         "status": "researching",
         "last_error": None,
@@ -1324,4 +1495,6 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
 __all__ = [
     "execute_tool_calls",
     "get_registered_tools",
+    "get_researcher_tools",
+    "ps_writer",
 ]

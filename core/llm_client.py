@@ -619,7 +619,7 @@ class OpenAIClient(LLMClient):
         )
 
 
-def build_client() -> LLMClient:
+def auto_build_client() -> LLMClient:
     """Build an AI client based on current configuration.
 
     Raises:
@@ -652,7 +652,7 @@ def build_client() -> LLMClient:
             max_delay=rate_limit_cfg.max_delay,
         )
 
-    return _build_client(
+    return build_client(
         client_type=model_cfg.provider,
         api_key=api_key,
         base_url=model_cfg.base_url,
@@ -664,7 +664,7 @@ def build_client() -> LLMClient:
     )
 
 
-def _build_client(
+def build_client(
     client_type: ModelProvider,
     api_key: str,
     base_url: Optional[str],

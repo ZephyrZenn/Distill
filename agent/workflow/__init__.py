@@ -4,7 +4,7 @@ from agent.models import AgentState, RawArticle, StepCallback, log_step
 from agent.tools import get_recent_group_update, save_current_execution_records
 from agent.workflow.executor import AgentExecutor
 from agent.workflow.planner import AgentPlanner
-from core.llm_client import build_client
+from core.llm_client import auto_build_client
 from core.models.feed import FeedGroup
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class SummarizeAgenticWorkflow:
             APIKeyNotConfiguredError: If the API key is not configured.
         """
         if self._client is None:
-            self._client = build_client()
+            self._client = auto_build_client()
             self._planner = AgentPlanner(self._client)
             self._executor = AgentExecutor(self._client)
     

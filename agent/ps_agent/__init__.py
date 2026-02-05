@@ -8,11 +8,13 @@ with writing, review, and refinement stages.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Callable, Optional
 
-from core.llm_client import LLMClient, build_client
+from core.llm_client import LLMClient, auto_build_client, build_client
+from core.models.llm import ModelProvider
 
-from .graph import build_ps_agent_graph
+from .graph import build_ps_agent_graph, build_test_graph
 from .state import PSAgentState, create_initial_state
 
 logger = logging.getLogger(__name__)
@@ -32,14 +34,18 @@ class PlanSolveAgent:
     def __init__(
         self,
         client: Optional[LLMClient] = None,
+        auduit_client: Optional[LLMClient] = None,
         *,
         max_iterations: int = 12,
         max_tool_calls: int = 24,
         max_refine: int = 2,
         max_context_items: int = 40,
         lazy_init: bool = False,
+        debug: bool = False,
     ):
         self._client = client
+        self._audit_client = auduit_client
+        self._debug = debug
         self._graph = None
         self._on_step: Optional[StepCallback] = None
         self._last_state: PSAgentState | None = None
@@ -54,9 +60,19 @@ class PlanSolveAgent:
 
     def _init_client(self) -> None:
         if self._client is None:
-            self._client = build_client()
+            self._client = auto_build_client()
+        if self._audit_client is None:
+            self._audit_client = build_client(
+                client_type=ModelProvider.OTHER,
+                api_key=os.getenv("MODEL_API_KEY"),
+                base_url=os.getenv("MODEL_BASE_URL"),
+                model="gemini-2.0-flash-lite",
+            )
         if self._graph is None:
-            self._graph = build_ps_agent_graph(self._client)
+            if self._debug:
+                self._graph = build_test_graph(self._client, self._audit_client)
+            else:
+                self._graph = build_ps_agent_graph(self._client, self._audit_client)
 
     @property
     def client(self) -> LLMClient:

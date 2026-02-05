@@ -37,7 +37,7 @@ async def search_web(
     time_range: Literal["day", "week", "month", "year"] = "week",
     max_results: int = 5,
     include_raw_content: bool = False,
-    topic: Literal["general", "news", "finance"] = "general",
+    topic: Literal["news", "finance"] = "news",
 ) -> list[SearchResult]:
     """搜索网页
 
@@ -49,7 +49,7 @@ async def search_web(
         time_range: 搜索结果的时间范围限制 ('day', 'week', 'month', 'year')
         max_results: 期望返回的最大结果数量
         include_raw_content: 是否获取原始网页内容（Tavily 特性）
-        topic: 搜索类别 ('general', 'news', 'finance')
+        topic: 搜索类别 ('news', 'finance')
 
     Returns:
         搜索结果列表，每个结果包含 title、url、content（摘要）、score，
