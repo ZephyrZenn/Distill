@@ -14,12 +14,8 @@ RUN apt-get update \
 
 COPY requirements.txt ./
 
-# Install torch from the CPU wheels first to avoid pulling GPU builds
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
-        --prefix=/install torch==2.4.1 typing_extensions>=4.8.0
-
 # Install the remaining Python dependencies into /install
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt --no-binary=hdbscan
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # Trim unneeded test files, caches, and debug symbols
 RUN find /install -type d -name "tests" -prune -exec rm -rf {} + \
@@ -34,8 +30,6 @@ RUN find /install -type d -name "tests" -prune -exec rm -rf {} + \
 FROM python:3.11-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    HF_HOME=/cache/hf \
-    TRANSFORMERS_CACHE=/cache/hf \
     ENV=prod \
     PYTHONPATH=/app
 WORKDIR /app

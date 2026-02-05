@@ -9,7 +9,7 @@ from apps.backend.services.feed_service import (
     import_opml_config,
     retrieve_new_feeds_sync,
 )
-from apps.backend.services.group_service import create_group
+from apps.backend.services.group_service import create_group, delete_group
 
 # Load environment variables before importing any modules that might use them
 load_dotenv()
@@ -46,3 +46,6 @@ class FeedServiceTest(unittest.TestCase):
         
     def test_retrieve_new_feeds(self):
         retrieve_new_feeds_sync()
+
+    def test_delete_group(self):
+        delete_group(10)

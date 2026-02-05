@@ -61,8 +61,17 @@ async def retrieve_new_feeds(group_ids: list[int] = None):
     if not feeds:
         return
     # feedparser 是阻塞操作，放到线程池避免阻塞事件循环
+    # 添加超时控制（每个 feed 最多 30 秒，总超时根据 feed 数量动态调整）
     loop = asyncio.get_running_loop()
-    articles = await loop.run_in_executor(None, parse_feed, feeds)
+    timeout = 30 * len(feeds) + 60  # 每个 feed 30 秒 + 60 秒基础时间
+    try:
+        articles = await asyncio.wait_for(
+            loop.run_in_executor(None, parse_feed, feeds),
+            timeout=timeout
+        )
+    except asyncio.TimeoutError:
+        logger.error("feedparser timeout after %d seconds for %d feeds", timeout, len(feeds))
+        articles = {}
     cutoff = datetime.datetime.now() - datetime.timedelta(days=7)
     filtered_articles = {}
     for feed_title, feed_articles in articles.items():
