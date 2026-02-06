@@ -88,10 +88,10 @@ async def execute_brief_generation_task(task_id: str):
         # 执行总结（使用brief_service的异步方法）
         from apps.backend.services.brief_service import generate_brief_for_groups_async
         brief = await generate_brief_for_groups_async(
+            task_id=task_id,
             group_ids=task.group_ids,
             focus=task.focus,
-            on_step=on_step,
-            # boost_mode=task.boost_mode
+            on_step=on_step
         )
         
         # 再次检查任务是否存在（可能在执行过程中被清理）

@@ -21,7 +21,7 @@ class SummarizeAgenticWorkflow:
         self._planner = None
         self._executor = None
         self.state_tracker = {}
-        self.state = None
+        self.states = {}
         
         if not lazy_init:
             self._init_client()
@@ -49,6 +49,7 @@ class SummarizeAgenticWorkflow:
 
     async def summarize(
         self,
+        task_id: str,
         hour_gap: int,
         group_ids: Optional[list[int]],
         focus: str = "",
@@ -58,30 +59,29 @@ class SummarizeAgenticWorkflow:
         self._init_client()
         
         groups, articles = await get_recent_group_update(hour_gap, group_ids, focus)
-
-        self.state = self._build_state(groups, articles, focus, on_step)
-        log_step(
-            self.state, f"🚀 Agent启动，获取到 {len(self.state['raw_articles'])} 篇文章"
-        )
-
-        log_step(self.state, "📋 开始规划阶段...")
-        plan = await self.planner.plan(self.state)
+        
+        if task_id in self.states:
+            raise ValueError(f"Task {task_id} already exists")
+        state = self._build_state(groups, articles, focus, on_step)
+        self.states[task_id] = state
+        log_step(state, f"🚀 Agent启动，获取到 {len(state['raw_articles'])} 篇文章")
+        log_step(state, "📋 开始规划阶段...")
+        plan = await self.planner.plan(state)
         logger.info("Plan: %s", plan)
-
-        log_step(self.state, "⚡ 开始执行阶段...")
-        results = await self.executor.execute(self.state)
+        log_step(state, "⚡ 开始执行阶段...")
+        results = await self.executor.execute(state)
         logger.info("Results: %s", results)
         # 提取结果字符串和成功状态
         result_strings = [result for result, _ in results]
         success_statuses = [success for _, success in results]
-        log_step(self.state, f"✅ Agent执行完成，共生成 {sum(success_statuses)} 篇")
+        log_step(state, f"✅ Agent执行完成，共生成 {sum(success_statuses)} 篇")
         if not results:
             return "", []
         # 使用工具保存执行记录
-        await save_current_execution_records(self.state)
+        await save_current_execution_records(state)
         
         # 返回简报内容和外部搜索结果
-        ext_info = self.state.get("ext_info", [])
+        ext_info = state.get("ext_info", [])
         return "\n\n".join(result_strings), ext_info
         
 
@@ -99,5 +99,8 @@ class SummarizeAgenticWorkflow:
             state["on_step"] = on_step
         return state
 
-    def get_log_history(self) -> list[str]:
-        return self.state["log_history"]
+    def get_log_history(self, task_id: str) -> list[str]:
+        state = self.states.get(task_id, None)
+        if not state:
+            return []
+        return state["log_history"]
