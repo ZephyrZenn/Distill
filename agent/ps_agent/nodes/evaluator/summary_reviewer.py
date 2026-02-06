@@ -1,22 +1,16 @@
+from agent.ps_agent.models import ReviewResult, SectionUnit
+from agent.ps_agent.prompts.review import (
+    SUMMARY_REVIEWER_PROMPT,
+    SUMMARY_REVIEWER_SYSTEM_PROMPT,
+)
+from agent.utils import extract_json
 from core.llm_client import LLMClient
 from core.models.llm import Message
 from agent.ps_agent.state import PSAgentState, log_step
-from agent.ps_agent.tools.ps_writer import ps_review_article, PSWritingMaterial
 import logging
 
 logger = logging.getLogger(__name__)
 
-def _build_writing_material(state: PSAgentState) -> PSWritingMaterial:
-    """从 state 构建 PSWritingMaterial（方案 B: 使用全局 items）"""
-    return PSWritingMaterial(
-        topic=state.get("focus", ""),
-        writing_guide=state.get("writing_guide", ""),
-        items=state.get("research_items", []),  # 全局材料池
-        patch_items=[
-            item for item in state.get("research_items", [])
-            if item.get("is_patch", False)
-        ],
-    )
 
 class SummaryReviewerNode:
     """Review the draft and decide whether to refine or continue research."""
@@ -26,48 +20,52 @@ class SummaryReviewerNode:
 
     async def __call__(self, state: PSAgentState) -> dict:
         run_id = state.get("run_id", "-")
-        draft = state.get("draft_report")
-        if not draft:
+        if not state.get("sections"):
             return {
-                **log_step(state, "❌ reviewing: draft_report 为空，无法审稿"),
+                **log_step(state, "❌ reviewing: sections 为空，无法审稿"),
                 "status": "failed",
-                "last_error": "draft_report 为空",
-                "messages": [Message.assistant("无法审稿：没有草稿内容。")],
+                "last_error": "sections 为空",
+                "messages": [Message.assistant("无法审稿：没有章节内容。")],
             }
 
-        material = _build_writing_material(state)
-
-        try:
-            pre = log_step(state, "🧪 reviewing: 开始审稿")
-            review = await ps_review_article(self.client, draft, material)
-            logger.info(
-                "[review] run_id=%s status=%s score=%s missing_info=%d",
-                run_id,
-                review.get("status"),
-                review.get("score"),
-                len(review.get("findings") or []),
-            )
+        sections = state.get("sections", [])
+        pre = log_step(state, "🧪 reviewing: 开始审稿")
+        for section in sections:
+            review = await self._review(section)
+            section["review_result"] = review
+        # 检查是否所有章节都通过了审核
+        if all(
+            section["review_result"].get("status") == "APPROVED" for section in sections
+        ):
+            final_report = "\n".join([section["content"] for section in sections])
             return {
                 **pre,
-                **log_step(
-                    state,
-                    f"🧪 reviewing: 完成 status={review.get('status')} score={review.get('score')}",
-                ),
-                "review_result": review,
-                "status": "reviewing",
-                "last_error": None,
-                "messages": [
-                    Message.assistant(
-                        f"审稿完成：status={review.get('status')} score={review.get('score')}"
-                    )
-                ],
+                **log_step(state, "🧪 reviewing: 文章审核通过"),
+                "final_report": final_report,
+                "sections": sections,
+                "status": "completed",
+                "messages": [Message.assistant("文章审核通过")],
             }
-        except Exception as exc:
-            logger.exception("[review] failed")
-            return {
-                **log_step(state, f"❌ reviewing: 审稿失败: {exc}"),
-                "status": "failed",
-                "last_error": str(exc),
-                "messages": [Message.assistant(f"审稿阶段失败：{exc}")],
-            }
+        return {
+            **pre,
+            **log_step(state, "🧪 reviewing: 部分段落审核未通过，进入修订阶段"),
+            "sections": sections,
+            "status": "refining",
+            "messages": [Message.assistant("部分段落审核未通过")],
+        }
 
+    async def _review(self, section: SectionUnit) -> ReviewResult:
+        user_prompt = SUMMARY_REVIEWER_PROMPT.format(
+            global_outline=section["context"]["global_outline"],
+            chapter=section["chapter"],
+            context=section["context"]["previous_summary"],
+            items=section["items"],
+            draft=section["content"],
+        )
+        messages = [
+            Message.system(SUMMARY_REVIEWER_SYSTEM_PROMPT),
+            Message.user(user_prompt),
+        ]
+        response = await self.client.completion(messages)
+        result: ReviewResult = extract_json(response)
+        return result

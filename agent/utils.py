@@ -39,7 +39,7 @@ def _clean_control_characters(text: str) -> str:
     return ''.join(result)
 
 
-def  extract_json(text: str) -> dict:
+def extract_json(text: str) -> dict:
     """
     Extract JSON from LLM response, handling:
     - Pure JSON text

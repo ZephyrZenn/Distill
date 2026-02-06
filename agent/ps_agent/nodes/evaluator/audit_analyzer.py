@@ -7,8 +7,7 @@ import logging
 from core.models.llm import Message
 from agent.utils import extract_json
 from core.llm_client import LLMClient
-from agent.ps_agent.models import Dimension, AuditAnalysisResult
-from agent.ps_agent.state import ResearchItem
+from agent.ps_agent.models import Dimension, AuditAnalysisResult, ResearchItem
 from agent.ps_agent.prompts import AUDIT_ANALYSIS_PROMPT
 
 logger = logging.getLogger(__name__)

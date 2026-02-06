@@ -1,7 +1,43 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import TypedDict, Literal
+from typing import TypedDict, Literal, NotRequired
 
+
+class ResearchItem(TypedDict, total=False):
+    """A normalized research record used for ranking."""
+
+    id: str
+    title: str
+    url: str
+    source: str  # feed | web | memory
+    published_at: str
+    summary: str
+    content: str
+    tags: list[str]
+
+    # Five-dimensional scoring (stored during curation)
+    relevance: float  # Focus + bucket similarity (0.0-1.0)
+    # freshness: float  # Time-based recency (0.0-1.0)
+    quality: float  # Content richness (0.0-1.0)
+    novelty: float  # Information gain (0.0-1.0)
+    score: float
+
+    # LLM audit fields (P0: Two-stage audit)
+    audit_stage: NotRequired[Literal["snippet", "full", "none"]]  # Current audit stage
+    should_fetch_full: NotRequired[bool]  # Whether to fetch full content for Stage 2
+    audit_reason: NotRequired[str]  # Reason for discard/keep from LLM
+
+    # Search context for freshness fallback
+    time_range_hint: NotRequired[
+        Literal["day", "week", "month", "year"]
+    ]  # From search_web time_range
+    
+class DiscardedItem(TypedDict, total=False):
+    """An item that was dropped during curation, with a reason."""
+    id: str
+    title: str
+    url: str
+    reason: str
 
 @dataclass
 class Dimension:
@@ -140,6 +176,7 @@ class FullAuditReport(TypedDict):
     reason: str
     defects: str
 
+
 class PlanReviewResult(TypedDict):
     status: Literal["READY", "PATCH", "REPLAN"]
     reason: str
@@ -153,6 +190,64 @@ class PlanReviewResult(TypedDict):
     new_directions: list[dict]
     failed_dimensions: list[dict]
 
+
+class StructureChapter(TypedDict):
+    chapter_id: str  # 章节ID
+    title: str  # 章节名称
+    priority: int  # 章节优先级
+    key_thesis: str  # 本章试图证明的核心论点
+    writing_guide: dict  # 写作指南
+    referenced_doc_ids: list[str]  # 指定该章节使用的素材ID
+    conflict_alert: (
+        str  # 若本章存在素材冲突，请说明（如：关于2025年销量的预测存在两种分歧）
+    )
+    sub_points: list[str]  # 子论点列表
+
+
+class StructurePlan(TypedDict):
+    daily_overview: str
+    narrative_logic: (
+        str  # 简述本报告的叙事主线（例如：从供应链瓶颈推导至终端价格波动的因果链条）
+    )
+    chapters: list[StructureChapter]  # 章节列表
+    
+class WritingMaterial(TypedDict):
+    chapter: StructureChapter
+    items: list[ResearchItem]
+
+class WritingContext(TypedDict):
+    global_outline: str
+    previous_summary: str
+    section_number: int
+
+class SectionUnit(TypedDict):
+    chapter: StructureChapter
+    items: list[ResearchItem]
+    content: str
+    context: WritingContext
+    review_result: NotRequired[ReviewResult]
+
+class ReviewFinding(TypedDict):
+    type: Literal[
+        "MISSING_INFO",
+        "SHALLOW_ANALYSIS",
+        "LOGIC_GAP",
+        "CITATION_ERROR",
+        "OVER_SPECULATION",
+    ]
+    severity: Literal["high", "medium", "low"]
+    description: str
+    suggestion: str
+
+
+class ReviewResult(TypedDict):
+    status: Literal["APPROVED", "REJECTED"]
+    score: int
+    summary: str
+    strengths: list[str]
+    findings: list[ReviewFinding]
+
+
 __all__ = [
     "Dimension",
     "PatchDiagnosis",
@@ -163,4 +258,10 @@ __all__ = [
     "FullAuditResult",
     "FullAuditScores",
     "FullAuditReport",
+    "PlanReviewResult",
+    "StructureChapter",
+    "StructurePlan",
+    "ReviewResult",
+    "ReviewFinding",
+    "ResearchItem",
 ]

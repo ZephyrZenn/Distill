@@ -7,8 +7,8 @@ import logging
 
 from core.llm_client import LLMClient
 from core.models.llm import Message
-from agent.ps_agent.models import PatchDiagnosis, PlanReviewResult, ReplanDiagnosis
-from agent.ps_agent.state import PSAgentState, log_step, ResearchItem
+from agent.ps_agent.models import PatchDiagnosis, PlanReviewResult, ReplanDiagnosis, ResearchItem
+from agent.ps_agent.state import PSAgentState, log_step
 from agent.ps_agent.prompts import PLAN_REVIEW_PROMPT
 from agent.utils import extract_json
 
@@ -166,7 +166,7 @@ class PlanReviewerNode:
         ]
 
         message_parts = [
-            f"✅ 全局评审通过\n\n",
+            "✅ 全局评审通过\n\n",
             f"评审意见: {reason}\n",
             f"覆盖度: {coverage_score:.2f}\n\n",
         ]

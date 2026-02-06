@@ -17,5 +17,5 @@ class PsAgentTest(unittest.TestCase):
         )
         def on_step(message: str):
             print(message)
-        report = asyncio.run(agent.run("世界局势", on_step=on_step))
+        report = asyncio.run(agent.run("当前AI行业动态", on_step=on_step))
         print(report)

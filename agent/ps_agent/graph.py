@@ -73,61 +73,27 @@ def plan_review_router(state: PSAgentState) -> Literal["research", "bootstrap", 
 
 def summary_review_router(state: PSAgentState) -> Literal["completed", "refining"]:
     """Route after reviewing a draft. Can only go to refining or completed."""
-    run_id = state.get("run_id", "-")
-    review = state.get("review_result") or {}
-    status = str(review.get("status", "")).upper()
-
-    # Check if APPROVED
-    if status == "APPROVED":
-        logger.info("[route] run_id=%s summary_reviewer_router=completed reason=approved", run_id)
+    status = state.get("status", "")
+    if status == "completed":
         return "completed"
-
-    # Check refine limit
-    refine_count = state.get("refine_count", 0)
-    max_refine = state.get("max_refine", 2)
-
-    if refine_count < max_refine:
-        logger.info(
-            "[route] run_id=%s summary_reviewer_router=refining reason=within_budget refine_count=%d/%d",
-            run_id,
-            refine_count,
-            max_refine
-        )
+    else:
         return "refining"
-
-    # Exceeded refine limit
-    logger.warning(
-        "[route] run_id=%s summary_reviewer_router=completed reason=refine_budget_exhausted count=%d",
-        run_id,
-        refine_count
-    )
-    return "completed"
 
 
 def finalize_node(state: PSAgentState) -> dict:
     """Finalize the workflow into a stable completed/failed state."""
-    draft = state.get("draft_report")
-    review = state.get("review_result") or {}
-    review_status = str(review.get("status", "")).upper()
+    status = state.get("status", "")
 
-    if draft:
-        if review_status == "APPROVED":
-            message = "审稿通过，生成最终报告。"
-        else:
-            message = "未完全通过审稿，但返回当前最优草稿作为最终结果。"
-        return {
-            **log_step(state, f"🏁 finalize: completed review_status={review_status or 'N/A'}"),
-            "final_report": draft,
-            "status": "completed",
-            "last_error": None,
-            "messages": [Message.assistant(message)],
-        }
-
+    
+    if status == "completed":
+        message = "审稿通过，生成最终报告。"
+    else:
+        message = "未完全通过审稿，但返回当前最优草稿作为最终结果。"
+    print(state.get("final_report"))
     return {
-        **log_step(state, "🏁 finalize: failed (no draft_report)"),
-        "status": "failed",
-        "last_error": state.get("last_error") or "未能生成报告",
-        "messages": [Message.assistant("流程结束，但没有可用报告。")],
+        **log_step(state, f"🏁 finalize: completed status={status or 'N/A'}"),
+        "status": "completed",
+        "messages": [Message.assistant(message)],
     }
 
 
@@ -215,44 +181,8 @@ def build_simple_graph(client: LLMClient, audit_client: LLMClient):
     return build_ps_agent_graph(client, audit_client)
 
 def build_test_graph(client: LLMClient, audit_client: LLMClient):
-    set_planner_client(client)
-    set_solver_client(client)
-    set_evaluator_client(client, audit_client)
     
-    graph = StateGraph(PSAgentState)
-    # Nodes
-    graph.add_node("bootstrap", bootstrap_node)
-
-    # Research Phase
-    graph.add_node("research", research_planner_node)
-    graph.add_node("tooling", tool_node)
-    graph.add_node("curation", material_curation_node)
-    graph.add_node("plan_review", plan_reviewer_node)
-    graph.add_edge("bootstrap", "research")
-    graph.add_edge("research", "tooling")
-    graph.add_edge("tooling", "curation")
-    
-    graph.add_conditional_edges(
-        "curation",
-        curation_router,
-        {
-            "research": "research",      # Not ready → continue research
-            "plan_review": "plan_review", # Ready for review → global review
-        }
-    )
-
-    # Outer Review: plan_review → (research | bootstrap | structure)
-    graph.add_conditional_edges(
-        "plan_review",
-        plan_review_router,
-        {
-            "research": "research",      # PATCH_MODE: continue inner loop
-            "bootstrap": "bootstrap",    # REPLAN_MODE: restart
-            "structure": END     # ready_for_write: proceed to writing
-        }
-    )
-    graph.set_entry_point("bootstrap")
-    return graph.compile()
+    return build_ps_agent_graph(client, audit_client)
 
 __all__ = [
     "build_ps_agent_graph",

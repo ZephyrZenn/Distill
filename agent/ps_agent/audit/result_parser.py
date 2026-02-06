@@ -5,8 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-from agent.ps_agent.models import FullAuditResult, SnippetAuditResult
-from agent.ps_agent.state import ResearchItem
+from agent.ps_agent.models import FullAuditResult, SnippetAuditResult, ResearchItem
 
 logger = logging.getLogger(__name__)
 

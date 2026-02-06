@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 from agent.ps_agent.utils.content_fetcher import fetch_contents
 from core.llm_client import LLMClient
 from core.models.llm import Message
 
 from agent.ps_agent.state import (
-    Citation,
     DiscardedItem,
     PSAgentState,
     ResearchItem,
@@ -20,9 +18,7 @@ from agent.ps_agent.state import (
 # P0: Two-stage LLM audit imports
 from agent.ps_agent.nodes.evaluator.batch_audit import BatchAuditor
 from agent.ps_agent.nodes.evaluator.audit_analyzer import AuditAnalyzer
-
-if TYPE_CHECKING:
-    from agent.ps_agent.models import Dimension
+from agent.ps_agent.models import ResearchItem, DiscardedItem
 
 logger = logging.getLogger(__name__)
 
@@ -72,23 +68,6 @@ def _is_homepage_url(url: str) -> bool:
 
     except Exception:
         return False
-
-
-def _build_citations(items: list[ResearchItem], *, limit: int = 20) -> list[Citation]:
-    citations: list[Citation] = []
-    for item in items[:limit]:
-        url = str(item.get("url", "") or "").strip()
-        if not url:
-            continue
-        citations.append(
-            Citation(
-                title=str(item.get("title", "") or "").strip(),
-                url=url,
-                source=str(item.get("source", "") or ""),
-                published_at=str(item.get("published_at", "") or ""),
-            )
-        )
-    return citations
 
 
 class MaterialCurationNode:
@@ -157,12 +136,11 @@ class MaterialCurationNode:
         # Stage 2: Full Content Audit (deep, with full content)
         # Only executed when materials are confirmed sufficient
         
-        scored_items, discarded, citations, metadata = await self._audit_stage2_full(state, kept_items)
+        scored_items, discarded, metadata = await self._audit_stage2_full(state, kept_items)
         return {
             **log_step(state, "✅ curation: audit completed"),
             "research_items": scored_items,
             "discarded_items": list(state.get("discarded_items", [])) + discarded,
-            "citations": citations,
             "status": "plan_review",
             "ready_for_review": True,
             "messages": [Message.assistant("审计已完成。")],
@@ -266,9 +244,6 @@ class MaterialCurationNode:
                 for item in discarded_items
             ]
 
-            # Build citations from kept items
-            citations = _build_citations(kept_items)
-
             # Score all items (relevance + quality → composite_score)
             scored_items = self._score_items(kept_items)
 
@@ -278,11 +253,11 @@ class MaterialCurationNode:
                 f"llm_calls={metadata.get('llm_calls', 0)}, "
                 f"ready_for_review=True"
             )
-            return scored_items, discarded, citations, metadata
+            return scored_items, discarded, metadata
 
         except Exception as e:
             logger.error(f"[curation:stage2] LLM audit failed: {e}", exc_info=True)
-            return items, [], [], None
+            return items, [], None
 
     async def _quick_filter_items(
         self, items: list[ResearchItem], state: PSAgentState

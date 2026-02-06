@@ -1,9 +1,15 @@
+import logging
+from collections import defaultdict
+from typing import TypedDict
+from agent.ps_agent.models import SectionUnit, WritingContext, WritingMaterial
+from agent.ps_agent.prompts.writing import (
+    DEEP_WRITER_INITIAL_PROMPT,
+    DEEP_WRITER_SYSTEM_PROMPT,
+)
+from agent.ps_agent.state import PSAgentState, log_step
 from core.llm_client import LLMClient
 from core.models.llm import Message
-from agent.ps_agent.state import PSAgentState, log_step
-from agent.ps_agent.tools.ps_writer import PSWritingMaterial, ps_write_article
-from agent.utils import extract_json
-import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,21 +21,15 @@ class DeepWriterNode:
 
     async def _write_section_with_context(
         self,
-        guide: dict,
-        context: dict,
-        research_items: list
+        context: WritingContext,
+        material: WritingMaterial,
     ) -> dict:
         """
-        Write a single section with sliding window context（方案 B: 不依赖 bucket）.
+        Write a single section with sliding window context.
 
         Args:
-            guide: Writing guide from structure node (chapter_id, chapter_name, writing_guide)
-            context: {
-                "global_outline": str,
-                "previous_summary": str,
-                "section_number": int
-            }
-            research_items: Global research items
+            context: Writing context
+            material: Writing material
 
         Returns:
             {
@@ -37,91 +37,107 @@ class DeepWriterNode:
                 "summary": str   # Hook for next section
             }
         """
-        # Build material（方案 B: 只使用全局 research_items）
-        patch_items = [i for i in research_items if i.get("is_patch")]
-        material = PSWritingMaterial(
-            topic=guide["chapter_name"],
-            writing_guide=guide.get("writing_guide", ""),
-            items=research_items,  # 全局材料池
-            patch_items=patch_items,
-        )
-
-        # Call writer with context
-        content = await ps_write_article(self.client, material, context=context)
-
-        # Generate summary for next section
-        summary_prompt = f"""
-基于以下内容，用一句话总结核心论点（供下一章衔接）：
-
-{content[:500]}...
-
-输出 JSON: {{"summary": "..."}}
-"""
-        try:
-            summary_response = await self.client.completion([Message.user(summary_prompt)])
-            summary_data = extract_json(summary_response)
-            summary = summary_data.get("summary", "")
-        except Exception as e:
-            logger.warning(f"Failed to generate summary: {e}")
-            summary = f"关于{guide['chapter_name']}的分析"
-
-        return {
-            "content": content,
-            "summary": summary
-        }
+        content = await self._write(context, material)
+        summary = await self._generate_summary(content)
+        return content, summary
 
     async def __call__(self, state: PSAgentState) -> dict:
         plan = state.get("plan")
-        if not plan or not plan.get("writing_guides"):
+        if not plan:
             return {
                 **log_step(state, "❌ writer: 无法写作，没有写作指南"),
                 "status": "failed",
-                "last_error": "No writing_guides found",
+                "last_error": "No plan found",
             }
 
-        writing_guides = plan.get("writing_guides", [])
         daily_overview = plan.get("daily_overview", "")
+        narrative_logic = plan.get("narrative_logic", "")
         research_items = state.get("research_items", [])
+        item_map = {item.get("id"): item for item in research_items}
+        chapters = plan.get("chapters", [])
 
-        # Sort by priority
-        writing_guides.sort(key=lambda x: x.get("priority", 99))
-
-        log_step(state, f"✍️ writer: 开始滑动窗口式写作 {len(writing_guides)} 个章节...")
+        log_step(state, f"✍️ writer: 开始滑动窗口式写作 {len(chapters)} 个章节...")
 
         # Sliding window writing
         sections = []
-        previous_summary = ""
+        chapter_articles = defaultdict(list)
+        for chapter in chapters:
+            for item_id in chapter.get("referenced_doc_ids", []):
+                item = item_map.get(item_id)
+                if not item:
+                    continue
+                chapter_articles[chapter.get("chapter_id")].append(item)
+        outline = f"概览:{daily_overview}\n\n叙事主线:{narrative_logic}"
+        context = WritingContext(
+            global_outline=outline,
+            previous_summary="",
+            section_number=0,
+        )
 
-        for idx, guide in enumerate(writing_guides, 1):
-            try:
-                # Write section with context
-                context = {
-                    "global_outline": daily_overview,
-                    "previous_summary": previous_summary,
-                    "section_number": idx
-                }
+        for idx, chapter in enumerate(chapters, 1):
+            context["section_number"] = idx
+            articles = chapter_articles[chapter.get("chapter_id")]
+            material = WritingMaterial(
+                chapter=chapter,
+                items=articles,
+            )
 
-                result = await self._write_section_with_context(guide, context, research_items)
-                sections.append(result["content"])
-                previous_summary = result["summary"]
-
-                logger.info(f"[writer] Completed section {idx}: {guide['chapter_name']}")
-
-            except Exception as e:
-                logger.error(f"Failed to write section {guide.get('chapter_name')}: {e}")
-                sections.append(f"## {guide.get('chapter_name')}\n\n(撰写失败: {e})")
-
-        # Aggregate final draft
-        final_draft = "\n\n".join(sections)
-
-        # Add Overview
-        if daily_overview:
-            final_draft = f"# {daily_overview}\n\n{final_draft}"
+            content, summary = await self._write_section_with_context(context, material)
+            sections.append(
+                SectionUnit(
+                    chapter=chapter,
+                    items=articles,
+                    content=content,
+                    context=context.copy(),
+                    review_result=None,
+                )
+            )
+            context["previous_summary"] = summary
 
         return {
-            **log_step(state, f"✍️ writer: 滑动窗口写作完成 (len={len(final_draft)})"),
-            "draft_report": final_draft,
-            "generated_sections": sections,
+            **log_step(state, f"✍️ writer: 滑动窗口写作完成 (len={len(sections)})"),
+            "sections": sections,
             "status": "reviewing",  # Next step
             "messages": [Message.assistant("采用滑动窗口式写作完成深度报告。")],
         }
+
+    async def _write(self, context: WritingContext, material: WritingMaterial) -> str:
+        """
+        Write a single section with sliding window context.
+
+        Args:
+            material: Writing material
+
+        Returns:
+            str: Section content in markdown
+        """
+        user_prompt = DEEP_WRITER_INITIAL_PROMPT.format(
+            global_outline=context["global_outline"],
+            chapter=material["chapter"],
+            items=material["items"],
+        )
+        messages = [
+            Message.system(DEEP_WRITER_SYSTEM_PROMPT),
+            Message.user(user_prompt),
+        ]
+        response = await self.client.completion(messages)
+        return response.strip()
+
+    async def _generate_summary(self, content: str) -> str:
+        """
+        Generate a summary for the given content.
+
+        Args:
+            content: Section content in markdown
+
+        Returns:
+            str: Summary
+        """
+        prompt = (
+            f"""基于以下内容，用简短的语言总结核心论点（供下一章衔接）：{content}"""
+        )
+        messages = [
+            Message.user(prompt),
+        ]
+        response = await self.client.completion(messages)
+        return response.strip()

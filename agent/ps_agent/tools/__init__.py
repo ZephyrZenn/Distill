@@ -32,7 +32,8 @@ from agent.utils import extract_json, get_query_embedding
 from core.embedding import EmbeddingError, embed_texts, is_embedding_configured
 from core.models.llm import FunctionDefinition, Message, Tool, ToolCall
 
-from agent.ps_agent.state import Citation, PSAgentState, ResearchItem
+from agent.ps_agent.state import PSAgentState
+from agent.ps_agent.models import ResearchItem, DiscardedItem
 
 logger = logging.getLogger(__name__)
 
@@ -1105,25 +1106,6 @@ async def _auto_fetch_fulltext_for_web_items(
     return updated, {"auto_fetch": fetched_count}
 
 
-def _citations_from_items(
-    items: list[ResearchItem], *, limit: int = 20
-) -> list[Citation]:
-    citations: list[Citation] = []
-    for item in items[:limit]:
-        url = str(item.get("url", "") or "").strip()
-        if not url:
-            continue
-        citations.append(
-            Citation(
-                title=str(item.get("title", "") or "").strip(),
-                url=url,
-                source=str(item.get("source", "") or ""),
-                published_at=str(item.get("published_at", "") or ""),
-            )
-        )
-    return citations
-
-
 def _truncate_for_tool_message(payload: dict) -> str:
     """Serialize payload for tool-message history, shrinking if needed.
 
@@ -1467,24 +1449,21 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
             research_items = _merge_fetch_content(research_items, payload)
 
         logger.info(
-            "[tool] run_id=%s after=%s research_items=%d citations=%d",
+            "[tool] run_id=%s after=%s research_items=%d",
             run_id,
             call.name,
             len(research_items),
-            len(_citations_from_items(research_items)),
         )
         _emit(
             f"🔧 tool: after {call.name} research_items={len(research_items)}"
         )
 
-    citations = _citations_from_items(research_items)
 
     return {
         "log_history": log_history,
         "messages": messages,
         "recent_web_queries": recent_web_queries,
         "research_items": research_items,
-        "citations": citations,
         "query_history": query_history,  # P1: Query history with embeddings
         "tool_call_count": state.get("tool_call_count", 0) + len(tool_calls),
         "status": "researching",
@@ -1496,5 +1475,4 @@ __all__ = [
     "execute_tool_calls",
     "get_registered_tools",
     "get_researcher_tools",
-    "ps_writer",
 ]
