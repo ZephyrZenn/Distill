@@ -27,7 +27,6 @@ class ResearchItem(TypedDict, total=False):
     published_at: str
     summary: str
     content: str
-    score: float
     tags: list[str]
 
     # Five-dimensional scoring (stored during curation)
@@ -35,6 +34,7 @@ class ResearchItem(TypedDict, total=False):
     freshness: float      # Time-based recency (0.0-1.0)
     quality: float        # Content richness (0.0-1.0)
     novelty: float        # Information gain (0.0-1.0)
+    score: float
 
     # LLM audit fields (P0: Two-stage audit)
     audit_stage: NotRequired[Literal["snippet", "full", "none"]]  # Current audit stage

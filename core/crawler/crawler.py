@@ -203,7 +203,7 @@ async def get_content(
             resp = await client.get(
                 url,
                 headers=get_headers(),
-                timeout=httpx.Timeout(connect=10.0, read=30.0, write=5.0, pool=5.0),
+                timeout=httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0),
                 follow_redirects=True,
             )
             resp.raise_for_status()

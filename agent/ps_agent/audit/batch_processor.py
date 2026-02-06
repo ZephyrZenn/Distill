@@ -40,6 +40,22 @@ class BatchProcessor:
             f"(batch_size={self.batch_size}, total_items={len(items)})"
         )
         return batches
+     
+    def create_batches_with_size[T](self, items: Sequence[T], batch_size: int) -> list[list[T]]:
+        """Split items into batches with a specific batch size.
+
+        Args:
+            items: Sequence of research items
+            batch_size: Batch size
+
+        Returns:
+            List of batches (each batch is a list of items)
+        """
+        batches = []
+        for i in range(0, len(items), batch_size):
+            batch = list(items[i : i + batch_size])
+            batches.append(batch)
+        return batches
 
     def estimate_tokens(
         self, batch: Sequence[dict], include_content: bool = False

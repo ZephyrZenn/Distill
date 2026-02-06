@@ -118,7 +118,9 @@ class BatchAuditor:
             "llm_calls": 0,
         }
 
-        batches = self.batch_processor.create_batches(items)
+        # TODO: don't use magic number here.
+        batch_size = 5
+        batches = self.batch_processor.create_batches_with_size(items, batch_size)
 
         for batch_idx, batch in enumerate(batches):
             logger.info(

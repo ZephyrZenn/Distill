@@ -180,10 +180,8 @@ class MaterialCurationNode:
         Flow:
         1. Quick filter items
         2. Run snippet audit
-        3. Always call audit_analyzer to get dimension_coverage
-        4. Check dimension_coverage to decide if sufficient
-        5. If sufficient: advance to Stage 2
-        6. If not sufficient: provide audit_feedback to researcher
+        3. If sufficient: advance to Stage 2
+        4. If not sufficient: provide audit_feedback to researcher
         """
         logger.info(f"[curation:stage1] Starting snippet audit for {len(items)} items")
 
@@ -219,7 +217,6 @@ class MaterialCurationNode:
                 f"llm_calls={metadata.get('llm_calls', 0)}"
             )
 
-            # Always generate audit feedback to get dimension_coverage
             audit_analysis = await self.audit_analyzer.analyze_with_spiral_guidance(
                 kept_items=kept_items,
                 discarded_items=discarded_items,

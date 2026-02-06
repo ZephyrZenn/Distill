@@ -140,6 +140,18 @@ class FullAuditReport(TypedDict):
     reason: str
     defects: str
 
+class PlanReviewResult(TypedDict):
+    status: Literal["READY", "PATCH", "REPLAN"]
+    reason: str
+    coverage_score: float
+    high_quality_ratio: float
+    key_findings: list[str]
+    conflicts: list[str]
+    gaps: list[str]
+    patch_query: str
+    key_items: list[str]
+    new_directions: list[dict]
+    failed_dimensions: list[dict]
 
 __all__ = [
     "Dimension",

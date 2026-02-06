@@ -39,10 +39,14 @@ async def _generate_intent_dimensions(
     try:
         if is_replan and replan_diagnosis:
             # REPLAN 模式：使用重规划 prompt
-            new_directions = replan_diagnosis.get("new_directions", {})
+            new_directions = replan_diagnosis.get("new_directions", [])
             replan_justification = replan_diagnosis.get("replan_justification", "")
             new_directions_json = json.dumps(
                 new_directions, ensure_ascii=False, indent=2
+            )
+            failed_dimensions = replan_diagnosis.get("failed_dimensions", [])
+            failed_dimensions_json = json.dumps(
+                failed_dimensions, ensure_ascii=False, indent=2
             )
 
             replan_user_prompt = f"""Focus: {focus}
@@ -55,6 +59,10 @@ async def _generate_intent_dimensions(
 ### New Directions (为维度重新定义提供指导)
 ```json
 {new_directions_json}
+
+### Failed Dimensions (为废弃的维度提供指导)
+```json
+{failed_dimensions_json}
 ```
 
 请根据以上信息，重新生成研究意图维度。
@@ -258,7 +266,7 @@ def _build_framework_summary(
         preview = ", ".join(negative_keywords[:8])
         if len(negative_keywords) > 8:
             preview += f" ... (共{len(negative_keywords)}个)"
-        lines.append(f"### 排除规则")
+        lines.append("### 排除规则")
         lines.append(f"需排除的关键词: {preview}")
         lines.append("")
 

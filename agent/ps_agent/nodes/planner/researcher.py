@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 
 from core.llm_client import LLMClient
@@ -138,7 +139,6 @@ class ResearchPlannerNode:
         Returns:
             User prompt string with JSON sections
         """
-        import json
 
         focus = state["focus"]
         focus_dimensions = state.get("focus_dimensions", [])

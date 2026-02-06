@@ -47,11 +47,6 @@ def plan_review_router(state: PSAgentState) -> Literal["research", "bootstrap", 
     """
     run_id = state.get("run_id", "-")
 
-    # Check failed status
-    if state.get("status") == "failed":
-        logger.warning("[route] run_id=%s plan_review_router=structure reason=status_failed", run_id)
-        return "structure"
-
     # Check iteration limits
     if state["iteration"] >= state["max_iterations"]:
         logger.warning(
@@ -171,7 +166,7 @@ def build_ps_agent_graph(client: LLMClient, audit_client: LLMClient):
     graph.add_edge("bootstrap", "research")
     graph.add_edge("research", "tooling")
     graph.add_edge("tooling", "curation")
-    
+   
     graph.add_conditional_edges(
         "curation",
         curation_router,
@@ -211,7 +206,7 @@ def build_ps_agent_graph(client: LLMClient, audit_client: LLMClient):
     # Exit
     graph.add_edge("finalize", END)
 
-    logger.info("Agentic daily research graph constructed (Inner Loop: research→tooling→curation→research)")
+    logger.info(f"[graph] Agentic daily research graph constructed (Inner Loop: research→tooling→curation→research)")
     return graph.compile()
 
 
