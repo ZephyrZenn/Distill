@@ -76,6 +76,8 @@ class AgentState(TypedDict):
     on_step: NotRequired[StepCallback]
     history_memories: dict[int, SummaryMemory]
     ext_info: NotRequired[list[SearchResult]]  # 收集所有使用的外部搜索结果
+    status: Literal["PENDING", "RUNNING", "COMPLETED", "FAILED"]
+    created_at: datetime
 
 def log_step(state: "AgentState", message: str) -> None:
     """记录执行步骤到历史，并触发回调（如果有）"""
