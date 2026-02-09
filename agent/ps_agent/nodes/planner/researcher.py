@@ -39,29 +39,6 @@ class ResearchPlannerNode:
 
         # Check iteration limits
         # TODO: 检查状态流转
-        if iteration >= state["max_iterations"]:
-            logger.warning(
-                "[planner] run_id=%s max_iterations reached=%d, routing to review",
-                run_id,
-                iteration,
-            )
-            return {
-                **log_step(state, "🛑 planner: 达到最大搜索轮次，进入评审"),
-                "messages": [Message.assistant("达到最大搜索轮次，进入评审。")],
-                "status": "plan_review",
-            }
-
-        if state["tool_call_count"] >= state["max_tool_calls"]:
-            logger.warning(
-                "[planner] run_id=%s max_tool_calls reached=%d, routing to review",
-                run_id,
-                state["tool_call_count"],
-            )
-            return {
-                **log_step(state, "🛑 planner: 达到最大工具调用次数，进入评审"),
-                "messages": [Message.assistant("达到最大工具调用次数，进入评审。")],
-                "status": "plan_review",
-            }
 
         # Build prompt based on focus, dimensions, and feedback
         user_prompt, is_patch = self._build_user_prompt(state)

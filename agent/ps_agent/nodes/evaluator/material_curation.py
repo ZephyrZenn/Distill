@@ -9,9 +9,7 @@ from core.llm_client import LLMClient
 from core.models.llm import Message
 
 from agent.ps_agent.state import (
-    DiscardedItem,
     PSAgentState,
-    ResearchItem,
     log_step,
 )
 
@@ -124,19 +122,20 @@ class MaterialCurationNode:
                     )
                 ],
             }
-            
+
         web_contents, feed_contents = await fetch_contents(kept_items)
         for item in kept_items:
             if item.get("source") == "web":
                 item["content"] = web_contents.get(item.get("url", ""), "")
             elif item.get("source") == "feed":
                 item["content"] = feed_contents.get(item.get("id", ""), "")
-        
 
         # Stage 2: Full Content Audit (deep, with full content)
         # Only executed when materials are confirmed sufficient
-        
-        scored_items, discarded, metadata = await self._audit_stage2_full(state, kept_items)
+
+        scored_items, discarded, metadata = await self._audit_stage2_full(
+            state, kept_items
+        )
         return {
             **log_step(state, "✅ curation: audit completed"),
             "research_items": scored_items,
@@ -165,7 +164,7 @@ class MaterialCurationNode:
 
         # Apply quick filters before LLM audit
         filtered_items = await self._quick_filter_items(items, state)
-
+        max_keep_items = state.get("max_context_items", 15) + 10
         # Run LLM snippet audit
         try:
             kept_items, discarded_items, metadata = (
@@ -174,6 +173,7 @@ class MaterialCurationNode:
                     focus=state["focus"],
                     focus_dimensions=state.get("focus_dimensions", []),
                     current_date=state["current_date"],
+                    max_keep_items=max_keep_items,
                 )
             )
 
@@ -220,7 +220,7 @@ class MaterialCurationNode:
         After Stage 2, set ready_for_review=True to proceed to plan_review.
         """
         logger.info(f"[curation:stage2] Starting full audit for {len(items)} items")
-
+        max_keep_items = state.get("max_context_items", 15)
         # Run LLM full audit on all items
         try:
             kept_items, discarded_items, metadata = (
@@ -229,6 +229,7 @@ class MaterialCurationNode:
                     focus=state["focus"],
                     focus_dimensions=state.get("focus_dimensions", []),
                     current_date=state["current_date"],
+                    max_keep_items=max_keep_items,
                 )
             )
 
@@ -248,11 +249,15 @@ class MaterialCurationNode:
             scored_items = self._score_items(kept_items)
 
             logger.info(
-                f"[curation:stage2] Complete: kept={len(scored_items)}, "
-                f"discarded={len(discarded)}, "
-                f"llm_calls={metadata.get('llm_calls', 0)}, "
-                f"ready_for_review=True"
+                "[curation:stage2] Complete: kept=%d, "
+                "discarded=%d, "
+                "llm_calls=%d, "
+                "ready_for_review=True",
+                len(scored_items),
+                len(discarded),
+                metadata.get("llm_calls", 0),
             )
+
             return scored_items, discarded, metadata
 
         except Exception as e:
@@ -306,10 +311,8 @@ class MaterialCurationNode:
 
         # Sort by composite score
         scored_items.sort(key=lambda x: x.get("score", 0), reverse=True)
-
-        avg_score = sum(i.get("score", 0) for i in scored_items) / len(
-            scored_items
-        )
+        # TODO: Maybe need to limit the number of items to a certain number
+        avg_score = sum(i.get("score", 0) for i in scored_items) / len(scored_items)
         logger.info(
             f"[curation] Scored {len(scored_items)} items, avg_score={avg_score:.2f}"
         )

@@ -26,9 +26,7 @@ class PlanSolveAgent:
     """A strongly agentic daily research-and-report agent.
 
     The workflow is bounded by budgets to avoid runaway loops:
-    - max_iterations: research loop turns
-    - max_tool_calls: total tool invocations
-    - max_refine: review-driven revisions
+    - max_context_items: the number of items in the context
     """
 
     def __init__(
@@ -36,10 +34,7 @@ class PlanSolveAgent:
         client: Optional[LLMClient] = None,
         auduit_client: Optional[LLMClient] = None,
         *,
-        max_iterations: int = 12,
-        max_tool_calls: int = 24,
-        max_refine: int = 2,
-        max_context_items: int = 40,
+        max_context_items: int = 15,
         lazy_init: bool = False,
         debug: bool = False,
     ):
@@ -50,9 +45,6 @@ class PlanSolveAgent:
         self._on_step: Optional[StepCallback] = None
         self._last_state: PSAgentState | None = None
 
-        self.max_iterations = max_iterations
-        self.max_tool_calls = max_tool_calls
-        self.max_refine = max_refine
         self.max_context_items = max_context_items
 
         if not lazy_init and client is None:
@@ -120,9 +112,6 @@ class PlanSolveAgent:
         initial_state = create_initial_state(
             focus,
             on_step=self._on_step,
-            max_iterations=self.max_iterations,
-            max_tool_calls=self.max_tool_calls,
-            max_refine=self.max_refine,
             max_context_items=self.max_context_items,
         )
 
@@ -188,16 +177,10 @@ async def run_ps_agent(
     focus: str,
     on_step: Optional[StepCallback] = None,
     *,
-    max_iterations: int = 12,
-    max_tool_calls: int = 24,
-    max_refine: int = 2,
     max_context_items: int = 40,
 ) -> str:
     """Convenience entrypoint mirroring the class-based API."""
     agent = PlanSolveAgent(
-        max_iterations=max_iterations,
-        max_tool_calls=max_tool_calls,
-        max_refine=max_refine,
         max_context_items=max_context_items,
     )
     return await agent.run(focus, on_step=on_step)

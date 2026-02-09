@@ -47,14 +47,6 @@ def plan_review_router(state: PSAgentState) -> Literal["research", "bootstrap", 
     """
     run_id = state.get("run_id", "-")
 
-    # Check iteration limits
-    if state["iteration"] >= state["max_iterations"]:
-        logger.warning(
-            "[route] run_id=%s plan_review_router=structure reason=max_iterations",
-            run_id,
-        )
-        return "structure"
-
     # Check if plan_reviewer approved for writing
     if state.get("ready_for_write", False):
         logger.info("[route] run_id=%s plan_review_router=structure reason=ready_for_write", run_id)

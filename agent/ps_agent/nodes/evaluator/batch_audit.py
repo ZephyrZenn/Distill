@@ -35,6 +35,7 @@ class BatchAuditor:
         focus: str,
         focus_dimensions: list[Dimension] | list[dict],
         current_date: str,
+        max_keep_items: int = 25,
     ) -> tuple[list[ResearchItem], list[ResearchItem], dict]:
         """Stage 1: Fast snippet-based audit.
 
@@ -67,16 +68,22 @@ class BatchAuditor:
             )
 
             try:
-                result = await self._call_snippet_audit_llm(batch, focus, focus_dimensions, current_date)
+                result = await self._call_snippet_audit_llm(
+                    batch, focus, focus_dimensions, current_date, max_keep_items
+                )
                 metadata["llm_calls"] += 1
 
-                kept_batch, discarded_batch = parse_audit_result(batch, result, stage="snippet")
+                kept_batch, discarded_batch = parse_audit_result(
+                    batch, result, stage="snippet"
+                )
 
                 kept.extend(kept_batch)
                 discarded.extend(discarded_batch)
 
             except Exception as e:
-                logger.error(f"[audit:stage1] Batch {batch_idx} failed: {e}", exc_info=True)
+                logger.error(
+                    f"[audit:stage1] Batch {batch_idx} failed: {e}", exc_info=True
+                )
                 # Fallback: keep all items from failed batch
                 kept.extend(batch)
 
@@ -92,6 +99,7 @@ class BatchAuditor:
         focus: str,
         focus_dimensions: list[dict],
         current_date: str,
+        max_keep_items: int = 15,
     ) -> tuple[list[ResearchItem], list[ResearchItem], dict]:
         """Stage 2: Deep full-content audit.
 
@@ -125,17 +133,21 @@ class BatchAuditor:
 
             try:
                 result = await self._call_full_audit_llm(
-                    batch, focus, focus_dimensions, current_date
+                    batch, focus, focus_dimensions, current_date, max_keep_items
                 )
                 metadata["llm_calls"] += 1
 
-                kept_batch, discarded_batch = parse_audit_result(batch, result, stage="full")
+                kept_batch, discarded_batch = parse_audit_result(
+                    batch, result, stage="full"
+                )
 
                 kept.extend(kept_batch)
                 discarded.extend(discarded_batch)
 
             except Exception as e:
-                logger.error(f"[audit:stage2] Batch {batch_idx} failed: {e}", exc_info=True)
+                logger.error(
+                    f"[audit:stage2] Batch {batch_idx} failed: {e}", exc_info=True
+                )
                 kept.extend(batch)
 
         logger.info(
@@ -150,6 +162,7 @@ class BatchAuditor:
         focus: str,
         focus_dimensions: list[Dimension] | list[dict],
         current_date: str,
+        max_keep_items: int = 25,
     ) -> list[SnippetAuditResult]:
         """Call LLM for snippet audit.
 
@@ -181,6 +194,8 @@ current date: {current_date}
 {items_json}
 ```
 
+You can keep at most {max_keep_items} items.
+
 Return audit results in JSON format.
 """
 
@@ -199,6 +214,7 @@ Return audit results in JSON format.
         focus: str,
         focus_dimensions: list[Dimension] | list[dict],
         current_date: str,
+        max_keep_items: int = 15,
     ) -> dict:
         """Call LLM for full content audit.
 
@@ -225,6 +241,8 @@ current date: {current_date}
 ```json
 {items_json}
 ```
+
+You can keep at most {max_keep_items} items.
 
 Return audit results in JSON format.
 """
@@ -285,7 +303,7 @@ Return audit results in JSON format.
         lines = []
         for dim in dimensions[:5]:  # Limit to top 5 dimensions
             # Handle both Dimension objects and dicts
-            if hasattr(dim, 'name'):
+            if hasattr(dim, "name"):
                 # Dimension object
                 name = dim.name
                 intent = dim.intent

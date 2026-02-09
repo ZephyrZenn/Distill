@@ -124,7 +124,8 @@ class PlanReviewerNode:
         sections.append("\n")
 
         # 7. Recent Queries (for efficiency assessment)
-        recent_queries = state.get("recent_web_queries", [])[-10:]
+        query_history = state.get("query_history", [])
+        recent_queries = [item.get("query", "") for item in query_history[-10:] if item.get("query")]
         if recent_queries:
             sections.append("## 最近搜索查询（用于评估搜索效率）")
             for i, query in enumerate(recent_queries, 1):

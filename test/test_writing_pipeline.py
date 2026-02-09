@@ -117,9 +117,6 @@ class WritingPipelineTest(unittest.TestCase):
         """创建基础测试状态."""
         state = create_initial_state(
             focus=self.focus,
-            max_iterations=12,
-            max_tool_calls=24,
-            max_refine=2,
             max_context_items=40,
         )
         state["current_date"] = self.current_date

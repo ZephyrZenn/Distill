@@ -58,8 +58,6 @@ Apply when ANY of the following is true:
 3. Critical red flags present (wrong time period, excluded keywords)
 4. Summary is too brief to assess (<50 chars) → not worth investigating
 
-Note: You can keep at most 30 items.
-
 ## Output Format (JSON)
 
 ```json

@@ -9,9 +9,6 @@ class PsAgentTest(unittest.TestCase):
     
     def test_ps_agent(self):
         agent = PlanSolveAgent(
-            max_iterations=12,
-            max_tool_calls=24,
-            max_refine=2,
             max_context_items=40,
             debug=True,
         )

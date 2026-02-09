@@ -49,12 +49,7 @@ class PSAgentState(TypedDict):
     # Conversation / tool-calling loop
     messages: Annotated[list[Message], add]
     tool_call_count: int
-    max_tool_calls: int
     iteration: int
-    max_iterations: int
-
-    # Lightweight tool-call memory (to help the model avoid repeating searches)
-    recent_web_queries: list[str]
 
     # Research memory
     research_items: list[ResearchItem]
@@ -70,14 +65,9 @@ class PSAgentState(TypedDict):
         bool
     ]  # Set by curation: materials ready for plan review
 
-    # Spiral collection (P1)
-    spiral_iteration: NotRequired[int]  # Current spiral iteration
-    max_spirals: NotRequired[int]  # Max spiral iterations (default: 3)
     query_history: NotRequired[
         list[dict]
     ]  # [{query, timestamp, results_count, embedding}]
-    dimension_coverage: NotRequired[dict[str, dict]]  # Per-dimension coverage tracking
-
     # Plan review output (consumed by structure node)
     ready_for_write: NotRequired[
         bool
@@ -115,9 +105,6 @@ def create_initial_state(
     focus: str,
     *,
     on_step: StepCallback | None = None,
-    max_iterations: int = 12,
-    max_tool_calls: int = 24,
-    max_refine: int = 2,
     max_context_items: int = 40,
 ) -> PSAgentState:
     """Create a bounded initial state for the daily research agent（方案 B 简化版）。"""
@@ -131,19 +118,12 @@ def create_initial_state(
         execution_mode="NORMAL",
         messages=[],
         tool_call_count=0,
-        max_tool_calls=max_tool_calls,
         iteration=0,
-        max_iterations=max_iterations,
-        recent_web_queries=[],
         research_items=[],
         discarded_items=[],
         curation_count=0,
         max_context_items=max_context_items,
-        draft_report=None,
-        review_result=None,
         final_report=None,
-        refine_count=0,
-        max_refine=max_refine,
         status="bootstrapping",
         last_error=None,
         plan=None,

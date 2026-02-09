@@ -1258,18 +1258,6 @@ def _parse_arguments(arguments: str) -> dict:
         return extract_json(arguments)
 
 
-def _push_recent_query(recent: list[str], query: str, *, limit: int = 6) -> list[str]:
-    query = str(query or "").strip()
-    if not query:
-        return recent
-    updated = list(recent or [])
-    # Avoid consecutive duplicates.
-    if updated and updated[-1] == query:
-        return updated[-limit:]
-    updated.append(query)
-    return updated[-limit:]
-
-
 def _tool_registry(current_date: str) -> dict[str, RegisteredTool]:
     schemas = build_tool_schemas(current_date=current_date)
     schema_by_name = {tool.function.name: tool for tool in schemas}
@@ -1333,9 +1321,6 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
 
     messages: list[Message] = []
     research_items = list(state.get("research_items", []))
-    recent_web_queries = list(state.get("recent_web_queries", []) or [])
-
-    # P1: Initialize query_history for spiral collection
     query_history = list(state.get("query_history", []) or [])
 
     for call in tool_calls:
@@ -1409,24 +1394,24 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
             research_items = _merge_items(research_items, new_items)
         elif call.name == "search_web":
             query_text = str(args.get("query", "") or "")
-            recent_web_queries = _push_recent_query(
-                recent_web_queries, query_text
-            )
             results = payload.get("results", []) or []
 
-            # P1: Record query to query_history with embedding
-            
-                # query_embedding = await get_query_embedding(query_text)
-            # TODO: 需要重新添加 embedding
-            query_history.append({
-                "query": query_text,
-                "timestamp": time.time(),
-                "results_count": len(results),
-            })
-            logger.info(
-                f"[tool] Recorded query to history: '{query_text[:50]}...' "
-                f"results={len(results)}"
-            )
+            # Record query to query_history with deduplication and limit
+            if query_text:
+                # Avoid consecutive duplicates
+                if not query_history or query_history[-1].get("query") != query_text:
+                    query_history.append({
+                        "query": query_text,
+                        "timestamp": time.time(),
+                        "results_count": len(results),
+                    })
+                    # Keep only recent 50 queries to avoid unbounded growth
+                    if len(query_history) > 50:
+                        query_history = query_history[-50:]
+                    logger.info(
+                        f"[tool] Recorded query to history: '{query_text[:50]}...' "
+                        f"results={len(results)}"
+                    )
             new_items = _normalize_web_results(results, is_patch=bool(args.get("is_patch", False)))
             research_items = _merge_items(research_items, new_items)
             # Patch 搜索模式（include_raw_content=True）已获取全文，跳过 auto-fetch
@@ -1462,9 +1447,8 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
     return {
         "log_history": log_history,
         "messages": messages,
-        "recent_web_queries": recent_web_queries,
         "research_items": research_items,
-        "query_history": query_history,  # P1: Query history with embeddings
+        "query_history": query_history,
         "tool_call_count": state.get("tool_call_count", 0) + len(tool_calls),
         "status": "researching",
         "last_error": None,
