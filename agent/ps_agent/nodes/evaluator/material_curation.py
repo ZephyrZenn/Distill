@@ -94,6 +94,7 @@ class MaterialCurationNode:
                 **log_step(state, "ℹ️ curation: 暂无可筛选素材，继续研究"),
                 "status": "researching",
                 "ready_for_review": False,
+                "curation_count": state.get("curation_count", 0) + 1,
                 "messages": [Message.assistant("暂无可筛选素材，继续研究。")],
             }
 
@@ -115,6 +116,7 @@ class MaterialCurationNode:
                 + discarded_items,
                 "audit_analysis": audit_analysis,
                 "status": "research",
+                "curation_count": state.get("curation_count", 0) + 1,
                 "messages": [
                     Message.assistant(
                         f"Stage 1 审计完成：保留 {len(kept_items)} 条，"
@@ -142,6 +144,7 @@ class MaterialCurationNode:
             "discarded_items": list(state.get("discarded_items", [])) + discarded,
             "status": "plan_review",
             "ready_for_review": True,
+            "curation_count": state.get("curation_count", 0) + 1,
             "messages": [Message.assistant("审计已完成。")],
         }
 

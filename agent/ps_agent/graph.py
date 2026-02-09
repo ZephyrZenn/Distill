@@ -22,17 +22,52 @@ logger = logging.getLogger(__name__)
 def curation_router(state: PSAgentState) -> Literal["research", "plan_review"]:
     """Route after curation decides.
 
-    Routing logic:
-    1. If ready_for_review=True → plan_review (global review)
-    2. Otherwise → research (continue searching)
+    Layer 2 Circuit Breaker Logic:
+    1. If ready_for_review=True → plan_review (normal exit)
+    2. If iteration >= max_iterations → plan_review (force exit)
+    3. If tool_call_count >= max_tool_calls → plan_review (force exit)
+    4. If curation_count >= max_curations → plan_review (force exit)
+    5. Otherwise → research (continue searching)
     """
     run_id = state.get("run_id", "-")
     ready_for_review = state.get("ready_for_review", False)
 
+    # Layer 2: Get limits
+    iteration = state.get("iteration", 0)
+    max_iterations = state.get("max_iterations", 10)
+    tool_call_count = state.get("tool_call_count", 0)
+    max_tool_calls = state.get("max_tool_calls", 50)
+    curation_count = state.get("curation_count", 0)
+    max_curations = state.get("max_curations", 8)
+
+    # Priority 1: Ready for review (normal exit)
     if ready_for_review:
         logger.info("[route] run_id=%s curation_router=plan_review reason=ready_for_review", run_id)
         return "plan_review"
 
+    # Priority 2: Circuit breaker - force exit to next phase
+    if iteration >= max_iterations:
+        logger.warning(
+            "[route] run_id=%s curation_router=plan_review reason=max_iterations (%d>=%d)",
+            run_id, iteration, max_iterations
+        )
+        return "plan_review"
+
+    if tool_call_count >= max_tool_calls:
+        logger.warning(
+            "[route] run_id=%s curation_router=plan_review reason=max_tool_calls (%d>=%d)",
+            run_id, tool_call_count, max_tool_calls
+        )
+        return "plan_review"
+
+    if curation_count >= max_curations:
+        logger.warning(
+            "[route] run_id=%s curation_router=plan_review reason=max_curations (%d>=%d)",
+            run_id, curation_count, max_curations
+        )
+        return "plan_review"
+
+    # Default: continue research
     logger.info("[route] run_id=%s curation_router=research reason=continue_search", run_id)
     return "research"
 
@@ -40,19 +75,44 @@ def curation_router(state: PSAgentState) -> Literal["research", "plan_review"]:
 def plan_review_router(state: PSAgentState) -> Literal["research", "bootstrap", "structure"]:
     """Route after plan_reviewer performs global review.
 
-    Routing logic:
+    Layer 2 Circuit Breaker Logic:
     1. If ready_for_write=True → structure (proceed to writing)
-    2. If execution_mode=REPLAN_MODE → bootstrap (restart with new dimensions)
-    3. Otherwise → research (continue searching)
+    2. If plan_review_count >= max_plan_reviews → structure (force exit)
+    3. If iteration >= max_iterations or tool_call_count >= max_tool_calls → structure (force exit)
+    4. If execution_mode=REPLAN_MODE → bootstrap (only if under limits)
+    5. Otherwise → research (continue searching)
     """
     run_id = state.get("run_id", "-")
 
-    # Check if plan_reviewer approved for writing
+    # Layer 2: Get limits
+    plan_review_count = state.get("plan_review_count", 0)
+    max_plan_reviews = state.get("max_plan_reviews", 3)
+    iteration = state.get("iteration", 0)
+    max_iterations = state.get("max_iterations", 10)
+    tool_call_count = state.get("tool_call_count", 0)
+    max_tool_calls = state.get("max_tool_calls", 50)
+
+    # Priority 1: Ready for write (normal exit)
     if state.get("ready_for_write", False):
         logger.info("[route] run_id=%s plan_review_router=structure reason=ready_for_write", run_id)
         return "structure"
 
-    # Check for replan mode
+    # Priority 2: Circuit breaker - force exit to writing (graceful degradation)
+    if plan_review_count >= max_plan_reviews:
+        logger.warning(
+            "[route] run_id=%s plan_review_router=structure reason=max_plan_reviews (%d>=%d)",
+            run_id, plan_review_count, max_plan_reviews
+        )
+        return "structure"
+
+    if iteration >= max_iterations or tool_call_count >= max_tool_calls:
+        logger.warning(
+            "[route] run_id=%s plan_review_router=structure reason=limits_exceeded iter=%d/%d tools=%d/%d",
+            run_id, iteration, max_iterations, tool_call_count, max_tool_calls
+        )
+        return "structure"
+
+    # Priority 3: Check for replan mode (only if under limits)
     mode = state.get("execution_mode", "NORMAL")
     if mode == "REPLAN_MODE":
         logger.info("[route] run_id=%s plan_review_router=bootstrap reason=replan_mode", run_id)
@@ -64,12 +124,33 @@ def plan_review_router(state: PSAgentState) -> Literal["research", "bootstrap", 
 
 
 def summary_review_router(state: PSAgentState) -> Literal["completed", "refining"]:
-    """Route after reviewing a draft. Can only go to refining or completed."""
+    """Route after reviewing a draft.
+
+    Layer 2 Circuit Breaker Logic:
+    1. If status=completed → completed (normal exit)
+    2. If refine_count >= max_refines → completed (force exit with best effort)
+    3. Otherwise → refining (continue refining)
+    """
+    run_id = state.get("run_id", "-")
     status = state.get("status", "")
+
+    # Priority 1: Normal completion
     if status == "completed":
         return "completed"
-    else:
-        return "refining"
+
+    # Layer 2: Circuit breaker - check refine limit
+    refine_count = state.get("refine_count", 0)
+    max_refines = state.get("max_refines", 3)
+
+    if refine_count >= max_refines:
+        logger.warning(
+            "[route] run_id=%s summary_review_router=completed reason=max_refines (%d>=%d)",
+            run_id, refine_count, max_refines
+        )
+        return "completed"
+
+    # Default: continue refining
+    return "refining"
 
 
 def finalize_node(state: PSAgentState) -> dict:

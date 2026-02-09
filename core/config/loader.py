@@ -5,7 +5,7 @@ from typing import Optional
 
 import toml
 
-from core.models.config import ContextConfig, GlobalConfig, ModelConfig, RateLimitConfig
+from core.models.config import AgentLimitsConfig, ContextConfig, GlobalConfig, ModelConfig, RateLimitConfig
 from core.models.llm import ModelProvider
 
 from .utils import (
@@ -181,7 +181,7 @@ def _to_rate_limit_config(config: dict) -> RateLimitConfig:
 
 def _to_context_config(config: dict) -> ContextConfig:
     """Convert dict configuration to ContextConfig dataclass.
-    
+
     All fields are optional and will use defaults if not provided.
     """
     return ContextConfig(
@@ -201,6 +201,25 @@ def _to_context_config(config: dict) -> ContextConfig:
         # Tool result limits
         tool_result_max_chars=int(config.get("tool_result_max_chars", 5000)),
         tool_result_max_items=int(config.get("tool_result_max_items", 20)),
+    )
+
+
+def _to_agent_limits_config(config: dict) -> AgentLimitsConfig:
+    """Convert dict configuration to AgentLimitsConfig dataclass.
+
+    All fields are optional and will use defaults if not provided.
+    """
+    return AgentLimitsConfig(
+        # Research phase limits
+        max_iterations=int(config.get("max_iterations", 10)),
+        max_tool_calls=int(config.get("max_tool_calls", 50)),
+        max_curations=int(config.get("max_curations", 8)),
+        # Review phase limits
+        max_plan_reviews=int(config.get("max_plan_reviews", 3)),
+        # Writing phase limits
+        max_refines=int(config.get("max_refines", 3)),
+        # Layer 1 control
+        enable_hard_limits=config.get("enable_hard_limits", True),
     )
 
 
@@ -261,11 +280,16 @@ def load_config(reload: bool = False, use_env_overrides: bool = True, path: Opti
     # Parse context config (optional, uses defaults if not present)
     context_config = file_config.get("context", {})
     context_cfg = _to_context_config(context_config)
-    
+
+    # Parse agent limits config (optional, uses defaults if not present)
+    agent_limits_config = file_config.get("agent_limits", {})
+    agent_limits_cfg = _to_agent_limits_config(agent_limits_config)
+
     global_cfg = GlobalConfig(
         model=_to_model_config(model_config),
         rate_limit=rate_limit_cfg,
         context=context_cfg,
+        agent_limits=agent_limits_cfg,
     )
 
     _config = global_cfg

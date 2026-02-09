@@ -51,6 +51,22 @@ class PSAgentState(TypedDict):
     tool_call_count: int
     iteration: int
 
+    # Layer 1: Maximum limits (state-level hard limits)
+    max_iterations: int
+    max_tool_calls: int
+    max_curations: int
+    max_plan_reviews: int
+    max_refines: int
+
+    # Layer 2: Tracking counters (for router-level circuit breakers)
+    plan_review_count: int
+    refine_count: int
+
+    # Circuit breaker tracking
+    circuit_breaker_tripped: bool
+    circuit_breaker_reason: str | None
+    enable_hard_limits: NotRequired[bool]  # Enable Layer 1 hard limits (default: true)
+
     # Research memory
     research_items: list[ResearchItem]
     discarded_items: list[DiscardedItem]
@@ -105,7 +121,12 @@ def create_initial_state(
     focus: str,
     *,
     on_step: StepCallback | None = None,
-    max_context_items: int = 40,
+    max_context_items: int = 15,
+    max_iterations: int = 10,
+    max_tool_calls: int = 50,
+    max_curations: int = 8,
+    max_plan_reviews: int = 3,
+    max_refines: int = 3,
 ) -> PSAgentState:
     """Create a bounded initial state for the daily research agent（方案 B 简化版）。"""
     today = datetime.now().strftime("%Y-%m-%d")
@@ -119,16 +140,38 @@ def create_initial_state(
         messages=[],
         tool_call_count=0,
         iteration=0,
+        # Layer 1: Maximum limits
+        max_iterations=max_iterations,
+        max_tool_calls=max_tool_calls,
+        max_curations=max_curations,
+        max_plan_reviews=max_plan_reviews,
+        max_refines=max_refines,
+        # Layer 2: Tracking counters (initialize to 0)
+        plan_review_count=0,
+        refine_count=0,
+        # Circuit breaker tracking
+        circuit_breaker_tripped=False,
+        circuit_breaker_reason=None,
+        enable_hard_limits=True,
+        # Research memory
         research_items=[],
         discarded_items=[],
         curation_count=0,
         max_context_items=max_context_items,
+        # Plan review output
+        ready_for_review=False,
+        ready_for_write=False,
+        audit_memo=None,
+        patch_diagnosis=None,
+        replan_diagnosis=None,
+        # Structuring & Planning
+        plan=None,
+        # Writing pipeline
+        sections=[],
         final_report=None,
+        # Status / diagnostics
         status="bootstrapping",
         last_error=None,
-        plan=None,
-        replan_diagnosis=None,
-        patch_diagnosis=None,
     )
 
     if on_step:
@@ -149,8 +192,53 @@ def log_step(state: PSAgentState, message: str) -> dict:
     return {"log_history": [message]}
 
 
+def check_layer1_limits(state: PSAgentState, counter_name: str, counter_value: int) -> tuple[bool, str | None]:
+    """Check Layer 1 hard limits and return (should_fail, reason).
+
+    Args:
+        state: Current agent state
+        counter_name: Name of the counter being checked
+            (e.g., "iteration", "tool_call_count", "curation_count",
+                  "plan_review_count", "refine_count")
+        counter_value: Current value of the counter
+
+    Returns:
+        (should_fail, error_reason) tuple
+        - should_fail: True if the limit is exceeded
+        - error_reason: Human-readable reason string if should_fail=True
+
+    Example:
+        should_fail, reason = check_layer1_limits(state, "iteration", 11)
+        if should_fail:
+            return {"status": "failed", "last_error": reason}
+    """
+    enable_hard_limits = state.get("enable_hard_limits", True)
+    if not enable_hard_limits:
+        return False, None
+
+    limits = {
+        "iteration": ("max_iterations", state.get("max_iterations", 10)),
+        "tool_call_count": ("max_tool_calls", state.get("max_tool_calls", 50)),
+        "curation_count": ("max_curations", state.get("max_curations", 8)),
+        "plan_review_count": ("max_plan_reviews", state.get("max_plan_reviews", 3)),
+        "refine_count": ("max_refines", state.get("max_refines", 3)),
+    }
+
+    if counter_name not in limits:
+        return False, None
+
+    max_key, max_value = limits[counter_name]
+
+    if counter_value >= max_value:
+        reason = f"Layer 1 limit exceeded: {counter_name}={counter_value} >= {max_key}={max_value}"
+        return True, reason
+
+    return False, None
+
+
 __all__ = [
     "PSAgentState",
     "create_initial_state",
     "log_step",
+    "check_layer1_limits",
 ]

@@ -46,12 +46,32 @@ class ContextConfig:
 
 
 @dataclass
+class AgentLimitsConfig:
+    """Agent loop limiting configuration dataclass"""
+
+    # Research phase limits
+    max_iterations: int = 10
+    max_tool_calls: int = 50
+    max_curations: int = 8
+
+    # Review phase limits
+    max_plan_reviews: int = 3
+
+    # Writing phase limits
+    max_refines: int = 3
+
+    # Layer 1 control
+    enable_hard_limits: bool = True
+
+
+@dataclass
 class GlobalConfig:
     """Global configuration dataclass"""
 
     model: "ModelConfig"
     rate_limit: RateLimitConfig = field(default_factory=RateLimitConfig)
     context: ContextConfig = field(default_factory=ContextConfig)
+    agent_limits: "AgentLimitsConfig" = field(default_factory=lambda: AgentLimitsConfig())  # type: ignore[misc]
 
 
 @dataclass

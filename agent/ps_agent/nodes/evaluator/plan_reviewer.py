@@ -200,6 +200,7 @@ class PlanReviewerNode:
             "research_items": key_research_items,
             "audit_memo": audit_memo,
             "ready_for_write": True,
+            "plan_review_count": state.get("plan_review_count", 0) + 1,
             "messages": [Message.assistant("".join(message_parts))],
         }
 
@@ -249,6 +250,7 @@ class PlanReviewerNode:
             "ready_for_review": False,
             "ready_for_write": False,
             "patch_diagnosis": patch_diagnosis,
+            "plan_review_count": state.get("plan_review_count", 0) + 1,
             "messages": [Message.assistant(message)],
         }
 
@@ -296,5 +298,6 @@ class PlanReviewerNode:
             "ready_for_review": False,
             "ready_for_write": False,
             "replan_diagnosis": replan_diagnosis,
+            "plan_review_count": state.get("plan_review_count", 0) + 1,
             "messages": [Message.assistant("".join(message_parts))],
         }

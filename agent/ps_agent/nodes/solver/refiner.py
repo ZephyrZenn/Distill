@@ -24,6 +24,7 @@ class RefinerNode:
             **log_step(state, "🧪 refining: 修订完成"),
             "sections": sections,
             "status": "writing",
+            "refine_count": state.get("refine_count", 0) + 1,
             "messages": [Message.assistant("修订完成")],
         }
         
