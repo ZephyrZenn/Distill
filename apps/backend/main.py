@@ -59,11 +59,15 @@ async def lifespan(app: FastAPI):
     update_schedule_jobs()
     # Start system scheduler for maintenance tasks
     init_system_scheduler()
-    init_agent()
+    agent = init_agent()
+    # Start agent task cleanup loop to prevent "Task already exists" errors
+    await agent.start_cleanup_loop(interval_seconds=300, max_age_hours=12)
     yield
     logger.info("Shutdown scheduler, thread pool")
     shutdown_scheduler()
     shutdown_system_scheduler()
+    # Stop agent cleanup loop
+    await agent.stop_cleanup_loop()
     # Shutdown: Clean up thread pool
     shutdown_thread_pool()
     close_pool()
