@@ -68,7 +68,7 @@ def _build_write_prompt(
     system_prompt = Message(
         role="system",
         content=WRITER_DEEP_DIVE_SYSTEM_PROMPT_TEMPLATE.format(
-            relevance_to_focus=writing_material["relevance_to_focus"],
+            relevance_description=writing_material["relevance_description"],
             topic=writing_material["topic"],
         ),
     )
@@ -77,7 +77,7 @@ def _build_write_prompt(
         content=WRITER_DEEP_DIVE_USER_PROMPT_TEMPLATE.format(
             topic=writing_material["topic"],
             match_type=writing_material["match_type"],
-            relevance_to_focus=writing_material["relevance_to_focus"],
+            relevance_description=writing_material["relevance_description"],
             writing_guide=writing_material["writing_guide"],
             reasoning=writing_material["reasoning"],
             articles=writing_material["articles"],
@@ -151,7 +151,7 @@ def _build_review_prompt(
             ext_info=writing_material.get("ext_info", []),
             history_memories=writing_material.get("history_memory", []),
             match_type=writing_material["match_type"],
-            relevance_to_focus=writing_material["relevance_to_focus"],
+            relevance_description=writing_material["relevance_description"],
             writing_guide=writing_material["writing_guide"],
         ),
     )

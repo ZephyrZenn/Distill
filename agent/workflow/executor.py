@@ -29,15 +29,9 @@ class AgentExecutor:
 
     async def execute(self, state: AgentState) -> list[tuple[str, bool]]:
         plan = state["plan"]
-        article_ids = [
-            aid for point in plan["focal_points"] for aid in point["article_ids"]
-        ]
-        state["raw_articles"] = [
-            article for article in state["raw_articles"] if article["id"] in article_ids
-        ]
-
+        article_ids = [article["id"] for article in state["scored_articles"]]
         db_articles = await get_article_content(article_ids)
-        for article in state["raw_articles"]:
+        for article in state["scored_articles"]:
             if article["id"] in db_articles:
                 article["content"] = db_articles[article["id"]]
         tasks = []
@@ -202,12 +196,12 @@ class AgentExecutor:
         Returns:
             WritingMaterial 实例
         """
-        raw_articles = [
+        scored_articles = [
             article
-            for article in state["raw_articles"]
+            for article in state["scored_articles"]
             if article["id"] in point["article_ids"]
         ]
-        log_step(state, f"   ↳ 获取 {len(raw_articles)} 篇文章内容...")
+        log_step(state, f"   ↳ 获取 {len(scored_articles)} 篇文章内容...")
         history_memory_ids = point.get("history_memory_id", [])
         history_memory = [
             state["history_memories"][hid]
@@ -222,10 +216,10 @@ class AgentExecutor:
             topic=point["topic"],
             style=style,
             match_type=point["match_type"],
-            relevance_to_focus=point["relevance_to_focus"],
+            relevance_description=point["relevance_description"],
             writing_guide=point["writing_guide"],
             reasoning=point["reasoning"],
-            articles=raw_articles,
+            articles=scored_articles,
             history_memory=history_memory if history_memory else [],
             ext_info=ext_info if ext_info else [],
         )

@@ -35,3 +35,4 @@ class GapAnalysis(TypedDict):
     buckets: list[FocusBucket]
     global_status: Literal["RESEARCHING", "READY_TO_WRITE"]
     notes: str
+
