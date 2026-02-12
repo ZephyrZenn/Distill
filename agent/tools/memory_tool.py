@@ -115,8 +115,11 @@ async def save_current_execution_records(state: AgentState) -> None:
         # 构建记忆数据
         for i, (point, result) in enumerate(zip(focal_points, summary_results)):
             embedding = embeddings[i] if embeddings else None
+            # 截断以匹配数据库字段长度限制 (topic: VARCHAR(256), reasoning: VARCHAR(512))
+            topic = point["topic"][:256]
+            reasoning = point["reasoning"][:512]
             summary_memories.append(
-                (point["topic"], point["reasoning"], result, embedding)
+                (topic, reasoning, result, embedding)
             )
 
     async def save_to_db(cur):

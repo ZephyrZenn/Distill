@@ -26,6 +26,7 @@ PLANNER_SYSTEM_PROMPT = """
 ## 输出约束
 - **逻辑透明**：在 `reasoning` 中必须点出该专题的价值来源——是因为它是用户指定的“必读项”，还是它属于足以影响行业格局的“变局项”。
 - **严禁废话**: 仅输出纯 JSON 格式。
+- **字数限制**: topic 字数限制在 20 个字以内，reasoning 字数限制在 100 个字以内。
 
 ## 输出格式 (JSON)
 {{
@@ -192,11 +193,6 @@ CRITIC_SYSTEM_PROMPT_TEMPLATE = """
 4. **决策逻辑限长**：`decision_logic` 严禁超过 50 字。
 5. **位置描述简写**：`location` 仅需指明段落序号（如：第 2 段）或核心关键词，不要复制整句。
 
-## 字段长度硬指标
-- "decision_logic": < 50 chars
-- "issue": < 60 chars
-- "correction_suggestion": < 80 chars
-
 ## 输出约束
 - **判定结果**：仅限 `APPROVED` 或 `REJECTED`。
 - **严格 JSON 格式**：仅输出合法 JSON，严禁任何额外解释文字。使用半角双引号。
@@ -211,11 +207,11 @@ CRITIC_SYSTEM_PROMPT_TEMPLATE = """
       "severity": "CRITICAL | ADVISORY",
       "type": "FACT_ERROR | INTENT_MISMATCH | LAZY_REWRITE | LOGIC_WEAKNESS",
       "location": "原文位置",
-      "issue": "详细描述问题点",
-      "correction_suggestion": "具体的修改方案"
+      "issue": "详细描述问题点，限制30字以内",
+      "correction_suggestion": "具体的修改方案，限制50字以内"
     }}
   ],
-  "overall_comment": "给撰稿人的最终评语"
+  "overall_comment": "给撰稿人的最终评语，限制50字以内"
 }}
 """
 

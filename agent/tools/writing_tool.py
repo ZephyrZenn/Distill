@@ -124,16 +124,16 @@ async def review_article(
         return result
     except Exception as e:
         # Log a truncated version to avoid huge log entries
-        response_preview = (
-            response[:500] + "..." if len(response) > 500 else response
-        )
+        # response_preview = (
+        #     response[:500] + "..." if len(response) > 500 else response
+        # )
         logger.error(
             "Failed to parse critic response. Error: %s\nResponse preview: %s",
             str(e),
-            response_preview,
+            response,
             exc_info=True,
         )
-        print(response)
+        # print(response)
         raise ValueError(f"Failed to parse critic response: {str(e)}") from e
 
 

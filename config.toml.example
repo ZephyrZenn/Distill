@@ -47,20 +47,3 @@ max_delay = 60.0
 
 # Enable/disable automatic retry on errors (default: true)
 enable_retry = true
-
-[context]
-# Context window settings
-max_tokens = 128000               # Maximum token count for the context window
-compress_threshold = 0.8          # Threshold (0-1) at which to trigger compression
-compress_strategy = "truncate"    # Compression strategy: summary, truncate, priority
-
-# Content optimization settings
-article_max_length = 500          # Maximum length for article content (characters)
-summary_max_length = 200          # Maximum length for article summaries (characters)
-memory_max_length = 300           # Maximum length for history memories (characters)
-
-
-history_max_messages = 50         # Maximum number of messages to keep
-compression_strategy = "sliding_window"  # sliding_window, summary, selective
-keep_system = true                # Whether to always keep system messages
-
