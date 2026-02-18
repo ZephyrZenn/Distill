@@ -243,43 +243,15 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
             )
 
 
-def generate_brief_for_groups(group_ids: list[int], focus: str = ""):
-    """
-    Generate brief for specific groups with optional focus.
-    Synchronous version for scheduled tasks.
-    """
-    if not group_ids:
-        raise ValueError("group_ids cannot be empty")
-
-    # 延迟导入避免循环依赖
-    from agent import get_agent
-
-    logger.info(f"Generating brief for groups {group_ids} with focus: {focus}")
-    try:
-        # 若已存在事件循环（例如在异步上下文中调用），禁止同步包装，避免跨 loop 池复用
-        asyncio.get_running_loop()
-        raise RuntimeError(
-            "generate_brief_for_groups cannot run inside an active event loop; "
-            "use await generate_brief_for_groups_async instead"
-        )
-    except RuntimeError:
-        # 无运行中的 loop，安全地创建独立 loop 执行
-        brief, ext_info = asyncio.run(get_agent().summarize(24, group_ids, focus))
-    if not brief:
-        logger.warning("No brief generated for groups %s", group_ids)
-        return
-    _insert_brief(group_ids, brief, ext_info)
-    logger.info("Brief generation completed for groups %s", group_ids)
-
-
 async def generate_brief_for_groups_async(
-    group_ids: list[int], focus: str = "", on_step=None
+    task_id: str, group_ids: list[int], focus: str = "", on_step=None
 ):
     """
     Generate brief for specific groups asynchronously with optional step callback.
     Returns the generated brief content.
 
     Args:
+        task_id: 任务ID
         group_ids: 分组ID列表
         focus: 用户关注点
         on_step: 步骤回调函数
@@ -287,14 +259,12 @@ async def generate_brief_for_groups_async(
     if not group_ids:
         raise ValueError("group_ids cannot be empty")
 
-    logger.info(
-        f"Generating brief for groups {group_ids} with focus: {focus}"
-    )
+    logger.info(f"Generating brief for groups {group_ids} with focus: {focus}")
 
     from agent import get_agent
 
     brief, ext_info = await get_agent().summarize(
-        24, group_ids, focus, on_step=on_step
+        task_id=task_id, hour_gap=24, group_ids=group_ids, focus=focus, on_step=on_step
     )
     if not brief:
         logger.warning("No brief generated for groups %s", group_ids)
@@ -302,7 +272,6 @@ async def generate_brief_for_groups_async(
     _insert_brief(group_ids, brief, ext_info)
     logger.info("Brief generation completed for groups %s", group_ids)
     return brief
-
 
 
 def _insert_brief(group_ids: list[int], brief: str, ext_info: list = None):

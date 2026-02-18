@@ -68,7 +68,7 @@ def _build_write_prompt(
     system_prompt = Message(
         role="system",
         content=WRITER_DEEP_DIVE_SYSTEM_PROMPT_TEMPLATE.format(
-            relevance_to_focus=writing_material["relevance_to_focus"],
+            relevance_description=writing_material["relevance_description"],
             topic=writing_material["topic"],
         ),
     )
@@ -77,7 +77,7 @@ def _build_write_prompt(
         content=WRITER_DEEP_DIVE_USER_PROMPT_TEMPLATE.format(
             topic=writing_material["topic"],
             match_type=writing_material["match_type"],
-            relevance_to_focus=writing_material["relevance_to_focus"],
+            relevance_description=writing_material["relevance_description"],
             writing_guide=writing_material["writing_guide"],
             reasoning=writing_material["reasoning"],
             articles=writing_material["articles"],
@@ -124,16 +124,16 @@ async def review_article(
         return result
     except Exception as e:
         # Log a truncated version to avoid huge log entries
-        response_preview = (
-            response[:500] + "..." if len(response) > 500 else response
-        )
+        # response_preview = (
+        #     response[:500] + "..." if len(response) > 500 else response
+        # )
         logger.error(
             "Failed to parse critic response. Error: %s\nResponse preview: %s",
             str(e),
-            response_preview,
+            response,
             exc_info=True,
         )
-        print(response)
+        # print(response)
         raise ValueError(f"Failed to parse critic response: {str(e)}") from e
 
 
@@ -151,7 +151,7 @@ def _build_review_prompt(
             ext_info=writing_material.get("ext_info", []),
             history_memories=writing_material.get("history_memory", []),
             match_type=writing_material["match_type"],
-            relevance_to_focus=writing_material["relevance_to_focus"],
+            relevance_description=writing_material["relevance_description"],
             writing_guide=writing_material["writing_guide"],
         ),
     )

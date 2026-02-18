@@ -31,13 +31,16 @@ class ResearchItem(TypedDict, total=False):
     time_range_hint: NotRequired[
         Literal["day", "week", "month", "year"]
     ]  # From search_web time_range
-    
+
+
 class DiscardedItem(TypedDict, total=False):
     """An item that was dropped during curation, with a reason."""
+
     id: str
     title: str
     url: str
     reason: str
+
 
 @dataclass
 class Dimension:
@@ -210,15 +213,18 @@ class StructurePlan(TypedDict):
         str  # 简述本报告的叙事主线（例如：从供应链瓶颈推导至终端价格波动的因果链条）
     )
     chapters: list[StructureChapter]  # 章节列表
-    
+
+
 class WritingMaterial(TypedDict):
     chapter: StructureChapter
     items: list[ResearchItem]
+
 
 class WritingContext(TypedDict):
     global_outline: str
     previous_summary: str
     section_number: int
+
 
 class SectionUnit(TypedDict):
     chapter: StructureChapter
@@ -226,6 +232,7 @@ class SectionUnit(TypedDict):
     content: str
     context: WritingContext
     review_result: NotRequired[ReviewResult]
+
 
 class ReviewFinding(TypedDict):
     type: Literal[

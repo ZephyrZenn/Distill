@@ -11,14 +11,18 @@ from core.llm_client import APIKeyNotConfiguredError
 
 logger = logging.getLogger(__name__)
 
+
 class TaskStatus(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
 
+
 class TaskInfo:
-    def __init__(self, task_id: str, group_ids: list[int], focus: str, boost_mode: bool = False):
+    def __init__(
+        self, task_id: str, group_ids: list[int], focus: str, boost_mode: bool = False
+    ):
         self.task_id = task_id
         self.group_ids = group_ids
         self.focus = focus
@@ -32,10 +36,7 @@ class TaskInfo:
 
     def add_log(self, message: str):
         """添加日志条目"""
-        self.logs.append({
-            "text": message,
-            "time": datetime.now().isoformat()
-        })
+        self.logs.append({"text": message, "time": datetime.now().isoformat()})
         self.updated_at = datetime.now()
 
     def to_dict(self):
@@ -50,20 +51,26 @@ class TaskInfo:
             "updated_at": self.updated_at.isoformat(),
         }
 
+
 # 全局任务存储（生产环境建议使用 Redis）
 _tasks: Dict[str, TaskInfo] = {}
+
 
 def create_task(group_ids: list[int], focus: str = "", boost_mode: bool = False) -> str:
     """创建新任务并返回任务ID"""
     task_id = str(uuid.uuid4())
     task = TaskInfo(task_id, group_ids, focus, boost_mode)
     _tasks[task_id] = task
-    logger.info(f"Created task {task_id} for groups {group_ids}, boost_mode={boost_mode}")
+    logger.info(
+        f"Created task {task_id} for groups {group_ids}, boost_mode={boost_mode}"
+    )
     return task_id
+
 
 def get_task(task_id: str) -> Optional[TaskInfo]:
     """获取任务信息"""
     return _tasks.get(task_id)
+
 
 async def execute_brief_generation_task(task_id: str):
     """异步执行brief生成任务"""
@@ -71,11 +78,11 @@ async def execute_brief_generation_task(task_id: str):
     if not task:
         logger.error(f"Task {task_id} not found")
         return
-    
+
     try:
         task.status = TaskStatus.RUNNING
         task.add_log("🚀 Agent启动，开始执行任务...")
-        
+
         # 创建回调函数来记录日志，添加异常处理
         def on_step(message: str):
             """日志回调函数，实时记录日志"""
@@ -83,26 +90,26 @@ async def execute_brief_generation_task(task_id: str):
                 if task and task.status == TaskStatus.RUNNING:
                     task.add_log(message)
             except Exception as e:
-                logger.error(f"Error in on_step callback for task {task_id}: {e}", exc_info=True)
-        
+                logger.error(
+                    f"Error in on_step callback for task {task_id}: {e}", exc_info=True
+                )
+
         # 执行总结（使用brief_service的异步方法）
         from apps.backend.services.brief_service import generate_brief_for_groups_async
+
         brief = await generate_brief_for_groups_async(
-            group_ids=task.group_ids,
-            focus=task.focus,
-            on_step=on_step,
-            # boost_mode=task.boost_mode
+            task_id=task_id, group_ids=task.group_ids, focus=task.focus, on_step=on_step
         )
-        
+
         # 再次检查任务是否存在（可能在执行过程中被清理）
         if task_id not in _tasks:
             logger.warning(f"Task {task_id} was removed during execution")
             return
-        
+
         task.result = brief
         task.status = TaskStatus.COMPLETED
         task.add_log("✅ Agent执行完成，摘要已保存")
-        
+
     except asyncio.CancelledError:
         logger.warning(f"Task {task_id} was cancelled")
         if task_id in _tasks:
@@ -127,25 +134,27 @@ async def execute_brief_generation_task(task_id: str):
             task.error = str(e)
             task.add_log(f"❌ 执行失败: {str(e)}")
 
+
 def cleanup_completed_tasks(max_age_hours: int = 24):
     """清理已完成的任务（超过指定小时数的）"""
     now = datetime.now()
     cutoff_time = now - timedelta(hours=max_age_hours)
-    
+
     tasks_to_remove = []
     for task_id, task in _tasks.items():
         if task.status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
             if task.updated_at < cutoff_time:
                 tasks_to_remove.append(task_id)
-    
+
     for task_id in tasks_to_remove:
         del _tasks[task_id]
         logger.info(f"Cleaned up completed task {task_id}")
-    
+
     if tasks_to_remove:
         logger.info(f"Cleaned up {len(tasks_to_remove)} completed tasks")
-    
+
     return len(tasks_to_remove)
+
 
 def get_task_count() -> dict:
     """获取任务统计信息"""

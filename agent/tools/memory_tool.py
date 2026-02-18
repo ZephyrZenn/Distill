@@ -33,15 +33,13 @@ async def save_current_execution_records(state: AgentState) -> None:
     Args:
         state: Agent 的完整状态对象，包含 raw_articles、plan.focal_points、summary_results
     """
-    # 判断是否是新Agent（groups为空表示新Agent，不使用Group）
-    is_new_agent = not state.get("groups", [])
 
     # 获取 focus，用于排除粒度控制
     focus = state.get("focus", "") or ""
 
     # 生成 focus 的 embedding（如果配置了 embedding 服务且 focus 不为空）
     focus_embedding = None
-    if not is_new_agent and focus and is_embedding_configured():
+    if focus and is_embedding_configured():
         try:
             focus_embedding = await embed_text(focus)
             logger.debug(f"Generated focus embedding for: {focus}")
@@ -55,9 +53,6 @@ async def save_current_execution_records(state: AgentState) -> None:
     focal_points = state.get("plan", {}).get("focal_points", [])
     summary_results = state.get("summary_results", [])
     execution_status = state.get("execution_status", [])
-    related_article_ids = [
-        aid for point in focal_points for aid in point["article_ids"]
-    ]
 
     if len(focal_points) != len(summary_results):
         raise ValueError(
@@ -72,31 +67,24 @@ async def save_current_execution_records(state: AgentState) -> None:
         )
         if status
     ]
+    used_article_ids = [
+        aid for point, _, _ in successful_items for aid in point["article_ids"]
+    ]
     failed_count = len(focal_points) - len(successful_items)
     if failed_count > 0:
         logger.info(f"清理 {failed_count} 个失败的 point 及其相关数据")
         focal_points = [item[0] for item in successful_items]
         summary_results = [item[1] for item in successful_items]
-        # 重新计算 related_article_ids，只包含成功的 point 的 article_ids
-        related_article_ids = [
-            aid for point in focal_points for aid in point["article_ids"]
-        ]
-
-    raw_articles = [
-        article
-        for article in state["raw_articles"]
-        if article["id"] in related_article_ids
-    ]
 
     # 只有旧workflow才保存到exclude表
     excluded_articles = []
-    if not is_new_agent:
-        group_ids = [group.id for group in state["groups"]]
-        # 只排除成功的 point 涉及的 articles
-        excluded_articles = [
-            (article["id"], group_ids, article["pub_date"], focus, focus_embedding)
-            for article in raw_articles
-        ]
+    group_ids = [group.id for group in state["groups"]]
+    # 只排除成功的 point 涉及的 articles
+    excluded_articles = [
+        (article["id"], group_ids, article["pub_date"], focus, focus_embedding)
+        for article in state["scored_articles"]
+        if article["id"] in used_article_ids
+    ]
 
     # 准备摘要记忆数据
     summary_memories = []
@@ -122,15 +110,16 @@ async def save_current_execution_records(state: AgentState) -> None:
                 )
                 embeddings = None
         else:
-            logger.debug(
-                "Embedding service not configured, skipping vector generation"
-            )
+            logger.debug("Embedding service not configured, skipping vector generation")
 
         # 构建记忆数据
         for i, (point, result) in enumerate(zip(focal_points, summary_results)):
             embedding = embeddings[i] if embeddings else None
+            # 截断以匹配数据库字段长度限制 (topic: VARCHAR(256), reasoning: VARCHAR(512))
+            topic = point["topic"][:256]
+            reasoning = point["reasoning"][:512]
             summary_memories.append(
-                (point["topic"], point["reasoning"], result, embedding)
+                (topic, reasoning, result, embedding)
             )
 
     async def save_to_db(cur):
@@ -227,9 +216,7 @@ async def search_memory(
                 "Vector search failed, falling back to keyword search: %s", e
             )
         except Exception as e:
-            logger.warning(
-                "Vector search error, falling back to keyword search: %s", e
-            )
+            logger.warning("Vector search error, falling back to keyword search: %s", e)
 
     # 回退到关键词搜索
     return await _keyword_search(valid_queries, days_ago, limit)

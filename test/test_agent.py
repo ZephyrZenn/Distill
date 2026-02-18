@@ -38,7 +38,15 @@ class AgentTest(unittest.TestCase):
         def on_step(message: str):
             print(f"[STEP] {message}")
 
-        result = asyncio.run(agent.summarize(24, [5], "AI竞争分析", on_step=on_step))
+        result, _ = asyncio.run(
+            agent.summarize(
+                task_id="test",
+                hour_gap=24,
+                group_ids=[5],
+                focus="AI竞争分析",
+                on_step=on_step,
+            )
+        )
         print("\n=== 最终结果 ===")
         print(result)
         with open("result4.md", "w") as f:
@@ -46,5 +54,6 @@ class AgentTest(unittest.TestCase):
 
     def test_embedding(self):
         from agent.tools.memory_tool import backfill_embeddings
+
         result = asyncio.run(backfill_embeddings())
         print(result)
