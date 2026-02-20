@@ -3,26 +3,18 @@
 This module provides embedding generation using OpenAI-compatible APIs.
 Embeddings are used for semantic search in the memory system.
 
-Configuration via environment variables (priority order):
-1. EMBEDDING_API_KEY - Dedicated API key for embedding service (highest priority)
-2. EMBEDDING_BASE_URL - Base URL for embedding service (used with EMBEDDING_API_KEY)
-3. EMBEDDING_MODEL - Embedding model name (default: text-embedding-3-small)
+Configuration:
+- config.toml [embedding]: model, provider, base_url
+- Environment: EMBEDDING_API_KEY (API key only; required when using embedding)
 
-Supported embedding models:
-- text-embedding-3-small (1536 dimensions, default)
-- text-embedding-3-large (3072 dimensions)
-- text-embedding-ada-002 (1536 dimensions, legacy)
+Example config.toml:
+    [embedding]
+    model = "text-embedding-3-small"
+    provider = "other"
+    base_url = "https://api.openai.com/v1"
 
-Example:
-    # Use dedicated embedding service
+Example env:
     export EMBEDDING_API_KEY=sk-...
-    export EMBEDDING_BASE_URL=https://api.openai.com/v1
-    export EMBEDDING_MODEL=text-embedding-3-small
-
-    # Or use OpenAI API key as fallback
-    export OPENAI_API_KEY=sk-...
-
-Note: Gemini embedding requires google-genai SDK, currently using OpenAI as default.
 """
 
 import logging
@@ -31,6 +23,8 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from openai import AsyncOpenAI
+
+from core.config.loader import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -48,17 +42,18 @@ DEFAULT_EMBEDDING_DIMENSION = 1536
 # Context length limits for embedding models (tokens)
 # Conservative estimate: ~4 chars per token for Chinese/English mixed content
 EMBEDDING_MAX_CHARS = 6000  # Safe limit for 8192 token models
-EMBEDDING_BATCH_SIZE = 20   # Max texts per batch to avoid total token overflow
+EMBEDDING_BATCH_SIZE = 20  # Max texts per batch to avoid total token overflow
 
 
 class EmbeddingError(Exception):
     """Raised when embedding generation fails."""
+
     pass
 
 
 class EmbeddingNotConfiguredError(Exception):
     """Raised when embedding service is not properly configured."""
-    
+
     def __init__(self, message: str = "Embedding service not configured"):
         super().__init__(message)
 
@@ -75,10 +70,10 @@ class EmbeddingService(ABC):
     @abstractmethod
     async def embed(self, text: str) -> list[float]:
         """Generate embedding for a single text.
-        
+
         Args:
             text: The text to embed.
-            
+
         Returns:
             A list of floats representing the embedding vector.
         """
@@ -87,10 +82,10 @@ class EmbeddingService(ABC):
     @abstractmethod
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts.
-        
+
         Args:
             texts: List of texts to embed.
-            
+
         Returns:
             List of embedding vectors.
         """
@@ -121,7 +116,7 @@ class OpenAIEmbeddingService(EmbeddingService):
         """Generate embedding for a single text."""
         if not text or not text.strip():
             raise EmbeddingError("Cannot embed empty text")
-        
+
         try:
             response = await self.client.embeddings.create(
                 model=self.model,
@@ -168,12 +163,18 @@ class OpenAIEmbeddingService(EmbeddingService):
 
                 logger.debug(
                     "Embedded batch %d-%d/%d (batch_size=%d)",
-                    batch_start, batch_end, len(valid_texts), len(batch_texts)
+                    batch_start,
+                    batch_end,
+                    len(valid_texts),
+                    len(batch_texts),
                 )
             except Exception as e:
                 logger.error(
                     "Error generating batch embeddings (batch %d-%d): %s",
-                    batch_start, batch_end, e, exc_info=True
+                    batch_start,
+                    batch_end,
+                    e,
+                    exc_info=True,
                 )
                 raise EmbeddingError(f"Failed to generate batch embeddings: {e}") from e
 
@@ -198,15 +199,18 @@ _embedding_service: Optional[EmbeddingService] = None
 
 
 def get_embedding_model() -> str:
-    """Get the embedding model name from environment variable or use default.
-    
-    Environment variable: EMBEDDING_MODEL
-    Default: text-embedding-3-small
-    
-    Returns:
-        The embedding model name.
+    """Get the embedding model name from config or use default.
+
+    Prefers config.toml [embedding].model when present.
+    Fallback: DEFAULT_EMBEDDING_MODEL
     """
-    return os.getenv("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
+    try:
+        cfg = get_config()
+        if cfg.embedding and cfg.embedding.model:
+            return cfg.embedding.model
+    except Exception:
+        pass
+    return DEFAULT_EMBEDDING_MODEL
 
 
 def get_embedding_dimension() -> int:
@@ -217,40 +221,36 @@ def get_embedding_dimension() -> int:
 
 def build_embedding_service() -> EmbeddingService:
     """Build an embedding service based on current configuration.
-    
-    EMBEDDING_API_KEY + EMBEDDING_BASE_URL (dedicated embedding config)
-    
-    Model is determined by EMBEDDING_MODEL environment variable or default.
-    
+
+    API key: from EMBEDDING_API_KEY (env).
+    Model and base_url: from config.toml [embedding] when present.
+
     Returns:
         An EmbeddingService instance.
-        
+
     Raises:
         EmbeddingNotConfiguredError: If no valid API key is found.
     """
-    # Priority 1: Check for dedicated embedding configuration (highest priority)
-    embedding_api_key = os.getenv("EMBEDDING_API_KEY")
-    embedding_base_url = os.getenv("EMBEDDING_BASE_URL")
-    
-    if embedding_api_key:
-        # Use dedicated embedding configuration
-        api_key = embedding_api_key
-        base_url = embedding_base_url
-        logger.info("Using EMBEDDING_API_KEY for embedding service")
-    
-    else:
+    api_key = os.getenv("EMBEDDING_API_KEY")
+    if not api_key or not api_key.strip():
         raise EmbeddingNotConfiguredError(
-            "No API key found for embedding service. "
-            "Set EMBEDDING_API_KEY."
+            "No API key found for embedding service. Set EMBEDDING_API_KEY."
         )
-    
-    # Get model from environment variable or use default
+
+    base_url = None
+    try:
+        cfg = get_config()
+        if cfg.embedding:
+            base_url = cfg.embedding.base_url
+    except Exception:
+        pass
+
     model = get_embedding_model()
-    
     logger.info(
-        f"Building embedding service: model={model}, base_url={base_url or 'default'}"
+        "Building embedding service: model=%s, base_url=%s",
+        model,
+        base_url or "default",
     )
-    
     return OpenAIEmbeddingService(
         api_key=api_key,
         base_url=base_url,
@@ -260,43 +260,44 @@ def build_embedding_service() -> EmbeddingService:
 
 def get_embedding_service() -> EmbeddingService:
     """Get the singleton embedding service instance.
-    
+
     Returns:
         The EmbeddingService instance.
-        
+
     Raises:
         EmbeddingNotConfiguredError: If service cannot be initialized.
     """
     global _embedding_service
-    
+
     if _embedding_service is None:
         _embedding_service = build_embedding_service()
-    
+
     return _embedding_service
 
 
 def is_embedding_configured() -> bool:
     """Check if embedding service can be configured.
-    
-    Checks for API keys in priority order:
-    1. EMBEDDING_API_KEY (highest priority)
-    
-    Returns:
-        True if an API key is available for embedding.
+
+    Requires EMBEDDING_API_KEY (env). Either config.toml [embedding]
     """
-    # Check dedicated embedding API key first
-    if os.getenv("EMBEDDING_API_KEY") and os.getenv("EMBEDDING_BASE_URL"):
-        return True
-    
+    api_key = os.getenv("EMBEDDING_API_KEY")
+    if not api_key or not api_key.strip():
+        return False
+    try:
+        cfg = get_config()
+        if cfg.embedding:
+            return True
+    except Exception:
+        return False
     return False
 
 
 async def embed_text(text: str) -> list[float]:
     """Convenience function to embed a single text.
-    
+
     Args:
         text: The text to embed.
-        
+
     Returns:
         The embedding vector.
     """
@@ -306,10 +307,10 @@ async def embed_text(text: str) -> list[float]:
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:
     """Convenience function to embed multiple texts.
-    
+
     Args:
         texts: List of texts to embed.
-        
+
     Returns:
         List of embedding vectors.
     """

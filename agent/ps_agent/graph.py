@@ -156,16 +156,30 @@ def summary_review_router(state: PSAgentState) -> Literal["completed", "refining
 def finalize_node(state: PSAgentState) -> dict:
     """Finalize the workflow into a stable completed/failed state."""
     status = state.get("status", "")
+    final_report = state.get("final_report")
 
-    
     if status == "completed":
         message = "审稿通过，生成最终报告。"
     else:
         message = "未完全通过审稿，但返回当前最优草稿作为最终结果。"
-    print(state.get("final_report"))
+        # 因 max_refines 等强制结束时，若尚未有 final_report 则从 sections 拼出当前最优草稿
+        if not final_report:
+            sections = state.get("sections", [])
+            if sections:
+                final_report = "\n".join(
+                    section.get("content", "") or "" for section in sections
+                ).strip()
+                if final_report:
+                    logger.info(
+                        "[finalize] assembled best-effort report from %d sections (%d chars)",
+                        len(sections),
+                        len(final_report),
+                    )
+
     return {
         **log_step(state, f"🏁 finalize: completed status={status or 'N/A'}"),
         "status": "completed",
+        "final_report": final_report,
         "messages": [Message.assistant(message)],
     }
 

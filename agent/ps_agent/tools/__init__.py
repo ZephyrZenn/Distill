@@ -49,8 +49,6 @@ MIN_MATCH_SCORE = 0.18
 WEB_RESULT_SNIPPET_MAX_CHARS = 450
 # 放宽 feed / 写作阶段的内容截断，避免证据过早被丢弃
 FEED_SUMMARY_MAX_CHARS = 1_200
-AUTO_FETCH_WEB_MAX_ITEMS = 6
-FETCHED_CONTENT_MAX_CHARS = 1_200
 TOOL_MAX_LIST_ITEMS = 12
 
 _WORD_RE = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]+")
@@ -408,31 +406,6 @@ async def _handle_search_feeds(args: dict, state: PSAgentState) -> dict:
     }
 
 
-async def _handle_finish_research(
-    args: dict, state: PSAgentState
-) -> dict:  # noqa: ARG001
-    key_findings = args.get("key_findings") or []
-    open_questions = args.get("open_questions") or []
-    notes = str(args.get("notes", "") or "").strip()
-
-    if not isinstance(key_findings, list) or not key_findings:
-        raise ValueError("finish_research.key_findings 必须是非空列表")
-
-    key_findings = [str(x).strip() for x in key_findings if str(x).strip()]
-    open_questions = [str(x).strip() for x in open_questions if str(x).strip()]
-
-    return {
-        "meta": {
-            "ok": True,
-            "count_findings": len(key_findings),
-            "count_open": len(open_questions),
-        },
-        "key_findings": key_findings,
-        "open_questions": open_questions,
-        "notes": notes,
-    }
-
-
 async def _handle_search_web(args: dict, state: PSAgentState) -> dict:
     if not is_search_engine_available():
         logger.warning("搜索引擎不可用，search_web 返回空结果")
@@ -500,51 +473,6 @@ async def _handle_search_web(args: dict, state: PSAgentState) -> dict:
         },
         "results": normalized,
     }
-
-
-async def _handle_search_memory(args: dict, state: PSAgentState) -> dict:
-    keywords = args.get("keywords", [])
-    if not isinstance(keywords, list) or not keywords:
-        raise ValueError("search_memory 的 keywords 必须是非空列表")
-
-    keywords = [str(k).strip() for k in keywords if str(k).strip()]
-    days_ago = int(args.get("days_ago", 14) or 14)
-    limit = int(args.get("limit", 10) or 10)
-
-    memories = await _search_memory(keywords, days_ago=days_ago, limit=limit)
-
-    # Convert mapping -> list for easier prompting downstream.
-    memory_list = list(memories.values()) if isinstance(memories, dict) else memories
-
-    return {
-        "memories": memory_list,
-        "meta": {"keywords": keywords, "days_ago": days_ago, "count": len(memory_list)},
-    }
-
-
-async def _handle_fetch_content(args: dict, state: PSAgentState) -> dict:
-    article_ids = args.get("article_ids") or []
-    urls = args.get("urls") or []
-    max_items = int(args.get("max_items", 8) or 8)
-
-    if max_items > 0:
-        article_ids = list(article_ids)[:max_items]
-        urls = list(urls)[:max_items]
-
-    result: dict[str, Any] = {}
-
-    if article_ids:
-        result["article_contents"] = await get_article_content(article_ids)
-
-    if urls:
-        result["web_contents"] = await fetch_web_contents(urls)
-
-    result["meta"] = {
-        "article_ids": article_ids,
-        "urls": urls,
-        "count": len(article_ids) + len(urls),
-    }
-    return result
 
 
 # ---------------------------------------------------------------------------
@@ -774,13 +702,6 @@ def _normalize_feed_articles(
             filtered_no_summary += 1
             continue
 
-        score = _compute_score(
-            source="feed",
-            published_at=published_at,
-            match_score=match_score * 0.6,
-            now=now,
-        )
-
         items.append(
             ResearchItem(
                 id=article_id or url or title,
@@ -790,7 +711,6 @@ def _normalize_feed_articles(
                 published_at=published_at,
                 summary=summary,
                 content=content,
-                score=score,
                 tags=[],
                 is_patch=is_patch,
                 relevance=0.0,
@@ -822,7 +742,6 @@ def _normalize_web_results(
         snippet = str(result.get("content", "") or "").strip()
         raw_content = str(result.get("raw_content", "") or "").strip()
         published_at = str(result.get("published_at", "") or "").strip()
-        score_val = float(result.get("score", 0.0) or 0.0)
 
         # 过滤：剔除没有 snippet/summary 的文章
         # snippet 是搜索结果的摘要，raw_content 是可选的全文
@@ -830,15 +749,7 @@ def _normalize_web_results(
             filtered_no_summary += 1
             continue
 
-        score = _compute_score(
-            source="web",
-            published_at=published_at,
-            match_score=score_val,
-            now=now,
-        )
-
         # 如果有 raw_content（Tavily 返回的全文），直接使用它作为 content
-        # 这样就不需要后续调用 fetch_content 来抓取网页
         has_full_content = raw_content and len(raw_content) > 100
 
         items.append(
@@ -850,7 +761,6 @@ def _normalize_web_results(
                 published_at=published_at,
                 summary=snippet,
                 content=raw_content if has_full_content else "",
-                score=score,
                 tags=["has_full_content"] if has_full_content else [],
                 is_patch=is_patch,
                 relevance=0.0,
@@ -886,13 +796,6 @@ def _normalize_memories(memories: list[Any]) -> list[ResearchItem]:
         memory_id = str(data.get("id", "") or topic or content[:32])
         published_at = str(data.get("created_at", "") or "").strip()
 
-        score = _compute_score(
-            source="memory",
-            published_at=published_at,
-            match_score=0.0,
-            now=now,
-        )
-
         items.append(
             ResearchItem(
                 id=memory_id,
@@ -902,7 +805,6 @@ def _normalize_memories(memories: list[Any]) -> list[ResearchItem]:
                 published_at=published_at,
                 summary=str(data.get("reasoning", "") or ""),
                 content=content,
-                score=score,
                 tags=["memory"],
                 relevance=0.0,
                 freshness=0.0,
@@ -1054,56 +956,6 @@ def _merge_fetch_content(
         updated.append(ResearchItem(**new_item))
 
     return updated
-
-
-async def _auto_fetch_fulltext_for_web_items(
-    research_items: list[ResearchItem],
-    *,
-    max_items: int = AUTO_FETCH_WEB_MAX_ITEMS,
-    summary_max_chars: int = FETCHED_CONTENT_MAX_CHARS,
-) -> tuple[list[ResearchItem], dict]:
-    """
-    自动为高分 web 结果抓取少量正文并做截断，返回更新后的 items 和 meta。
-    """
-    candidates = [
-        item
-        for item in research_items
-        if item.get("source") == "web" and not item.get("content")
-    ]
-    if not candidates:
-        return research_items, {"auto_fetch": 0}
-
-    candidates = sorted(
-        candidates,
-        key=lambda i: (
-            float(i.get("score", 0.0) or 0.0),
-            _published_timestamp(i.get("published_at")),
-        ),
-        reverse=True,
-    )[:max_items]
-
-    urls = [i.get("url") for i in candidates if i.get("url")]
-    if not urls:
-        return research_items, {"auto_fetch": 0}
-
-    contents = await fetch_web_contents(urls)
-    updated: list[ResearchItem] = []
-    fetched_count = 0
-    for item in research_items:
-        if item in candidates:
-            url = item.get("url")
-            if url and url in contents and contents[url]:
-                text = str(contents[url])
-                if len(text) > summary_max_chars:
-                    text = text[:summary_max_chars] + "..."
-                new_item = dict(item)
-                new_item["content"] = text
-                updated.append(ResearchItem(**new_item))
-                fetched_count += 1
-                continue
-        updated.append(item)
-
-    return updated, {"auto_fetch": fetched_count}
 
 
 def _truncate_for_tool_message(payload: dict) -> str:
@@ -1266,18 +1118,9 @@ def _tool_registry(current_date: str) -> dict[str, RegisteredTool]:
         "search_feeds": RegisteredTool(
             schema=schema_by_name["search_feeds"], handler=_handle_search_feeds
         ),
-        "finish_research": RegisteredTool(
-            schema=schema_by_name["finish_research"], handler=_handle_finish_research
-        ),
         "search_web": RegisteredTool(
             schema=schema_by_name["search_web"], handler=_handle_search_web
-        ),
-        "search_memory": RegisteredTool(
-            schema=schema_by_name["search_memory"], handler=_handle_search_memory
-        ),
-        "fetch_content": RegisteredTool(
-            schema=schema_by_name["fetch_content"], handler=_handle_fetch_content
-        ),
+        )
     }
 
 
@@ -1414,18 +1257,6 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
                     )
             new_items = _normalize_web_results(results, is_patch=bool(args.get("is_patch", False)))
             research_items = _merge_items(research_items, new_items)
-            # Patch 搜索模式（include_raw_content=True）已获取全文，跳过 auto-fetch
-            # Tavily 返回 raw_content 后无需再用 httpx 抓取
-            # is_patch = bool(args.get("is_patch", False))
-            # if not is_patch:
-            #     # 自动抓取少量高分 web 结果正文，截断后写回 content
-            #     research_items, auto_meta = await _auto_fetch_fulltext_for_web_items(
-            #         research_items,
-            #         max_items=AUTO_FETCH_WEB_MAX_ITEMS,
-            #         summary_max_chars=FETCHED_CONTENT_MAX_CHARS,
-            #     )
-            #     if auto_meta.get("auto_fetch"):
-            #         _emit(f"🔧 tool: auto fetch content {auto_meta['auto_fetch']} items")
         elif call.name == "search_memory":
             memories = payload.get("memories", []) or []
             new_items = _normalize_memories(memories)

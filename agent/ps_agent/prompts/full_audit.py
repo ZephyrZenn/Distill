@@ -24,7 +24,14 @@ Based on the **Full Text**, re-evaluate the actual fit:
 - **Question**: Does the full text deliver on the promise of the summary?
 - **Logic**: A high score here means the article provides the *exact* evidence needed for the focus dimensions.
 
-## Output Format (JSON)
+## Length Constraints (important)
+Keep the JSON compact so the response is parseable:
+- **key_findings**: At most 3–5 bullet points per item; each bullet one short sentence (under 30 words).
+- **reason**: One to two sentences only (under 50 words).
+- **defects**: One to two sentences only (under 50 words).
+
+## Output Format (required)
+You MUST respond with exactly one JSON object with a single key **"results"** whose value is an array of objects (one per material). No other format is accepted.
 
 ```json
 {
@@ -45,56 +52,10 @@ Based on the **Full Text**, re-evaluate the actual fit:
     }
   ]
 }
+```
 
-## Examples
-Example 1: High-Value Analytical Material (KEEP)
-{
-  "id": "full_01",
-  "action": "keep",
-  "scores": {
-    "refined_relevance": 0.98,
-    "quality_score": 0.95,
-    "novelty_score": 0.90,
-  },
-  "audit_report": {
-    "key_findings": ["NVIDIA secured 60% of TSMC's 2025 CoWoS capacity", "1.5x shipment increase for Blackwell Ultra vs market consensus"],
-    "reason": "Provides the 'Hard Evidence' for the 2025 Supply Chain dimension which was previously based on speculation.",
-    "defects": "Focuses heavily on hardware supply, lacks software ecosystem impact."
-  }
-}
-Example 2: News Rehash / Low Novelty (DISCARD/LOW SCORE)
-{
-  "id": "full_02",
-  "action": "discard",
-  "scores": {
-    "refined_relevance": 0.60,
-    "quality_score": 0.40,
-    "novelty_score": 0.20,
-  },
-  "audit_report": {
-      "key_findings": ["CEO Jensen Huang reiterated yearly chip release cycle"],
-      "reason": "Touches on the roadmap but adds no new intelligence beyond public PR statements.",
-      "defects": "High fluff content, no specific technical or financial data points."
-    }
-  }
-}
-Example 3: Deep Technical but Low Relevance (DISCARD)
-{
-  "id": "full_03",
-  "action": "discard",
-    "scores": {
-      "refined_relevance": 0.30,
-      "quality_score": 0.85,
-      "novelty_score": 0.70,
-      "composite_score": 0.54
-    },
-    "audit_report": {
-      "key_findings": ["AMD MI350X reduces latency by 30% via new fabric"],
-      "reason": "Only relevant as 'Competitor Context', but does not provide information about NVIDIA's own 2025 strategy.",
-      "defects": "The research focus is NVIDIA, this article is almost entirely about AMD's architecture."
-    },
-  }
-}
+## Example (full response shape; keep brevity inside each item)
+{"results":[{"id":"full_01","action":"keep","scores":{"refined_relevance":0.98,"quality_score":0.95,"novelty_score":0.9},"audit_report":{"key_findings":["NVIDIA 60% TSMC CoWoS 2025","Blackwell Ultra 1.5x vs consensus"],"reason":"Hard evidence for Supply Chain dimension.","defects":"Hardware only, no software."}},{"id":"full_02","action":"discard","scores":{"refined_relevance":0.6,"quality_score":0.4,"novelty_score":0.2},"audit_report":{"key_findings":["Jensen reiterated yearly chip cycle"],"reason":"No new intel beyond PR.","defects":"Fluff, no data."}}]}
 """
 
 __all__ = ["FULL_AUDIT_PROMPT"]

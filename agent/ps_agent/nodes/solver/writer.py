@@ -56,7 +56,8 @@ class DeepWriterNode:
         item_map = {item.get("id"): item for item in research_items}
         chapters = plan.get("chapters", [])
 
-        log_step(state, f"✍️ writer: 开始滑动窗口式写作 {len(chapters)} 个章节...")
+        msg_start = f"✍️ writer: 开始滑动窗口式写作 {len(chapters)} 个章节..."
+        log_step(state, msg_start)
 
         # Sliding window writing
         sections = []
@@ -94,8 +95,10 @@ class DeepWriterNode:
             )
             context["previous_summary"] = summary
 
+        msg_done = f"✍️ writer: 滑动窗口写作完成 (len={len(sections)})"
+        log_step(state, msg_done)
         return {
-            **log_step(state, f"✍️ writer: 滑动窗口写作完成 (len={len(sections)})"),
+            "log_history": [msg_start, msg_done],
             "sections": sections,
             "status": "reviewing",  # Next step
             "messages": [Message.assistant("采用滑动窗口式写作完成深度报告。")],

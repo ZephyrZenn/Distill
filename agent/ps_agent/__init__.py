@@ -8,11 +8,9 @@ with writing, review, and refinement stages.
 from __future__ import annotations
 
 import logging
-import os
 from typing import Callable, Optional
 
-from core.llm_client import LLMClient, auto_build_client, build_client
-from core.models.llm import ModelProvider
+from core.llm_client import LLMClient, auto_build_client
 
 from .graph import build_ps_agent_graph, build_test_graph
 from .state import PSAgentState, create_initial_state
@@ -52,14 +50,9 @@ class PlanSolveAgent:
 
     def _init_client(self) -> None:
         if self._client is None:
-            self._client = auto_build_client()
+            self._client = auto_build_client("model")
         if self._audit_client is None:
-            self._audit_client = build_client(
-                client_type=ModelProvider.OTHER,
-                api_key=os.getenv("MODEL_API_KEY"),
-                base_url=os.getenv("MODEL_BASE_URL"),
-                model="gemini-2.0-flash-lite",
-            )
+            self._audit_client = auto_build_client("lightweight_model")
         if self._graph is None:
             if self._debug:
                 self._graph = build_test_graph(self._client, self._audit_client)
@@ -177,7 +170,7 @@ async def run_ps_agent(
     focus: str,
     on_step: Optional[StepCallback] = None,
     *,
-    max_context_items: int = 40,
+    max_context_items: int = 15,
 ) -> str:
     """Convenience entrypoint mirroring the class-based API."""
     agent = PlanSolveAgent(

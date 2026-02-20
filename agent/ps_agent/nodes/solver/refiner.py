@@ -16,12 +16,14 @@ class RefinerNode:
     async def __call__(self, state: PSAgentState) -> dict:
         sections = state.get("sections", [])
         failed_sections = [section for section in sections if section["review_result"].get("status") == "REJECTED"]
-        pre = log_step(state, "🧪 refining: 开始修订")
+        msg_start = "🧪 refining: 开始修订"
+        log_step(state, msg_start)
         for section in failed_sections:
             section["content"] = await self._refine(section)
+        msg_done = "🧪 refining: 修订完成"
+        log_step(state, msg_done)
         return {
-            **pre,
-            **log_step(state, "🧪 refining: 修订完成"),
+            "log_history": [msg_start, msg_done],
             "sections": sections,
             "status": "writing",
             "refine_count": state.get("refine_count", 0) + 1,

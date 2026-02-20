@@ -9,7 +9,7 @@ class PsAgentTest(unittest.TestCase):
     
     def test_ps_agent(self):
         agent = PlanSolveAgent(
-            max_context_items=40,
+            max_context_items=15,
             debug=True,
         )
         def on_step(message: str):

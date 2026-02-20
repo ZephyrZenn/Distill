@@ -5,7 +5,14 @@ from typing import Optional
 
 import toml
 
-from core.models.config import AgentLimitsConfig, ContextConfig, GlobalConfig, ModelConfig, RateLimitConfig
+from core.models.config import (
+    AgentLimitsConfig,
+    ContextConfig,
+    EmbeddingConfig,
+    GlobalConfig,
+    ModelConfig,
+    RateLimitConfig,
+)
 from core.models.llm import ModelProvider
 
 from .utils import (
@@ -54,26 +61,24 @@ def _validate_model_config(config: dict) -> None:
         value = config.get(field)
         if not value or (isinstance(value, str) and not value.strip()):
             raise ConfigValidationError(f"Missing required field: model.{field}")
-    
+
     provider = config["provider"]
     valid_providers = [p.value for p in ModelProvider]
     if provider not in valid_providers:
         raise ConfigValidationError(
             f"Invalid provider: {provider}. Must be one of: {valid_providers}"
         )
-    
+
     # Validate base_url is required for OTHER provider
     if provider == ModelProvider.OTHER.value:
         base_url = config.get("base_url")
         if not base_url or (isinstance(base_url, str) and not base_url.strip()):
-            raise ConfigValidationError(
-                "base_url is required when provider is 'other'"
-            )
+            raise ConfigValidationError("base_url is required when provider is 'other'")
 
 
 def get_api_key_env_var(provider: ModelProvider) -> str:
     """Get the environment variable name for a provider's API key.
-    
+
     Environment variable mapping:
     - OPENAI: OPENAI_API_KEY
     - DEEPSEEK: DEEPSEEK_API_KEY
@@ -91,27 +96,27 @@ def get_api_key_env_var(provider: ModelProvider) -> str:
 
 def get_api_key_for_provider(provider: ModelProvider) -> Optional[str]:
     """Get the API key for a given provider from environment variables.
-    
+
     Returns None if not configured, allowing the system to start without API keys.
     """
     env_var = get_api_key_env_var(provider)
     api_key = os.getenv(env_var)
-    
+
     if not api_key:
         logger.warning(
             f"API key not configured. Set {env_var} environment variable for provider '{provider.value}'"
         )
         return None
-    
+
     return api_key
 
 
 def is_api_key_configured(provider: Optional[ModelProvider] = None) -> bool:
     """Check if the API key is configured for the given or current provider.
-    
+
     Args:
         provider: Optional provider to check. If None, uses current config provider.
-    
+
     Returns:
         True if API key is configured, False otherwise.
     """
@@ -121,15 +126,17 @@ def is_api_key_configured(provider: Optional[ModelProvider] = None) -> bool:
             provider = config.model.provider
         except Exception:
             return False
-    
+
     env_var = get_api_key_env_var(provider)
     api_key = os.getenv(env_var)
     return bool(api_key and api_key.strip())
 
 
-def get_base_url_for_provider(provider: ModelProvider, config_base_url: Optional[str] = None) -> Optional[str]:
+def get_base_url_for_provider(
+    provider: ModelProvider, config_base_url: Optional[str] = None
+) -> Optional[str]:
     """Get the base URL for a given provider.
-    
+
     Auto-determined URLs:
     - OPENAI: https://api.openai.com/v1
     - DEEPSEEK: https://api.deepseek.com
@@ -142,7 +149,7 @@ def get_base_url_for_provider(provider: ModelProvider, config_base_url: Optional
         ModelProvider.GEMINI: None,
         ModelProvider.OTHER: config_base_url,
     }
-    
+
     return base_url_map.get(provider)
 
 
@@ -150,10 +157,10 @@ def _to_model_config(config: dict) -> ModelConfig:
     """Convert dict configuration to ModelConfig dataclass."""
     provider = ModelProvider(config["provider"])
     config_base_url = config.get("base_url")
-    
+
     # Get auto-determined base_url (or use config for OTHER)
     base_url = get_base_url_for_provider(provider, config_base_url)
-    
+
     return ModelConfig(
         model=config["model"].strip(),
         provider=provider,
@@ -163,7 +170,7 @@ def _to_model_config(config: dict) -> ModelConfig:
 
 def _to_rate_limit_config(config: dict) -> RateLimitConfig:
     """Convert dict configuration to RateLimitConfig dataclass.
-    
+
     All fields are optional and will use defaults if not provided.
     """
     return RateLimitConfig(
@@ -223,7 +230,23 @@ def _to_agent_limits_config(config: dict) -> AgentLimitsConfig:
     )
 
 
-def load_config(reload: bool = False, use_env_overrides: bool = True, path: Optional[str] = None) -> GlobalConfig:
+def _to_embedding_config(config: dict) -> EmbeddingConfig:
+    """Convert [embedding] section to EmbeddingConfig. All fields optional."""
+    provider_str = config.get("provider", "other")
+    try:
+        provider = ModelProvider(provider_str)
+    except ValueError:
+        provider = ModelProvider.OTHER
+    return EmbeddingConfig(
+        model=str(config.get("model", "text-embedding-3-small")).strip(),
+        provider=provider,
+        base_url=config.get("base_url") and str(config.get("base_url")).strip() or None,
+    )
+
+
+def load_config(
+    reload: bool = False, use_env_overrides: bool = True, path: Optional[str] = None
+) -> GlobalConfig:
     """Load configuration with caching, validation, and environment overrides"""
     global _config
 
@@ -272,11 +295,11 @@ def load_config(reload: bool = False, use_env_overrides: bool = True, path: Opti
     # Validate and build global config
     model_config = file_config.get("model", {})
     _validate_model_config(model_config)
-    
+
     # Parse rate limit config (optional, uses defaults if not present)
     rate_limit_config = file_config.get("rate_limit", {})
     rate_limit_cfg = _to_rate_limit_config(rate_limit_config)
-    
+
     # Parse context config (optional, uses defaults if not present)
     context_config = file_config.get("context", {})
     context_cfg = _to_context_config(context_config)
@@ -285,11 +308,30 @@ def load_config(reload: bool = False, use_env_overrides: bool = True, path: Opti
     agent_limits_config = file_config.get("agent_limits", {})
     agent_limits_cfg = _to_agent_limits_config(agent_limits_config)
 
+    # Optional: lightweight model (e.g. for audit/batch tasks)
+    lightweight_cfg = None
+    lightweight_config = file_config.get("lightweight_model", {})
+    if (
+        lightweight_config
+        and lightweight_config.get("model")
+        and lightweight_config.get("provider")
+    ):
+        _validate_model_config(lightweight_config)
+        lightweight_cfg = _to_model_config(lightweight_config)
+
+    # Optional: embedding (model/base_url from config, API key from env)
+    embedding_cfg = None
+    embedding_config = file_config.get("embedding", {})
+    if embedding_config:
+        embedding_cfg = _to_embedding_config(embedding_config)
+
     global_cfg = GlobalConfig(
         model=_to_model_config(model_config),
         rate_limit=rate_limit_cfg,
         context=context_cfg,
         agent_limits=agent_limits_cfg,
+        lightweight_model=lightweight_cfg,
+        embedding=embedding_cfg,
     )
 
     _config = global_cfg
@@ -304,7 +346,7 @@ def load_config(reload: bool = False, use_env_overrides: bool = True, path: Opti
 
 def _apply_env_overrides(config: dict) -> dict:
     """Apply environment variable overrides to configuration.
-    
+
     Note: API keys are now read directly from environment variables based on provider,
     not stored in config. Base URLs are auto-determined except for OTHER provider.
     """

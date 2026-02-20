@@ -39,6 +39,61 @@ def _clean_control_characters(text: str) -> str:
     return ''.join(result)
 
 
+def _escape_unescaped_quotes_in_json_strings(s: str) -> str:
+    """Escape double quotes that appear inside JSON string values (LLM often outputs these unescaped).
+
+    Walks the string and when inside a double-quoted value, any " that is not the closing quote
+    (i.e. followed by : , } ] or end-of-value) is escaped as \".
+    """
+    result: list[str] = []
+    i = 0
+    n = len(s)
+    in_string = False
+    after_backslash = False
+
+    def lookahead_closing(pos: int) -> bool:
+        """True if this " closes the string (next non-ws is : , } ] or next key ")."""
+        j = pos + 1
+        while j < n and s[j] in " \t\n\r":
+            j += 1
+        if j >= n:
+            return True
+        # Next token is key ("), or value separator (:,},])
+        return s[j] in ':,}]"'
+
+    while i < n:
+        c = s[i]
+        if after_backslash:
+            result.append(c)
+            after_backslash = False
+            i += 1
+            continue
+        if not in_string:
+            result.append(c)
+            if c == '"':
+                in_string = True
+            i += 1
+            continue
+        # in_string
+        if c == '\\':
+            result.append(c)
+            after_backslash = True
+            i += 1
+            continue
+        if c == '"':
+            if lookahead_closing(i):
+                result.append(c)
+                in_string = False
+            else:
+                result.append('\\"')
+            i += 1
+            continue
+        result.append(c)
+        i += 1
+
+    return ''.join(result)
+
+
 def extract_json(text: str) -> dict:
     """
     Extract JSON from LLM response, handling:
@@ -75,7 +130,9 @@ def extract_json(text: str) -> dict:
 
     # Clean control characters BEFORE parsing (this is the key fix)
     json_str = _clean_control_characters(json_str)
-    
+    # Escape unescaped double quotes inside string values (e.g. "几年内" in Chinese text)
+    json_str = _escape_unescaped_quotes_in_json_strings(json_str)
+
     # Try parsing with strict=False first (allows control chars in strings)
     try:
         return json.loads(json_str, strict=False)

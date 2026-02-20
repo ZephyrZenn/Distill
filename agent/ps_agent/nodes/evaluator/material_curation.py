@@ -108,7 +108,7 @@ class MaterialCurationNode:
             return {
                 **log_step(
                     state,
-                    "🔍 audit:stage1 complete kept={len(kept_items)} "
+                    f"🔍 audit:stage1 complete kept={len(kept_items)} "
                     f"discarded={len(discarded_items)} → 继续研究",
                 ),
                 "research_items": kept_items,
@@ -167,7 +167,7 @@ class MaterialCurationNode:
 
         # Apply quick filters before LLM audit
         filtered_items = await self._quick_filter_items(items, state)
-        max_keep_items = state.get("max_context_items", 15) + 10
+        max_keep_items = int(state.get("max_context_items", 15) * 2)
         # Run LLM snippet audit
         try:
             kept_items, discarded_items, metadata = (
@@ -176,10 +176,12 @@ class MaterialCurationNode:
                     focus=state["focus"],
                     focus_dimensions=state.get("focus_dimensions", []),
                     current_date=state["current_date"],
-                    max_keep_items=max_keep_items,
                 )
             )
 
+            kept_items.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
+            kept_items = kept_items[:max_keep_items]
+            
             # Convert discarded items to DiscardedItem format
             discarded = [
                 DiscardedItem(
@@ -187,7 +189,7 @@ class MaterialCurationNode:
                     title=item.get("title", ""),
                     url=item.get("url", ""),
                     reason=item.get("audit_reason", "LLM snippet audit: discarded"),
-                    score=item.get("llm_relevance", 0.0),
+                    score=item.get("relevance_score", 0.0),
                 )
                 for item in discarded_items
             ]
@@ -232,7 +234,6 @@ class MaterialCurationNode:
                     focus=state["focus"],
                     focus_dimensions=state.get("focus_dimensions", []),
                     current_date=state["current_date"],
-                    max_keep_items=max_keep_items,
                 )
             )
 
@@ -250,7 +251,8 @@ class MaterialCurationNode:
 
             # Score all items (relevance + quality → composite_score)
             scored_items = self._score_items(kept_items)
-
+            scored_items.sort(key=lambda x: x.get("score", 0), reverse=True)
+            scored_items = scored_items[:max_keep_items]
             logger.info(
                 "[curation:stage2] Complete: kept=%d, "
                 "discarded=%d, "
@@ -314,7 +316,6 @@ class MaterialCurationNode:
 
         # Sort by composite score
         scored_items.sort(key=lambda x: x.get("score", 0), reverse=True)
-        # TODO: Maybe need to limit the number of items to a certain number
         avg_score = sum(i.get("score", 0) for i in scored_items) / len(scored_items)
         logger.info(
             f"[curation] Scored {len(scored_items)} items, avg_score={avg_score:.2f}"

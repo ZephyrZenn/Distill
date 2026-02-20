@@ -2,16 +2,14 @@ import asyncio
 import json
 import logging
 import random
-import re
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 from google import genai
 from google.genai import types
 from openai import AsyncOpenAI
 
 from core.config.loader import get_api_key_for_provider, get_config, get_api_key_env_var
-from core.models.feed import FeedArticle
 from core.models.llm import (
     CompletionResponse,
     Message,
@@ -239,10 +237,18 @@ class GeminiClient(LLMClient):
             # Apply rate limiting
             await self._apply_rate_limit()
 
-            async def _do_completion():
-                resp = await self.client.aio.models.generate_content(
-                    model=self.model, contents=prompt
+            max_tokens = kwargs.get("max_tokens")
+            request_params = {
+                "model": self.model,
+                "contents": prompt,
+            }
+            if max_tokens is not None:
+                request_params["config"] = types.GenerateContentConfig(
+                    max_output_tokens=max_tokens
                 )
+
+            async def _do_completion():
+                resp = await self.client.aio.models.generate_content(**request_params)
                 logger.info(
                     "GeminiClient completion content_chars=%d preview=%s",
                     len(resp.text or ""),
@@ -491,7 +497,7 @@ class OpenAIClient(LLMClient):
                     model=self.model,
                     messages=messages_dict,
                     stream=False,
-                    max_tokens=8192,
+                    max_tokens=kwargs.get("max_tokens", 8192),
                 )
                 content = resp.choices[0].message.content or ""
                 logger.info(
@@ -619,14 +625,23 @@ class OpenAIClient(LLMClient):
         )
 
 
-def auto_build_client() -> LLMClient:
+def auto_build_client(key: Literal["model", "lightweight_model"] = "model") -> LLMClient:
     """Build an AI client based on current configuration.
 
     Raises:
         APIKeyNotConfiguredError: If the API key is not set for the current provider.
     """
     config = get_config()
-    model_cfg = config.model
+    if key == "model":
+        model_cfg = config.model
+    elif key == "lightweight_model":
+        if config.lightweight_model is None:
+            logger.warning("Lightweight model not configured, using model instead")
+            model_cfg = config.model
+        else:
+            model_cfg = config.lightweight_model
+    else:
+        raise ValueError(f"Invalid key: {key}")
     rate_limit_cfg = config.rate_limit
 
     # Get API key from environment variable based on provider

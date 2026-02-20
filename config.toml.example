@@ -21,6 +21,17 @@ provider = "openai"
 # Only required when provider = "other":
 # base_url = "https://your-custom-api.com/v1"
 
+# Optional: lightweight model for audit/batch tasks (e.g. batch_audit). API key from env (MODEL_API_KEY for other).
+# [lightweight_model]
+# model = "gemini-2.5-flash-lite"
+# provider = "other"
+# base_url = "https://your-custom-api.com/v1"
+
+# Optional: embedding service. Model and base_url here; API key from env (EMBEDDING_API_KEY).
+# [embedding]
+# model = "text-embedding-3-small"
+# provider = "other"
+# base_url = "https://your-custom-api.com/v1"
 
 [rate_limit]
 # Rate limiting settings (all fields are optional, defaults shown below)
@@ -47,6 +58,11 @@ max_delay = 60.0
 
 # Enable/disable automatic retry on errors (default: true)
 enable_retry = true
+
+[context]
+# Context window settings for LLM prompts
+max_tokens = 128000
+compress_threshold = 0.8
 
 [agent_limits]
 # Plan & Solve Agent loop limiting configuration

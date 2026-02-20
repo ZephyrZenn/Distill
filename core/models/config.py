@@ -65,6 +65,15 @@ class AgentLimitsConfig:
 
 
 @dataclass
+class EmbeddingConfig:
+    """Embedding service configuration (model/base_url from config, API key from env)."""
+
+    model: str = "text-embedding-3-small"
+    provider: ModelProvider = ModelProvider.OTHER
+    base_url: Optional[str] = None
+
+
+@dataclass
 class GlobalConfig:
     """Global configuration dataclass"""
 
@@ -72,6 +81,8 @@ class GlobalConfig:
     rate_limit: RateLimitConfig = field(default_factory=RateLimitConfig)
     context: ContextConfig = field(default_factory=ContextConfig)
     agent_limits: "AgentLimitsConfig" = field(default_factory=lambda: AgentLimitsConfig())  # type: ignore[misc]
+    lightweight_model: Optional["ModelConfig"] = None
+    embedding: Optional[EmbeddingConfig] = None
 
 
 @dataclass
@@ -81,4 +92,3 @@ class ModelConfig:
     model: str
     provider: ModelProvider
     base_url: Optional[str] = None  # Only required for OTHER provider
-

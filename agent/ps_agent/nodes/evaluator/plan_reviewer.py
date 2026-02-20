@@ -7,7 +7,12 @@ import logging
 
 from core.llm_client import LLMClient
 from core.models.llm import Message
-from agent.ps_agent.models import PatchDiagnosis, PlanReviewResult, ReplanDiagnosis, ResearchItem
+from agent.ps_agent.models import (
+    PatchDiagnosis,
+    PlanReviewResult,
+    ReplanDiagnosis,
+    ResearchItem,
+)
 from agent.ps_agent.state import PSAgentState, log_step
 from agent.ps_agent.prompts import PLAN_REVIEW_PROMPT
 from agent.utils import extract_json
@@ -75,7 +80,9 @@ class PlanReviewerNode:
                 return self._route_to_patch(state, review_result)
 
         except Exception as exc:
-            logger.exception(f"[plan_reviewer] run_id={run_id} LLM review failed: {exc}")
+            logger.exception(
+                f"[plan_reviewer] run_id={run_id} LLM review failed: {exc}"
+            )
             raise exc
 
     def _build_review_prompt(
@@ -103,29 +110,33 @@ class PlanReviewerNode:
 
         # 2. Research Dimensions
         sections.append("## 研究维度\n")
-        dims = [ dim.to_dict() for dim in focus_dimensions ]
+        dims = [dim.to_dict() for dim in focus_dimensions]
         sections.append(json.dumps(dims, ensure_ascii=False, indent=2))
         sections.append("\n")
-        
+
         sections.append("## 素材详情\n")
         items = []
         for item in research_items:
-            items.append({
-                "id": item.get("id", ""),
-                "title": item.get("title", ""),
-                "summary": item.get("summary", ""),
-                "relevance": item.get("relevance", 0.0),
-                "quality": item.get("quality", 0.0),
-                "novelty": item.get("novelty", 0.0),
-                "score": item.get("score", 0.0),
-                "audit_reason": item.get("audit_reason", ""),
-            })
+            items.append(
+                {
+                    "id": item.get("id", ""),
+                    "title": item.get("title", ""),
+                    "summary": item.get("summary", ""),
+                    "relevance": item.get("relevance", 0.0),
+                    "quality": item.get("quality", 0.0),
+                    "novelty": item.get("novelty", 0.0),
+                    "score": item.get("score", 0.0),
+                    "audit_reason": item.get("audit_reason", ""),
+                }
+            )
         sections.append(json.dumps(items, ensure_ascii=False, indent=2))
         sections.append("\n")
 
         # 7. Recent Queries (for efficiency assessment)
         query_history = state.get("query_history", [])
-        recent_queries = [item.get("query", "") for item in query_history[-10:] if item.get("query")]
+        recent_queries = [
+            item.get("query", "") for item in query_history[-10:] if item.get("query")
+        ]
         if recent_queries:
             sections.append("## 最近搜索查询（用于评估搜索效率）")
             for i, query in enumerate(recent_queries, 1):
@@ -134,7 +145,9 @@ class PlanReviewerNode:
 
         return "\n".join(sections)
 
-    def _route_to_ready(self, state: PSAgentState, review_result: PlanReviewResult) -> dict:
+    def _route_to_ready(
+        self, state: PSAgentState, review_result: PlanReviewResult
+    ) -> dict:
         """Route to structure phase with audit memo.
 
         Args:
@@ -204,7 +217,9 @@ class PlanReviewerNode:
             "messages": [Message.assistant("".join(message_parts))],
         }
 
-    def _route_to_patch(self, state: PSAgentState, review_result: PlanReviewResult) -> dict:
+    def _route_to_patch(
+        self, state: PSAgentState, review_result: PlanReviewResult
+    ) -> dict:
         """Route back to research with patch queries.
 
         Args:
@@ -254,7 +269,9 @@ class PlanReviewerNode:
             "messages": [Message.assistant(message)],
         }
 
-    def _route_to_replan(self, state: PSAgentState, review_result: PlanReviewResult) -> dict:
+    def _route_to_replan(
+        self, state: PSAgentState, review_result: PlanReviewResult
+    ) -> dict:
         """Route to bootstrap for replanning with new dimensions.
 
         Args:

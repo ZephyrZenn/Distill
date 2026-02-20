@@ -66,17 +66,24 @@ class StructureNode:
             ).set_priority(0),
         ]
 
+        msg_start = "📐 structuring: 正在生成写作策略..."
+        log_step(state, msg_start)  # 执行前：立即触发 callback，让 UI 先显示
+
         try:
             response = await self.client.completion(messages)
 
             plan: StructurePlan = extract_json(response)
 
-            summary = f"规划完成：生成 {len(plan.get('chapters', []))} 个章节指南。"
-            logger.info("[structure] Finish plan. Overview: %s", plan.get("daily_overview", ""))
+            summary = f"规划完成：生成 {len(plan.get('chapters', []))} 个章节指南。概览：{plan.get('daily_overview', '')}"
+            logger.info(
+                "[structure] Finish plan. Overview: %s", plan.get("daily_overview", "")
+            )
+
+            msg_done = f"📐 structuring: {summary}"
+            log_step(state, msg_done)  # 执行后：触发 callback
 
             return {
-                **log_step(state, "📐 structuring: 正在生成写作策略..."),
-                **log_step(state, f"📐 structuring: {summary}"),
+                "log_history": [msg_start, msg_done],
                 "plan": plan,
                 "status": "structuring",
                 "messages": [Message.assistant(summary)],
@@ -84,8 +91,10 @@ class StructureNode:
 
         except Exception as exc:
             logger.exception("[structure] failed")
+            msg_err = f"❌ structuring: 规划失败: {exc}"
+            log_step(state, msg_err)
             return {
-                **log_step(state, f"❌ structuring: 规划失败: {exc}"),
+                "log_history": [msg_start, msg_err],
                 "status": "failed",
                 "last_error": str(exc),
             }

@@ -1,13 +1,13 @@
+import logging
 from agent.ps_agent.models import ReviewResult, SectionUnit
 from agent.ps_agent.prompts.review import (
     SUMMARY_REVIEWER_PROMPT,
     SUMMARY_REVIEWER_SYSTEM_PROMPT,
 )
+from agent.ps_agent.state import PSAgentState, log_step
 from agent.utils import extract_json
 from core.llm_client import LLMClient
 from core.models.llm import Message
-from agent.ps_agent.state import PSAgentState, log_step
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,8 @@ class SummaryReviewerNode:
             }
 
         sections = state.get("sections", [])
-        pre = log_step(state, "🧪 reviewing: 开始审稿")
+        msg_start = "🧪 reviewing: 开始审稿"
+        log_step(state, msg_start)
         for section in sections:
             review = await self._review(section)
             section["review_result"] = review
@@ -38,17 +39,19 @@ class SummaryReviewerNode:
             section["review_result"].get("status") == "APPROVED" for section in sections
         ):
             final_report = "\n".join([section["content"] for section in sections])
+            msg_done = "🧪 reviewing: 文章审核通过"
+            log_step(state, msg_done)
             return {
-                **pre,
-                **log_step(state, "🧪 reviewing: 文章审核通过"),
+                "log_history": [msg_start, msg_done],
                 "final_report": final_report,
                 "sections": sections,
                 "status": "completed",
                 "messages": [Message.assistant("文章审核通过")],
             }
+        msg_done = "🧪 reviewing: 部分段落审核未通过，进入修订阶段"
+        log_step(state, msg_done)
         return {
-            **pre,
-            **log_step(state, "🧪 reviewing: 部分段落审核未通过，进入修订阶段"),
+            "log_history": [msg_start, msg_done],
             "sections": sections,
             "status": "refining",
             "messages": [Message.assistant("部分段落审核未通过")],

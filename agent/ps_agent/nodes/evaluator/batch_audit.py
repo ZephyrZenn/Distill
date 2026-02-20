@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
-from core.llm_client import LLMClient
 
-from agent.ps_agent.models import SnippetAuditResult, ResearchItem, Dimension
+from core.config import get_config
+from core.llm_client import LLMClient
+from core.prompt.context_manager import ContextBlock, ContextBudget
+
+from agent.ps_agent.models import Dimension, ResearchItem, SnippetAuditResult
 from core.models.llm import Message
 from agent.ps_agent.audit.batch_processor import BatchProcessor
 from agent.ps_agent.audit.result_parser import parse_audit_result
@@ -35,7 +38,6 @@ class BatchAuditor:
         focus: str,
         focus_dimensions: list[Dimension] | list[dict],
         current_date: str,
-        max_keep_items: int = 25,
     ) -> tuple[list[ResearchItem], list[ResearchItem], dict]:
         """Stage 1: Fast snippet-based audit.
 
@@ -69,7 +71,10 @@ class BatchAuditor:
 
             try:
                 result = await self._call_snippet_audit_llm(
-                    batch, focus, focus_dimensions, current_date, max_keep_items
+                    batch=batch,
+                    focus=focus,
+                    focus_dimensions=focus_dimensions,
+                    current_date=current_date,
                 )
                 metadata["llm_calls"] += 1
 
@@ -86,7 +91,6 @@ class BatchAuditor:
                 )
                 # Fallback: keep all items from failed batch
                 kept.extend(batch)
-
         logger.info(
             f"[audit:stage1] Complete: kept={len(kept)}, discarded={len(discarded)}, "
             f"llm_calls={metadata['llm_calls']}"
@@ -99,7 +103,6 @@ class BatchAuditor:
         focus: str,
         focus_dimensions: list[dict],
         current_date: str,
-        max_keep_items: int = 15,
     ) -> tuple[list[ResearchItem], list[ResearchItem], dict]:
         """Stage 2: Deep full-content audit.
 
@@ -133,7 +136,10 @@ class BatchAuditor:
 
             try:
                 result = await self._call_full_audit_llm(
-                    batch, focus, focus_dimensions, current_date, max_keep_items
+                    batch=batch,
+                    focus=focus,
+                    focus_dimensions=focus_dimensions,
+                    current_date=current_date,
                 )
                 metadata["llm_calls"] += 1
 
@@ -149,7 +155,6 @@ class BatchAuditor:
                     f"[audit:stage2] Batch {batch_idx} failed: {e}", exc_info=True
                 )
                 kept.extend(batch)
-
         logger.info(
             f"[audit:stage2] Complete: kept={len(kept)}, discarded={len(discarded)}, "
             f"llm_calls={metadata['llm_calls']}"
@@ -162,7 +167,6 @@ class BatchAuditor:
         focus: str,
         focus_dimensions: list[Dimension] | list[dict],
         current_date: str,
-        max_keep_items: int = 25,
     ) -> list[SnippetAuditResult]:
         """Call LLM for snippet audit.
 
@@ -194,8 +198,6 @@ current date: {current_date}
 {items_json}
 ```
 
-You can keep at most {max_keep_items} items.
-
 Return audit results in JSON format.
 """
 
@@ -214,7 +216,6 @@ Return audit results in JSON format.
         focus: str,
         focus_dimensions: list[Dimension] | list[dict],
         current_date: str,
-        max_keep_items: int = 15,
     ) -> dict:
         """Call LLM for full content audit.
 
@@ -226,8 +227,66 @@ Return audit results in JSON format.
         Returns:
             Parsed JSON response from LLM
         """
-        items_json = self._format_items_for_audit(batch, include_content=True)
+        # Build raw items as dict for context manager.
+        items_for_audit: list[dict] = []
+        for item in batch:
+            items_for_audit.append(
+                {
+                    "id": item["id"],
+                    "title": item.get("title", "")[:200],
+                    "summary": item.get("summary", "")[:800],
+                    "source": item.get("source", ""),
+                    "published_at": item.get("published_at", ""),
+                    "content": item.get("content", ""),
+                }
+            )
+
         dimensions_context = self._format_dimensions(focus_dimensions)
+
+        # Use global config + context manager to control prompt size.
+        config = get_config()
+        context_cfg = config.context
+        # Default output tokens for full audit; can be made configurable later.
+        max_output_tokens = 3000
+
+        per_task_limits: dict = {
+            "full_audit": {
+                "max_input_ratio": 0.6,
+                "max_chars_per_item": 1800,
+            }
+        }
+
+        ctx_budget = ContextBudget(
+            max_context_tokens=context_cfg.max_tokens,
+            max_output_tokens=max_output_tokens,
+            safety_ratio=context_cfg.compress_threshold,
+            task_name="full_audit",
+            per_task_limits=per_task_limits,
+        )
+
+        ctx_budget.add_block(
+            ContextBlock.fixed("system", FULL_AUDIT_PROMPT, priority=10)
+        )
+        ctx_budget.add_block(ContextBlock.fixed("focus", focus, priority=9))
+        ctx_budget.add_block(
+            ContextBlock.fixed("dimensions", dimensions_context, priority=8)
+        )
+        ctx_budget.add_block(
+            ContextBlock.variable(
+                name="materials",
+                payload=items_for_audit,
+                strategy_name="structured_paragraphs",
+                priority=5,
+                per_item_key="content",
+                max_chars_per_item=per_task_limits["full_audit"]["max_chars_per_item"],
+            )
+        )
+
+        ctx_budget.compact()
+        compact_items = ctx_budget.get_block_payload("materials")
+        items_json = json.dumps(
+            compact_items, ensure_ascii=False, separators=(",", ":")
+        )
 
         user_prompt = f"""Please perform deep audit on the following research materials.
 current date: {current_date}
@@ -241,10 +300,7 @@ current date: {current_date}
 ```json
 {items_json}
 ```
-
-You can keep at most {max_keep_items} items.
-
-Return audit results in JSON format.
+Return audit results in JSON format. Keep each audit_report brief (see Length Constraints in system prompt).
 """
 
         messages = [
@@ -252,7 +308,7 @@ Return audit results in JSON format.
             Message.user(user_prompt),
         ]
 
-        response = await self.client.completion(messages)
+        response = await self.client.completion(messages, max_tokens=max_output_tokens)
         res = extract_json(response)
         return res["results"]
 
@@ -268,9 +324,9 @@ Return audit results in JSON format.
         Returns:
             JSON string of formatted items
         """
-        formatted = []
+        formatted: list[dict] = []
         for item in items:
-            item_dict = {
+            item_dict: dict = {
                 "id": item["id"],
                 "title": item.get("title", "")[:200],
                 "summary": item.get("summary", "")[:800],
@@ -279,12 +335,11 @@ Return audit results in JSON format.
             }
 
             if include_content and item.get("content"):
-                # Truncate full content to avoid token overflow
-                item_dict["content"] = item["content"][:3000]
+                item_dict["content"] = item.get("content", "")
 
             formatted.append(item_dict)
 
-        return json.dumps(formatted, ensure_ascii=False, indent=2)
+        return json.dumps(formatted, ensure_ascii=False, separators=(",", ":"))
 
     def _format_dimensions(self, dimensions: list) -> str:
         """Format focus dimensions for prompt.

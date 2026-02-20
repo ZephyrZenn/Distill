@@ -32,8 +32,6 @@ def _process_snippet_item(
     explanation = result_item.get("explanation", "")
 
     # Extract scores
-    topic_match = reasoning.get("topic_match", "")
-    info_value = reasoning.get("information_value", "")
     relevance = result_item.get("relevance_score")
 
     # Build reason string
