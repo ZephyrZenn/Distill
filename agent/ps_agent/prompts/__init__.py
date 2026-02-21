@@ -46,9 +46,6 @@ from .full_audit import FULL_AUDIT_PROMPT
 # Spiral Collection (P1)
 from .audit_analysis import AUDIT_ANALYSIS_PROMPT
 
-# 向后兼容别名
-WRITER_SYSTEM_PROMPT = DEEP_WRITER_SYSTEM_PROMPT
-
 
 __all__ = [
     # Bootstrap
@@ -66,7 +63,6 @@ __all__ = [
     "STRUCTURE_SYSTEM_PROMPT",
     "STRUCTURE_USER_PROMPT",
     # Writing
-    "WRITER_SYSTEM_PROMPT",  # 兼容别名
     "DEEP_WRITER_SYSTEM_PROMPT",
     "DEEP_WRITER_INITIAL_PROMPT",
     "DEEP_WRITER_REFINE_PROMPT",

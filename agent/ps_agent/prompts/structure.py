@@ -1,4 +1,4 @@
-"""Structure 阶段 Prompts（方案 B 简化版）"""
+"""Structure 阶段 Prompts"""
 
 STRUCTURE_SYSTEM_PROMPT = """你是深度分析报告的首席策略官 (Chief Strategy Officer)。
 

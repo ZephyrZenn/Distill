@@ -1,10 +1,6 @@
 """Research Planning 阶段 Prompts（方案 B 简化版）"""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from agent.ps_agent.state import PSAgentState
 
 RESEARCH_PLANNER_PROMPT = """你是一位资深新闻主编。你的任务是制定"分批研究计划"，以最高效的方式进行深度战略分析。
 
@@ -43,7 +39,12 @@ RESEARCH_PLANNER_PROMPT = """你是一位资深新闻主编。你的任务是制
 
 ## 资源约束
 - **批次限制**：一次规划 **3-5** 个工具调用
-- 可用工具：`search_feeds`、`search_web`
+- 可用工具：`search_feeds`、`search_web`、`search_memory`
+
+### 工具分工
+- **search_feeds**：系统内 RSS 订阅源，获取近期文章元信息
+- **search_web**：互联网实时搜索，补充订阅源未覆盖的最新信息
+- **search_memory**：历史记忆中的背景与趋势，用于**补充解释性背景**，不替代当日信息；需要历史上下文、过往摘要时再调用
 
 ## 工具调用策略
 
@@ -117,9 +118,9 @@ query_suggestions = [{"suggested_query": "NVIDIA Blackwell tensor core performan
 **你可以在一次响应中并行调用多个工具**。如果有多个缺口需要填补，请在一次响应中生成多个工具调用。
 
 ### 如何调用搜索工具
-针对每个缺口，调用 `search_web` 或 `search_feeds`：
-- `query`: 搜索查询（参考诊断报告中的搜索建议）
-- `time_range`: 根据主题类型选择
+针对每个缺口，调用 `search_web`、`search_feeds` 或 `search_memory`：
+- **search_web / search_feeds**：`query` 参考诊断报告中的搜索建议，`time_range` 根据主题类型选择
+- **search_memory**：当缺口需要**历史背景、趋势上下文**时使用，传 `keywords` 数组（2-6 个关键词）
 """
 
 __all__ = [

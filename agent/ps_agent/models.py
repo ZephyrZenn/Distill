@@ -17,7 +17,6 @@ class ResearchItem(TypedDict, total=False):
 
     # Five-dimensional scoring (stored during curation)
     relevance: float  # Focus + bucket similarity (0.0-1.0)
-    # freshness: float  # Time-based recency (0.0-1.0)
     quality: float  # Content richness (0.0-1.0)
     novelty: float  # Information gain (0.0-1.0)
     score: float
@@ -26,11 +25,6 @@ class ResearchItem(TypedDict, total=False):
     audit_stage: NotRequired[Literal["snippet", "full", "none"]]  # Current audit stage
     should_fetch_full: NotRequired[bool]  # Whether to fetch full content for Stage 2
     audit_reason: NotRequired[str]  # Reason for discard/keep from LLM
-
-    # Search context for freshness fallback
-    time_range_hint: NotRequired[
-        Literal["day", "week", "month", "year"]
-    ]  # From search_web time_range
 
 
 class DiscardedItem(TypedDict, total=False):

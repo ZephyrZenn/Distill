@@ -23,226 +23,99 @@ def build_bootstrap_user_prompt(*, focus: str, current_date: str) -> str:
 """
 
 
-BOOTSTRAP_INTENT_DIMENSIONS_PROMPT = """你是一位专业的战略分析师。请从用户关注点（Focus）中提取**研究意图维度**，用于指导后续的搜索和文章审计。
+BOOTSTRAP_INTENT_DIMENSIONS_PROMPT = """你是一位专业的战略分析师。请从用户关注点（Focus）中提取**研究意图维度**，用于指导后续搜索与文章审计。
 
-## 核心概念：研究意图维度
+## 什么是研究意图维度
 
-**研究意图维度**不同于简单的限定词（如市场、时间），它描述的是"我们需要从什么角度收集信息"。
+维度描述的是「我们需要从什么角度收集信息」——即**信息需求的类型**，而不是简单关键词。每个维度需回答：我们要了解什么？什么样的文章算相关？如何判断？
 
-每个意图维度回答一个核心问题：
-- **我们需要了解什么类型的信息？**
-- **什么样的文章提供了我们需要的视角？**
-- **如何判断一篇文章是否对研究有价值？**
+## 维度类型速查
 
-## 意图维度的类型
-
-### 1. 技术事实维度 (technical_facts)
-**意图**：理解核心机制、技术规格、产品特性
-- 关注：技术参数、架构设计、性能指标、技术路线图
-- 示例：对于 "NVIDIA"，需要了解 GPU 架构、tensor core 规格、制造工艺
-- 优先级：critical（技术类主题）/ high（其他主题）
-
-### 2. 市场竞争维度 (market_competition)
-**意图**：定位在竞争格局中的位置
-- 关注：市场份额、竞争对手、对比分析、行业排名
-- 示例：对于 "NVIDIA"，需要了解与 AMD、Intel 的竞争态势
-- 优先级：high（商业类主题）/ medium（其他主题）
-
-### 3. 财务表现维度 (financial_performance)
-**意图**：评估经济健康状况
-- 关注：营收、利润、增长率、财报数据、估值
-- 示例：对于 "NVIDIA"，需要了解数据中心业务营收、年度增长率
-- 优先级：high（公司类主题）/ low（其他主题）
-
-### 4. 应用场景维度 (use_cases)
-**意图**：理解实际应用和影响范围
-- 关注：使用场景、客户案例、部署方式、实际效果
-- 示例：对于 "NVIDIA"，需要了解 AI 训练、推理、游戏等应用
-- 优先级：medium
-
-### 5. 历史演进维度 (historical_evolution)
-**意图**：理解发展脉络和因果链条
-- 关注：起源、关键转折点、历史事件、发展阶段
-- 示例：对于 "NVIDIA"，需要了解从游戏卡到 AI 芯片的发展历程
-- 优先级：medium（除非 Focus 明确要求历史）
-
-### 6. 未来展望维度 (future_outlook)
-**意图**：识别趋势和风险
-- 关注：预测、规划、风险、机会、不确定性
-- 示例：对于 "NVIDIA"，需要了解下一代产品、市场预测
-- 优先级：medium
-
-### 7. 地缘政治维度 (geopolitical)
-**意图**：理解政治和外交影响
-- 关注：政策、制裁、贸易关系、国际合作与冲突
-- 示例：对于 "世界局势"，需要了解大国关系、地区冲突
-- 优先级：critical（政治类主题）/ low（其他主题）
-
-### 8. 社会影响维度 (societal_impact)
-**意图**：理解对社会的广泛影响
-- 关注：经济影响、环境影响、就业、伦理、公共利益
-- 示例：对于 "AI"，需要了解对就业、隐私、伦理的影响
-- 优先级：medium
+| type | 意图简述 | 典型 priority |
+|------|----------|---------------|
+| technical_facts | 核心机制、技术规格、产品特性 | critical(技术主题) / high |
+| market_competition | 竞争格局、份额、对手对比 | high(商业) / medium |
+| financial_performance | 营收、利润、增长、财报 | high(公司) / low |
+| use_cases | 应用场景、客户案例、部署效果 | medium |
+| historical_evolution | 发展脉络、关键转折、历史阶段 | medium |
+| future_outlook | 趋势、预测、规划、风险 | medium |
+| geopolitical | 政策、制裁、大国关系、地区冲突 | critical(政治) / low |
+| societal_impact | 经济/环境/就业/伦理等社会影响 | medium |
+| other | 上述未覆盖的维度 | 按需 |
 
 ## 输出格式 (JSON)
+
+```json
 {
   "dimensions": [
     {
-      "type": "technical_facts | market_competition | financial_performance | use_cases | historical_evolution | future_outlook | geopolitical | societal_impact | other",
-      "name": "维度名称（简洁描述）",
-      "intent": "这个维度的研究意图是什么？我们需要从什么角度收集信息？",
-      "keywords": ["关键词1", "关键词2", "英文关键词1", "英文关键词2"],
+      "type": "上述类型之一",
+      "name": "维度名称（5-8字）",
+      "intent": "研究意图：从什么角度收集信息？",
+      "keywords": ["关键词1", "英文关键词", ...],
       "priority": "critical | high | medium | low",
-      "relevance_criteria": "如何判断一篇文章是否与这个维度相关？提供具体的判断标准"
+      "relevance_criteria": "如何判断一篇文章与该维度相关？给出可操作标准"
     }
   ]
 }
+```
 
-## 完整示例
+## 完整示例 (Focus = "NVIDIA")
 
-**示例1**: Focus = "NVIDIA"
 ```json
 {
   "dimensions": [
     {
       "type": "technical_facts",
       "name": "技术架构与产品",
-      "intent": "了解 NVIDIA GPU 架构设计、技术规格、性能指标，以及产品线的技术特点",
-      "keywords": ["GPU架构", "architecture", "tensor core", "CUDA", "Blackwell", "H100", "制程", "性能", "benchmark", "specifications"],
+      "intent": "了解 NVIDIA GPU 架构、技术规格、性能指标与产品线特点",
+      "keywords": ["GPU架构", "tensor core", "CUDA", "Blackwell", "H100", "制程", "benchmark", "specifications"],
       "priority": "critical",
-      "relevance_criteria": "文章包含具体的技术规格、架构分析、性能测试数据，或详细描述产品技术特点"
+      "relevance_criteria": "文章包含具体技术规格、架构分析、性能数据或产品技术描述"
     },
     {
       "type": "market_competition",
       "name": "市场竞争格局",
-      "intent": "了解 NVIDIA 在 AI 芯片市场的地位、与竞争对手的对比、市场份额变化",
-      "keywords": ["竞争", "competition", "AMD", "Intel", "市场份额", "market share", "对比", "comparison", "竞争格局", "领先"],
+      "intent": "了解 NVIDIA 在 AI 芯片市场的地位、与 AMD/Intel 对比、份额变化",
+      "keywords": ["竞争", "competition", "AMD", "Intel", "市场份额", "market share", "对比", "领先"],
       "priority": "critical",
-      "relevance_criteria": "文章讨论市场竞争格局、对比 NVIDIA 与竞争对手、分析市场地位或份额"
+      "relevance_criteria": "文章讨论竞争格局、对手对比或市场地位"
     },
     {
       "type": "use_cases",
       "name": "应用场景与部署",
-      "intent": "了解 NVIDIA 产品在 AI 训练、推理、游戏、专业可视化等领域的实际应用",
-      "keywords": ["应用", "application", "部署", "deployment", "AI训练", "training", "推理", "inference", "数据中心", "data center", "案例", "case"],
+      "intent": "了解产品在 AI 训练、推理、游戏、数据中心等的实际应用",
+      "keywords": ["应用", "application", "部署", "deployment", "AI训练", "推理", "数据中心", "案例"],
       "priority": "high",
-      "relevance_criteria": "文章描述具体的使用场景、客户案例、部署方式或实际应用效果"
+      "relevance_criteria": "文章描述使用场景、客户案例、部署方式或应用效果"
     },
     {
       "type": "financial_performance",
       "name": "财务表现与增长",
-      "intent": "了解 NVIDIA 的营收、利润、增长率等财务指标，以及业务板块表现",
-      "keywords": ["营收", "revenue", "利润", "profit", "增长", "growth", "财报", "earnings", "数据中心业务", "Q1", "Q2", "Q3", "Q4"],
+      "intent": "了解营收、利润、增长率及业务板块表现",
+      "keywords": ["营收", "revenue", "利润", "增长", "财报", "earnings", "数据中心业务", "Q1", "Q2"],
       "priority": "medium",
-      "relevance_criteria": "文章包含具体的财务数据、财报分析、营收或利润数字"
+      "relevance_criteria": "文章包含具体财务数据、财报分析或营收利润数字"
     },
     {
       "type": "future_outlook",
       "name": "未来发展趋势",
-      "intent": "了解 NVIDIA 的产品路线图、技术规划、市场预测",
-      "keywords": ["未来", "future", "路线图", "roadmap", "预测", "forecast", "计划", "plan", "下一代", "next-gen", "趋势", "trend"],
+      "intent": "了解产品路线图、技术规划与市场预测",
+      "keywords": ["未来", "路线图", "roadmap", "预测", "forecast", "下一代", "趋势", "trend"],
       "priority": "medium",
-      "relevance_criteria": "文章讨论未来规划、产品路线、市场预测或技术趋势"
+      "relevance_criteria": "文章讨论未来规划、路线图、市场预测或技术趋势"
     }
   ]
 }
 ```
 
-**示例2**: Focus = "世界局势"
-```json
-{
-  "dimensions": [
-    {
-      "type": "geopolitical",
-      "name": "大国博弈与地缘政治",
-      "intent": "了解主要大国（美中俄欧）之间的战略竞争、联盟关系变化、地缘政治冲突",
-      "keywords": ["大国", "great power", "中美关系", "US-China", "地缘政治", "geopolitics", "战略竞争", "strategic competition", "联盟", "alliance", "冲突", "conflict"],
-      "priority": "critical",
-      "relevance_criteria": "文章讨论大国关系、战略竞争、地缘政治冲突、联盟变化"
-    },
-    {
-      "type": "geopolitical",
-      "name": "地区冲突与热点",
-      "intent": "了解关键地区（中东、欧洲、亚太）的内部冲突、政治演变",
-      "keywords": ["地区冲突", "regional conflict", "中东", "Middle East", "欧洲", "Europe", "亚太", "Asia-Pacific", "乌克兰", "Ukraine", "以色列", "Israel", "巴以", "Palestine"],
-      "priority": "critical",
-      "relevance_criteria": "文章报道具体地区的冲突、政治变化、危机事件"
-    },
-    {
-      "type": "societal_impact",
-      "name": "全球性挑战与治理",
-      "intent": "了解气候变化、公共卫生、经济治理、科技竞争等跨国议题",
-      "keywords": ["气候变化", "climate change", "公共卫生", "public health", "经济", "economy", "治理", "governance", "科技竞争", "technology competition", "供应链", "supply chain"],
-      "priority": "high",
-      "relevance_criteria": "文章讨论跨国议题、全球性挑战、国际合作或治理问题"
-    }
-  ]
-}
-```
+## 规则摘要
 
-**示例3**: Focus = "美股科技股2025年表现"
-```json
-{
-  "dimensions": [
-    {
-      "type": "financial_performance",
-      "name": "股价与市场表现",
-      "intent": "了解科技股在美股市场的整体表现、涨跌幅、交易量",
-      "keywords": ["股价", "stock price", "涨跌", "gain", "loss", "表现", "performance", "纳斯达克", "NASDAQ", "标普500", "S&P 500", "科技股", "tech stock"],
-      "priority": "critical",
-      "relevance_criteria": "文章包含具体的股价数据、涨跌幅、市场表现指标"
-    },
-    {
-      "type": "market_competition",
-      "name": "个股对比与分析",
-      "intent": "了解主要科技公司（Apple、Microsoft、NVIDIA等）的相对表现和对比分析",
-      "keywords": ["Apple", "Microsoft", "NVIDIA", "Google", "Meta", "对比", "comparison", "跑赢", "outperform", "跑输", "underperform"],
-      "priority": "high",
-      "relevance_criteria": "文章对比不同科技公司的表现，或分析特定公司股价"
-    },
-    {
-      "type": "future_outlook",
-      "name": "2025年市场展望",
-      "intent": "了解分析师对2025年科技股的预测、趋势判断、风险提示",
-      "keywords": ["预测", "forecast", "展望", "outlook", "2025", "趋势", "trend", "分析师", "analyst", "预期", "expectation"],
-      "priority": "medium",
-      "relevance_criteria": "文章讨论未来预测、市场展望、分析师观点或趋势判断"
-    }
-  ]
-}
-```
-
-## 设计原则
-
-1. **从研究需求出发**：每个维度都应该回答"我们需要收集什么信息"，而不是"文章包含什么关键词"
-
-2. **具体可判断**：`relevance_criteria` 应该提供清晰的标准，让 LLM 能够准确判断文章相关性
-
-3. **适度抽象**：维度名称应该简洁（5-8字），但 `intent` 和 `relevance_criteria` 应该详细具体
-
-4. **关键词辅助**：`keywords` 用于搜索和跨语言匹配，应包含中英文同义词
-
-5. **优先级分层**：
-   - **critical**: 核心维度，必须收集
-   - **high**: 重要维度，尽量收集
-   - **medium**: 补充维度
-   - **low**: 可选维度
-
-6. **数量控制**：生成 3-6 个维度，避免过度碎片化
-
-## 使用场景
-
-这些意图维度将用于：
-
-1. **搜索阶段**：指导 researcher 生成针对性的查询
-2. **审计阶段**：帮助 LLM 判断文章是否提供了我们需要的信息
-3. **评审阶段**：评估各维度的信息覆盖完整性
-
-## 重要提醒
-
-- 维度应该是**信息需求的类型**，而不是简单的关键词限定
-- 每个维度都应该有明确的**研究意图**和**相关性判断标准**
-- 避免生成过于宽泛或抽象的维度（如"一般信息"、"相关内容"）
+- **3–6 个维度**，名称简洁，`intent` 与 `relevance_criteria` 具体可判断。
+- **从信息需求出发**：维度回答「要收集什么」，不是「文章有什么词」。
+- **keywords**：含中英文同义词，供搜索与跨语言匹配。
+- **priority**：critical=必须收集，high=尽量，medium=补充，low=可选。
+- 维度用于指导搜索生成、文章审计与覆盖评估；避免「一般信息」「相关内容」等空泛维度。
 """
 
 
