@@ -44,5 +44,12 @@ async def get_agent_config_check():
 @router.post("/")
 async def modify_setting(request: ModifySettingRequest):
     model_config = request_to_model_config(request.model) if request.model else None
-    setting_service.update_setting(model_config)
+    setting_service.update_setting(
+        model=model_config,
+        lightweight_model=request.lightweight_model,
+        embedding=request.embedding,
+        rate_limit=request.rate_limit,
+        context=request.context,
+        agent_limits=request.agent_limits,
+    )
     return success_with_data(None)
