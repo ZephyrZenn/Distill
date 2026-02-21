@@ -10,6 +10,8 @@ from __future__ import annotations
 import logging
 from typing import Callable, Optional
 
+from agent.tools import is_search_engine_available
+from core.embedding import is_embedding_configured
 from core.llm_client import LLMClient, auto_build_client
 
 from .graph import build_ps_agent_graph, build_test_graph
@@ -18,6 +20,31 @@ from .state import PSAgentState, create_initial_state
 logger = logging.getLogger(__name__)
 
 StepCallback = Callable[[str], None]
+
+
+def check_ps_agent_requirements() -> tuple[bool, list[str]]:
+    """检查 PS Agent 所需依赖是否已配置。
+
+    Returns:
+        (是否全部就绪, 缺失项描述列表)。若全部就绪则 missing 为空。
+    """
+    missing: list[str] = []
+    if not is_embedding_configured():
+        missing.append(
+            "Embedding（需配置 EMBEDDING_API_KEY 与 config.toml [embedding]）"
+        )
+    if not is_search_engine_available():
+        missing.append("Tavily（需配置 TAVILY_API_KEY）")
+    return (len(missing) == 0, missing)
+
+
+def _ensure_ps_agent_requirements() -> None:
+    """PS Agent 运行前强制校验依赖；未配置则抛出 ValueError。"""
+    ok, missing = check_ps_agent_requirements()
+    if not ok:
+        raise ValueError(
+            "使用 PS Agent 前请先配置以下依赖: " + "；".join(missing)
+        )
 
 
 class PlanSolveAgent:
@@ -73,6 +100,7 @@ class PlanSolveAgent:
         """Run the agent and return the final report markdown."""
         if not focus or not focus.strip():
             raise ValueError("focus 不能为空")
+        _ensure_ps_agent_requirements()
 
         self._on_step = on_step
         self._log_step(f"🚀 启动 Agentic Research Agent: {focus}")
@@ -87,6 +115,7 @@ class PlanSolveAgent:
         """Run the agent and return both the report and final state."""
         if not focus or not focus.strip():
             raise ValueError("focus 不能为空")
+        _ensure_ps_agent_requirements()
 
         self._on_step = on_step
         self._log_step(f"🚀 启动 Agentic Research Agent: {focus}")
@@ -182,6 +211,7 @@ async def run_ps_agent(
 __all__ = [
     "PSAgentState",
     "PlanSolveAgent",
+    "check_ps_agent_requirements",
     "create_initial_state",
     "run_ps_agent",
 ]

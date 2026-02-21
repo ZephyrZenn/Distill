@@ -3,7 +3,6 @@ import {
   Zap,
   PlayCircle,
   RotateCcw,
-  Info,
   History,
   X,
   Clock,
@@ -54,8 +53,20 @@ const InstantLabPage = () => {
   const [selectedHistoryTask, setSelectedHistoryTask] = useState<HistoryTask | null>(null);
   const [loadingHistoryTask, setLoadingHistoryTask] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const focusInputRef = useRef<HTMLTextAreaElement>(null);
 
   const allGroups = groups ?? [];
+
+  // Auto-resize focus textarea by content (wrap, no horizontal scroll)
+  useEffect(() => {
+    const el = focusInputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const min = 40; // ~2.5rem
+    const max = 112; // max-h-28
+    const h = Math.min(max, Math.max(min, el.scrollHeight));
+    el.style.height = `${h}px`;
+  }, [generationFocus]);
 
   // 从 localStorage 加载历史记录
   useEffect(() => {
@@ -570,8 +581,67 @@ const InstantLabPage = () => {
               </div>
             </div>
 
-            {/* Main content area - GPT chat-like */}
-            <div className="flex-1 flex flex-col bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Mode container: both modes shown, click to select */}
+            <div className="mb-3 md:mb-4 rounded-xl bg-slate-50/80 p-3 md:p-4">
+              <div className="flex flex-col sm:flex-row items-stretch gap-2 md:gap-3">
+                {/* Workflow 模式 - card */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (boostMode) {
+                      setBoostMode(false);
+                      setSelectedGroupsForGen([]);
+                    }
+                  }}
+                  className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 ${
+                    !boostMode
+                      ? 'border-indigo-400 bg-indigo-50/90'
+                      : 'border-slate-200 bg-white/70 hover:border-slate-300 hover:bg-white/90'
+                  }`}
+                >
+                  <div className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 overflow-hidden shrink-0">
+                    <img src="/workflow.svg" alt="" className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain" />
+                  </div>
+                  <p className="mt-1.5 text-xs font-bold text-slate-800">Workflow</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">仅根据分组内订阅源的信息生成总结</p>
+                </button>
+
+                {/* PS Agent 模式 - card */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (boostMode) return;
+                    try {
+                      const check = await api.getAgentConfigCheck();
+                      if (!check.ready) {
+                        showToast(
+                          `Agent 模式配置不完整：${check.missing.join('；')}`,
+                          { type: 'error' }
+                        );
+                        return;
+                      }
+                      setBoostMode(true);
+                    } catch (e) {
+                      showToast('检查 Agent 配置失败，请稍后重试', { type: 'error' });
+                    }
+                  }}
+                  className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 ${
+                    boostMode
+                      ? 'border-indigo-400 bg-indigo-50/90'
+                      : 'border-slate-200 bg-white/70 hover:border-slate-300 hover:bg-white/90'
+                  }`}
+                >
+                  <div className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 overflow-hidden shrink-0">
+                    <img src="/bot.svg" alt="" className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain" />
+                  </div>
+                  <p className="mt-1.5 text-xs font-bold text-slate-800">Agent</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">根据关注点自主搜索信息，生成总结。<br/>注意：此模式会消耗较多Token。</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Main content area - height follows content */}
+            <div className="flex flex-col bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm overflow-hidden w-full">
               {/* Top section - Group selection (standard mode only) */}
               {!boostMode && (
                 <div className="border-b border-slate-200 bg-slate-50/60 p-3 md:p-4">
@@ -605,98 +675,53 @@ const InstantLabPage = () => {
                 </div>
               )}
 
-              {/* Upper section - Focus input */}
-              <div className="flex-1 flex flex-col p-4 md:p-6">
-                <div className="flex-1 flex flex-col">
-                  <div className="mb-3 flex items-center gap-2">
-                    <label className="text-xs font-bold text-slate-600">
-                      用户关注点
-                    </label>
-                    {boostMode && <span className="text-rose-400 text-xs">*</span>}
-                    {!boostMode && <span className="text-slate-400 text-xs">(可选)</span>}
-                  </div>
+              {/* Chat-like input row: input + send icon in one bar */}
+              <div className="px-3 md:px-4 py-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <label className="text-xs font-bold text-slate-600 shrink-0">用户关注点</label>
+                  {boostMode && <span className="text-rose-400 text-xs">*</span>}
+                  {!boostMode && <span className="text-slate-400 text-xs">(可选)</span>}
+                </div>
+                <div
+                  className={`flex items-start rounded-lg md:rounded-xl bg-slate-100 border overflow-hidden ${
+                    boostMode && !generationFocus.trim()
+                      ? 'ring-2 ring-rose-300 border-rose-200'
+                      : 'border-slate-200 focus-within:ring-2 focus-within:ring-indigo-400/30 focus-within:border-indigo-300'
+                  }`}
+                >
                   <textarea
+                    ref={focusInputRef}
                     value={generationFocus}
                     onChange={(e) => setGenerationFocus(e.target.value)}
-                    placeholder={boostMode ? "请输入您的关注点..." : "例如：关注 AI 在移动端的应用..."}
-                    className={`flex-1 w-full bg-slate-50 border-none rounded-xl md:rounded-2xl px-4 md:px-5 py-3 md:py-4 text-sm md:text-base focus:ring-2 focus:ring-indigo-500/20 resize-none outline-none ${
-                      boostMode && !generationFocus.trim() ? 'ring-2 ring-rose-400' : ''
-                    }`}
-                    style={{ minHeight: '120px' }}
-                  />
-                  {boostMode && !generationFocus.trim() && (
-                    <p className="text-xs text-rose-400 mt-2 ml-1">Boost Mode 下必须填写用户关注点</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Lower section - Boost Mode toggle and controls */}
-              <div className="border-t border-slate-200 bg-slate-50/50 px-3 py-2 md:px-4 md:py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  {/* Boost Mode toggle with info icon */}
-                  <div className="flex items-center gap-3 flex-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBoostMode(!boostMode);
-                        // 切换到 boostMode 时清空已选择的分组
-                        if (!boostMode) {
-                          setSelectedGroupsForGen([]);
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (
+                          !(boostMode && !generationFocus.trim()) &&
+                          (boostMode || selectedGroupsForGen.length > 0)
+                        ) {
+                          startGeneration();
                         }
-                      }}
-                      className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                        boostMode ? 'bg-indigo-600' : 'bg-slate-300'
-                      }`}
-                      role="switch"
-                      aria-checked={boostMode}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          boostMode ? 'translate-x-4' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                    
-                    <span className="text-xs font-medium text-slate-700">
-                      Boost Mode
-                    </span>
-                    
-                    {/* Info icon with tooltip */}
-                    <div className="relative group">
-                      <Info 
-                        size={16} 
-                        className="text-slate-400 hover:text-slate-600 cursor-help transition-colors" 
-                      />
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-0 mb-2 w-64 p-2.5 bg-slate-900 text-white text-[11px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                        <div className="font-bold mb-1">
-                          {boostMode ? 'Boost Mode' : 'Workflow'}
-                        </div>
-                        <div className="text-slate-300 leading-relaxed">
-                          {boostMode 
-                            ? 'BoostAgent 将自主选择所有可用订阅源，根据您的关注点智能生成内容。注意Token消耗会是workflow模式的两倍以上'
-                            : 'Agentic Workflow，LLM智能筛选你选中的分组的当日更新，并生成简报。'
-                          }
-                        </div>
-                        {/* Tooltip arrow */}
-                        <div className="absolute top-full left-6 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Generate button */}
+                      }
+                    }}
+                    placeholder={boostMode ? "请输入您的关注点..." : "例如：关注 AI 在移动端的应用..."}
+                    rows={1}
+                    className="flex-1 min-w-0 min-h-[2.25rem] md:min-h-10 max-h-28 py-2.5 px-3 md:px-4 bg-transparent border-none text-sm outline-none resize-none overflow-x-hidden overflow-y-auto break-words"
+                  />
                   <button
                     onClick={startGeneration}
                     disabled={
                       (boostMode && !generationFocus.trim()) ||
                       (!boostMode && selectedGroupsForGen.length === 0)
                     }
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-xs md:text-sm whitespace-nowrap"
+                    className="h-9 md:h-10 w-9 md:w-10 shrink-0 flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent transition-colors mt-0.5"
                   >
-                    <PlayCircle size={16} />
-                    启动
+                    <PlayCircle size={20} />
                   </button>
                 </div>
+                {boostMode && !generationFocus.trim() && (
+                  <p className="text-xs text-rose-400 mt-1 ml-1">Boost Mode 下必须填写用户关注点</p>
+                )}
               </div>
             </div>
           </div>

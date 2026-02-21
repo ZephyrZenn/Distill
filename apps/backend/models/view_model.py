@@ -75,6 +75,16 @@ class SettingResponse(CommonResult[SettingVO]):
     pass
 
 
+class AgentCheckVO(CamelModel):
+    """Agent 模式配置检查结果"""
+    ready: bool  # 配置是否齐全
+    missing: List[str]  # 缺失项描述（如未配置的 API Key 等）
+
+
+class AgentCheckResponse(CommonResult[AgentCheckVO]):
+    pass
+
+
 class ScheduleListResponse(CommonResult[List[ScheduleVO]]):
     pass
 

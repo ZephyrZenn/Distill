@@ -1,0 +1,59 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- 背景（可选透明） -->
+<rect width="512" height="512" fill="none"/>
+
+<!-- 连接路径 (像素阶梯效果) -->
+
+<path d="M160 100 H400 V250 H112 V400 H350" stroke="#757575" stroke-width="20" stroke-linejoin="miter" fill="none" />
+
+<!-- 齿轮 (左上) -->
+
+<g id="gear" transform="translate(60, 50)">
+<rect x="25" y="0" width="30" height="80" fill="#757575" />
+<rect x="0" y="25" width="80" height="30" fill="#757575" />
+<rect x="10" y="10" width="60" height="60" fill="#757575" />
+<rect x="25" y="25" width="30" height="30" fill="#9E9E9E" />
+<!-- 齿轮孔 -->
+<rect x="35" y="35" width="10" height="10" fill="#E0E0E0" />
+</g>
+
+<!-- 第一个框 (蓝色) -->
+
+<g id="blue-box" transform="translate(210, 60)">
+<rect width="180" height="90" fill="#42A5F5" />
+<rect x="15" y="40" width="60" height="15" fill="#BBDEFB" />
+<rect x="90" y="40" width="30" height="15" fill="#BBDEFB" />
+<rect x="135" y="40" width="30" height="15" fill="#BBDEFB" />
+</g>
+
+<!-- 第二个框 (黄色) -->
+
+<g id="yellow-box" transform="translate(170, 210)">
+<rect width="180" height="90" fill="#FFCA28" />
+<rect x="15" y="40" width="30" height="15" fill="#FFF9C4" />
+<rect x="60" y="40" width="70" height="15" fill="#FFF9C4" />
+<rect x="145" y="40" width="20" height="15" fill="#FFF9C4" />
+</g>
+
+<!-- 第三个框 (红色) -->
+
+<g id="red-box" transform="translate(110, 360)">
+<rect width="180" height="90" fill="#EF5350" />
+<rect x="15" y="40" width="50" height="15" fill="#FFCDD2" />
+<rect x="80" y="40" width="40" height="15" fill="#FFCDD2" />
+<rect x="135" y="40" width="30" height="15" fill="#FFCDD2" />
+</g>
+
+<!-- 完成圆圈 (绿色) -->
+
+<g id="done-circle" transform="translate(320, 340)">
+<rect x="20" y="0" width="90" height="130" fill="#66BB6A" />
+<rect x="0" y="20" width="130" height="90" fill="#66BB6A" />
+<rect x="10" y="10" width="110" height="110" fill="#66BB6A" />
+
+<!-- 像素钩 -->
+<path d="M35 65 L55 85 L100 40" stroke="white" stroke-width="12" fill="none" />
+
+
+</g>
+</svg>

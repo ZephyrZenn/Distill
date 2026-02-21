@@ -46,6 +46,12 @@ export interface Setting {
   model: ModelSetting;
 }
 
+/** Agent 模式配置检查结果 */
+export interface AgentCheckResult {
+  ready: boolean;
+  missing: string[];
+}
+
 export type FeedGroupListResponse = ApiResponse<FeedGroup[]>;
 export type FeedGroupDetailResponse = ApiResponse<FeedGroup>;
 export type FeedListResponse = ApiResponse<Feed[]>;
