@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type {
+  AgentCheckResult,
   ApiResponse,
   FeedBrief,
   FeedBriefListResponse,
@@ -106,6 +107,8 @@ export const api = {
 
   // Settings
   getSetting: () => unwrap<Setting>(client.get<SettingResponse>('/setting/')),
+  getAgentConfigCheck: () =>
+    unwrap<AgentCheckResult>(client.get<ApiResponse<AgentCheckResult>>('/setting/agent-check')),
   updateSetting: (payload: ModifySettingPayload) =>
     unwrap<void>(client.post<ApiResponse<void>>('/setting/', payload)),
 

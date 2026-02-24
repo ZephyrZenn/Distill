@@ -3,12 +3,12 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/backend.Dockerfile
-    container_name: news-backend
+    container_name: distill-backend
     environment:
       ENV: prod
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-ainews}
+      POSTGRES_DB: ${POSTGRES_DB:-distill}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       # API keys for model providers (set the one you need)
@@ -18,10 +18,6 @@ services:
       MODEL_API_KEY: ${MODEL_API_KEY:-}
       # Optional: Tavily for web search
       TAVILY_API_KEY: ${TAVILY_API_KEY:-}
-      # Optional: Jina Reader API for content extraction fallback
-      JINA_API_KEY: ${JINA_API_KEY:-}
-    volumes:
-      - ./hf_cache:/cache/hf
     depends_on:
       - db
     ports:
@@ -32,7 +28,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/frontend.Dockerfile
-    container_name: news-frontend
+    container_name: distill-frontend
     depends_on:
       - backend
     ports:
@@ -43,12 +39,12 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:16-alpine
-    container_name: news-db
+    image: pgvector/pgvector:pg16
+    container_name: distill-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-ainews}
+      POSTGRES_DB: ${POSTGRES_DB:-distill}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ../sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro

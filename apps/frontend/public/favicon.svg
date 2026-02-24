@@ -1,4 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#1d4ed8" />
-  <path d="M18 46h28M18 32h20M18 18h12" stroke="#fff" stroke-width="6" stroke-linecap="round" />
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 上方：少量大色块，小尺寸下仍可见 -->
+  <rect x="48" y="16" width="32" height="32" rx="4" fill="#EF5350"/>
+  <rect x="112" y="8" width="32" height="32" rx="4" fill="#FFCA28"/>
+  <rect x="176" y="16" width="32" height="32" rx="4" fill="#42A5F5"/>
+  <rect x="88" y="40" width="32" height="32" rx="4" fill="#66BB6A"/>
+
+  <!-- 漏斗：一体轮廓 + 高光，颈底留出与星星的间距 -->
+  <defs>
+    <linearGradient id="funnelGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5C5C5C"/>
+      <stop offset="50%" stop-color="#757575"/>
+      <stop offset="100%" stop-color="#8E8E8E"/>
+    </linearGradient>
+  </defs>
+  <!-- 漏斗主体：宽口 → 锥体 → 细颈 -->
+  <path d="M48 56 L208 56 L208 72 L200 72 L152 136 L152 176 L104 176 L104 136 L56 72 L48 72 Z" fill="url(#funnelGradient)"/>
+  <!-- 口沿高光 -->
+  <path d="M48 56 L208 56 L208 68 L48 68 Z" fill="#9E9E9E" opacity="0.9"/>
+  <!-- 锥面高光 -->
+  <path d="M120 80 L168 80 L152 128 L120 128 Z" fill="#BDBDBD" opacity="0.6"/>
+  <!-- 颈内 -->
+  <rect x="108" y="140" width="40" height="36" fill="#616161"/>
+  <rect x="112" y="144" width="32" height="28" fill="#757575" opacity="0.8"/>
+
+  <!-- 底部精华：金色十字星（与漏斗底留有空隙） -->
+  <path d="M128 198 L148 226 L128 256 L108 226 Z" fill="#FFCA28"/>
 </svg>

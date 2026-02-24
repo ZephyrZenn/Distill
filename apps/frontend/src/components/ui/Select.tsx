@@ -60,13 +60,13 @@ export const Select = ({
     <Listbox value={listboxValue} onChange={handleChange} multiple={isMulti}>
       {({ open }) => (
         <div className={`relative ${className}`}>
-          <Listbox.Button className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none hover:border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 transition-all shadow-sm hover:shadow-md cursor-pointer text-left flex items-center justify-between">
-            <span className={isFilled ? 'text-slate-700 font-bold' : 'text-slate-400'}>
+          <Listbox.Button className="w-full theme-surface border theme-border rounded-xl px-4 py-3 text-sm font-medium theme-text outline-none transition-all shadow-sm hover:shadow-md cursor-pointer text-left flex items-center justify-between theme-accent-text-hover focus:ring-2 focus:ring-[var(--theme-primary)]/20 focus:border-[var(--theme-primary)]">
+            <span className={isFilled ? 'theme-text font-bold' : 'theme-text-muted'}>
               {displayLabel}
             </span>
             <ChevronDown 
               size={16} 
-              className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+              className={`theme-text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
             />
           </Listbox.Button>
           
@@ -80,7 +80,7 @@ export const Select = ({
             leaveTo="transform opacity-0 scale-95"
           >
             <Listbox.Options
-              className={`absolute w-full bg-white border border-slate-100 rounded-2xl shadow-2xl py-2 z-50 max-h-60 overflow-auto focus:outline-none custom-scrollbar ${
+              className={`absolute w-full theme-surface border theme-border rounded-2xl shadow-2xl py-2 z-50 max-h-60 overflow-auto focus:outline-none custom-scrollbar ${
                 direction === 'up' ? 'bottom-full mb-2' : 'mt-2'
               }`}
             >
@@ -90,10 +90,10 @@ export const Select = ({
                   value={option.value}
                   disabled={option.value === ''}
                   className={({ active, disabled }) =>
-                    `relative cursor-pointer select-none py-3 px-4 transition-colors ${
+                    `relative cursor-pointer select-none py-3 px-4 transition-colors theme-text ${
                       disabled ? 'opacity-50 cursor-not-allowed' : ''
                     } ${
-                      active && !disabled ? 'bg-indigo-50 text-indigo-600' : 'text-slate-700'
+                      active && !disabled ? 'nav-active' : ''
                     }`
                   }
                 >
@@ -105,7 +105,7 @@ export const Select = ({
                       {selected && option.value && (
                         <Check 
                           size={16} 
-                          className={`${active ? 'text-indigo-600' : 'text-indigo-500'}`}
+                          className="theme-accent-text"
                         />
                       )}
                     </div>

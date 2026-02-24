@@ -49,6 +49,9 @@ MAX_CONCURRENT_REQUESTS = 5  # 降低并发数，避免触发限流
 DELAY_BETWEEN_REQUESTS = (1.0, 3.0)  # 每个请求之间的随机延迟（秒）
 DELAY_BETWEEN_DOMAINS = (5.0, 10.0)  # 不同域名之间的延迟（秒）
 
+# 单个 URL 的总超时时间上限（秒），包括内部重试与退避
+PER_URL_TOTAL_TIMEOUT = 15.0
+
 # robots.txt 缓存
 _robots_cache: dict[str, RobotFileParser] = {}
 _robots_cache_lock = asyncio.Lock()
@@ -203,7 +206,7 @@ async def get_content(
             resp = await client.get(
                 url,
                 headers=get_headers(),
-                timeout=httpx.Timeout(connect=10.0, read=30.0, write=5.0, pool=5.0),
+                timeout=httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0),
                 follow_redirects=True,
             )
             resp.raise_for_status()
@@ -350,8 +353,21 @@ async def fetch_all_contents(urls: list[str]) -> dict[str, str]:
             domain_semaphore = asyncio.Semaphore(2)  # 每个域名最多 2 个并发请求
 
             async def fetch_with_semaphore(url: str) -> tuple[str, str | None, bool]:
+                """对单个 URL 施加总超时上限，避免单个地址长时间挂起."""
                 async with domain_semaphore:
-                    return await get_content(url, client)
+                    try:
+                        return await asyncio.wait_for(
+                            get_content(url, client),
+                            timeout=PER_URL_TOTAL_TIMEOUT,
+                        )
+                    except asyncio.TimeoutError:
+                        logger.warning(
+                            "[CRAWLER] ⏱️ 单个 URL 总超时 %.1fs: %s",
+                            PER_URL_TOTAL_TIMEOUT,
+                            url,
+                        )
+                        # 标记为不再使用 Tavily 兜底重试，直接视为失败
+                        return url, None, False
 
             # 并行获取同一域名的所有 URL
             domain_tasks = [fetch_with_semaphore(url) for url in domain_urls]

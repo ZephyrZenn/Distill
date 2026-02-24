@@ -1,0 +1,28 @@
+[project]
+name = "distill"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "apscheduler==3.11.0",
+    "beautifulsoup4==4.13.4",
+    "fastapi~=0.115.12",
+    "feedparser==6.0.11",
+    "google-genai~=1.15.0",
+    "httpx~=0.28.1",
+    "langgraph~=0.2.0",
+    "lxml~=5.4.0",
+    "lxml-html-clean>=0.4.3",
+    "openai~=1.78.0",
+    "pgvector~=0.3.6",
+    "psycopg[binary,pool]>=3.3.3",
+    "pydantic~=2.11.4",
+    "python-dotenv==1.1.0",
+    "tavily-python~=0.5.0",
+    "toml==0.10.2",
+    "trafilatura~=1.6.0",
+    "typer~=0.12.0",
+    "typing-extensions>=4.12.2,<5",
+    "uvicorn~=0.34.2",
+]

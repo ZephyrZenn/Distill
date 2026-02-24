@@ -1,0 +1,47 @@
+<svg width="256" height="256" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- 机器人头部主体 -->
+<!-- 深色边框/阴影 -->
+<rect x="40" y="60" width="100" height="90" fill="#424242" />
+<!-- 主体颜色 -->
+<rect x="45" y="65" width="90" height="80" fill="#9E9E9E" />
+<!-- 亮部细节 -->
+<rect x="45" y="65" width="80" height="10" fill="#BDBDBD" />
+<rect x="45" y="75" width="10" height="60" fill="#BDBDBD" />
+
+<!-- 眼睛部分 -->
+
+<rect x="60" y="85" width="20" height="20" fill="#212121" />
+<rect x="100" y="85" width="20" height="20" fill="#212121" />
+<!-- 发光的眼瞳 -->
+<rect x="65" y="90" width="10" height="10" fill="#00E5FF" />
+<rect x="105" y="90" width="10" height="10" fill="#00E5FF" />
+
+<!-- 嘴巴/面板 -->
+
+<rect x="65" y="120" width="50" height="5" fill="#616161" />
+
+<!-- 天线 -->
+
+<rect x="85" y="35" width="10" height="25" fill="#616161" />
+<!-- 天线顶端灯 (红色) -->
+<rect x="80" y="20" width="20" height="15" fill="#FF5252" />
+<rect x="85" y="25" width="10" height="5" fill="#FF8A80" />
+
+<!-- 思考气泡 (由小到大) -->
+
+<!-- 气泡1 -->
+
+<rect x="150" y="55" width="10" height="10" fill="#BDBDBD" />
+<!-- 气泡2 -->
+<rect x="165" y="35" width="15" height="15" fill="#9E9E9E" />
+<!-- 气泡3 (主气泡) -->
+<rect x="155" y="0" width="30" height="25" fill="#757575" />
+<!-- 气泡内的像素点 -->
+<rect x="160" y="8" width="5" height="5" fill="#EEEEEE" />
+<rect x="170" y="8" width="5" height="5" fill="#EEEEEE" />
+<rect x="180" y="8" width="5" height="5" fill="#EEEEEE" />
+
+<!-- 底部装饰 (脖子) -->
+
+<rect x="75" y="150" width="30" height="10" fill="#424242" />
+</svg>

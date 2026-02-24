@@ -3,12 +3,12 @@
    ============================================ */
 
 .day-picker-container {
-  --rdp-accent-color: #6366f1;
-  --rdp-accent-color-dark: #4f46e5;
-  --rdp-background-color: #eef2ff;
-  --rdp-background-color-dark: #e0e7ff;
-  --rdp-outline: 2px solid #c7d2fe;
-  --rdp-outline-selected: 2px solid #6366f1;
+  --rdp-accent-color: var(--theme-primary);
+  --rdp-accent-color-dark: var(--theme-primary-hover);
+  --rdp-background-color: var(--theme-accent);
+  --rdp-background-color-dark: var(--theme-surface-hover);
+  --rdp-outline: 2px solid var(--theme-border);
+  --rdp-outline-selected: 2px solid var(--theme-primary);
 }
 
 /* Root container */
@@ -28,7 +28,7 @@
 .day-picker-custom .rdp-caption_label {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
   text-transform: capitalize;
 }
 
@@ -51,14 +51,14 @@
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
-  color: #64748b;
+  color: var(--theme-text-muted);
   transition: all 0.2s ease;
 }
 
 .day-picker-custom .rdp-button_previous:hover,
 .day-picker-custom .rdp-button_next:hover {
-  background: #eef2ff;
-  color: #6366f1;
+  background: var(--theme-accent);
+  color: var(--theme-interactive);
 }
 
 .day-picker-custom .rdp-button_previous:disabled,
@@ -81,7 +81,7 @@
   justify-content: center;
   font-size: 0.625rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--theme-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -112,46 +112,46 @@
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #334155;
+  color: var(--theme-text);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .day-picker-custom .rdp-day_button:hover:not(:disabled) {
-  background: #eef2ff;
-  color: #6366f1;
+  background: var(--theme-accent);
+  color: var(--theme-interactive);
   transform: scale(1.05);
 }
 
 /* Today */
 .day-picker-custom .rdp-today .rdp-day_button {
-  border: 2px solid #c7d2fe;
+  border: 2px solid var(--theme-border);
   font-weight: 700;
 }
 
 /* Selected days */
 .day-picker-custom .rdp-selected .rdp-day_button {
-  background: #6366f1 !important;
-  color: white !important;
+  background: var(--theme-primary) !important;
+  color: var(--theme-on-primary) !important;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.2);
 }
 
 .day-picker-custom .rdp-selected .rdp-day_button:hover {
-  background: #4f46e5 !important;
+  background: var(--theme-primary-hover) !important;
 }
 
 /* Range selection */
 .day-picker-custom .rdp-range_start .rdp-day_button,
 .day-picker-custom .rdp-range_end .rdp-day_button {
-  background: #6366f1 !important;
-  color: white !important;
+  background: var(--theme-primary) !important;
+  color: var(--theme-on-primary) !important;
   font-weight: 700;
 }
 
 .day-picker-custom .rdp-range_middle .rdp-day_button {
-  background: #eef2ff !important;
-  color: #6366f1 !important;
+  background: var(--theme-accent) !important;
+  color: var(--theme-interactive) !important;
   font-weight: 600;
 }
 
@@ -171,7 +171,7 @@
 
 /* Disabled days */
 .day-picker-custom .rdp-disabled .rdp-day_button {
-  color: #cbd5e1;
+  color: var(--theme-text-muted);
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -183,7 +183,7 @@
 
 /* Outside days (other months) */
 .day-picker-custom .rdp-outside .rdp-day_button {
-  color: #cbd5e1;
+  color: var(--theme-text-muted);
   opacity: 0.5;
 }
 
@@ -194,14 +194,14 @@
 
 /* Focus styles for accessibility */
 .day-picker-custom .rdp-day_button:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--theme-primary);
   outline-offset: 2px;
   z-index: 1;
 }
 
 .day-picker-custom .rdp-button_previous:focus-visible,
 .day-picker-custom .rdp-button_next:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--theme-primary);
   outline-offset: 2px;
 }
 
@@ -256,4 +256,51 @@
   .animate-in {
     animation: none;
   }
+}
+
+/* 黑金曜石主题：日期选择器使用主题色 */
+[data-theme="obsidian"] .day-picker-container {
+  --rdp-accent-color: var(--theme-accent);
+  --rdp-accent-color-dark: var(--theme-accent-hover);
+  --rdp-background-color: var(--theme-surface);
+  --rdp-background-color-dark: var(--theme-surface-hover);
+  --rdp-outline: 2px solid var(--theme-border);
+  --rdp-outline-selected: 2px solid var(--theme-accent);
+}
+[data-theme="obsidian"] .day-picker-custom .rdp-caption_label { color: var(--theme-text); }
+[data-theme="obsidian"] .day-picker-custom .rdp-button_previous:hover,
+[data-theme="obsidian"] .day-picker-custom .rdp-button_next:hover {
+  background: var(--theme-nav-hover-bg);
+  color: var(--theme-accent);
+}
+[data-theme="obsidian"] .day-picker-custom .rdp-day_button {
+  color: var(--theme-text);
+}
+[data-theme="obsidian"] .day-picker-custom .rdp-day_button:hover:not(:disabled) {
+  background: var(--theme-nav-hover-bg);
+  color: var(--theme-accent);
+}
+[data-theme="obsidian"] .day-picker-custom .rdp-today .rdp-day_button {
+  border-color: var(--theme-accent);
+}
+[data-theme="obsidian"] .day-picker-custom .rdp-selected .rdp-day_button,
+[data-theme="obsidian"] .day-picker-custom .rdp-range_start .rdp-day_button,
+[data-theme="obsidian"] .day-picker-custom .rdp-range_end .rdp-day_button {
+  background: var(--theme-accent) !important;
+  color: var(--theme-on-primary) !important;
+}
+[data-theme="obsidian"] .day-picker-custom .rdp-range_middle .rdp-day_button {
+  background: var(--theme-nav-active-bg) !important;
+  color: var(--theme-accent) !important;
+}
+[data-theme="obsidian"] .day-picker-custom .rdp-day_button:focus-visible,
+[data-theme="obsidian"] .day-picker-custom .rdp-button_previous:focus-visible,
+[data-theme="obsidian"] .day-picker-custom .rdp-button_next:focus-visible {
+  outline-color: var(--theme-accent);
+}
+[data-theme="obsidian"] .day-picker-custom .rdp-weekday { color: var(--theme-text-muted); }
+[data-theme="obsidian"] .day-picker-custom .rdp-outside .rdp-day_button,
+[data-theme="obsidian"] .day-picker-custom .rdp-disabled .rdp-day_button {
+  color: var(--theme-text-muted);
+  opacity: 0.5;
 }

@@ -7,8 +7,11 @@
   width: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+  background: var(--theme-scrollbar-thumb);
   border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-track);
 }
 
 /* Terminal scrollbar */
@@ -85,18 +88,18 @@
   }
 }
 
-/* Selection color */
+/* Selection color - 随主题变化 */
 ::selection {
-  background-color: rgb(199 210 254 / 0.5);
+  background-color: var(--theme-selection);
 }
 
 /* ============================================
    Markdown Prose Custom Styles
    ============================================ */
 
-/* 脚注引用（角标）样式 */
+/* 脚注引用（角标）样式 - 浅色用主色，深色用 accent */
 .prose sup a {
-  color: #6366f1 !important;
+  color: var(--theme-interactive) !important;
   font-weight: 600 !important;
   text-decoration: none !important;
   vertical-align: super;
@@ -113,7 +116,7 @@
   vertical-align: super;
   font-size: 0.75em;
   margin-left: 0.2em;
-  color: #6366f1;
+  color: var(--theme-interactive);
   font-weight: 600;
   text-decoration: none;
 }
@@ -131,15 +134,15 @@
   display: none !important;
 }
 
-/* Heading styles - emphasize hierarchy */
+/* Heading styles - 使用主题变量（与 demo 浅色一致） */
 .prose h1 {
   font-size: 2.25em !important;
   font-weight: 800 !important;
   line-height: 1.2 !important;
   margin-top: 1.5em !important;
   margin-bottom: 0.8em !important;
-  color: #1e293b !important; /* slate-800 */
-  border-bottom: 2px solid #e2e8f0 !important;
+  color: var(--theme-text) !important;
+  border-bottom: 2px solid var(--theme-border) !important;
   padding-bottom: 0.5em !important;
 }
 
@@ -149,8 +152,8 @@
   line-height: 1.3 !important;
   margin-top: 1.4em !important;
   margin-bottom: 0.7em !important;
-  color: #334155 !important; /* slate-700 */
-  border-bottom: 1px solid #e2e8f0 !important;
+  color: var(--theme-text) !important;
+  border-bottom: 1px solid var(--theme-border) !important;
   padding-bottom: 0.4em !important;
 }
 
@@ -160,57 +163,71 @@
   line-height: 1.35 !important;
   margin-top: 1.2em !important;
   margin-bottom: 0.6em !important;
-  color: #475569 !important; /* slate-600 */
+  color: var(--theme-text) !important;
 }
 
-.prose h4 {
+.prose h4, .prose h5, .prose h6 {
   font-size: 1.125em !important;
   font-weight: 600 !important;
   line-height: 1.4 !important;
-  margin-top: 1.1em !important;
-  margin-bottom: 0.5em !important;
-  color: #64748b !important; /* slate-500 */
-}
-
-.prose h5 {
-  font-size: 1.05em !important;
-  font-weight: 600 !important;
-  line-height: 1.45 !important;
   margin-top: 1em !important;
-  margin-bottom: 0.45em !important;
-  color: #64748b !important;
+  margin-bottom: 0.5em !important;
+  color: var(--theme-text-muted) !important;
 }
 
-.prose h6 {
-  font-size: 0.95em !important;
-  font-weight: 600 !important;
-  line-height: 1.45 !important;
-  margin-top: 0.9em !important;
-  margin-bottom: 0.4em !important;
-  color: #64748b !important;
+.prose h5 { font-size: 1.05em !important; }
+.prose h6 { font-size: 0.95em !important; }
+
+/* 正文与链接 - 浅色与 demo 一致（主色 #111827），深色由下方 obsidian 块覆盖 */
+.prose {
+  color: var(--theme-text);
 }
 
-/* Custom link styles */
 .prose a {
-  color: #6366f1 !important; /* indigo-600 */
+  color: var(--theme-interactive) !important;
   font-weight: 600 !important;
   text-decoration: none !important;
   transition: all 0.2s ease;
 }
 
 .prose a:hover {
-  color: #4f46e5 !important; /* indigo-700 */
+  color: var(--theme-interactive-hover) !important;
   text-decoration: underline !important;
 }
 
 .prose a:visited {
-  color: #818cf8 !important; /* indigo-400 */
+  color: var(--theme-interactive) !important;
 }
 
 .prose a:focus {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--theme-interactive);
   outline-offset: 2px;
   border-radius: 2px;
+}
+
+/* 黑金曜石主题下正文与链接使用主题色 */
+[data-theme="obsidian"] .prose {
+  color: var(--theme-text);
+}
+[data-theme="obsidian"] .prose h1,
+[data-theme="obsidian"] .prose h2,
+[data-theme="obsidian"] .prose h3,
+[data-theme="obsidian"] .prose h4,
+[data-theme="obsidian"] .prose h5,
+[data-theme="obsidian"] .prose h6 {
+  color: var(--theme-text) !important;
+  border-color: var(--theme-border) !important;
+}
+[data-theme="obsidian"] .prose sup a,
+[data-theme="obsidian"] .prose [data-footnote-ref],
+[data-theme="obsidian"] .prose a {
+  color: var(--theme-accent) !important;
+}
+[data-theme="obsidian"] .prose a:hover {
+  color: var(--theme-accent-hover) !important;
+}
+[data-theme="obsidian"] .prose a:focus {
+  outline-color: var(--theme-accent);
 }
 
 /* Date input custom styles */
@@ -223,12 +240,12 @@
 
 .date-input:hover::-webkit-calendar-picker-indicator {
   opacity: 1;
-  filter: invert(37%) sepia(94%) saturate(2070%) hue-rotate(229deg) brightness(94%) contrast(92%);
+  filter: invert(62%) sepia(98%) saturate(1000%) hue-rotate(360deg) brightness(95%) contrast(92%);
 }
 
 .date-input:focus::-webkit-calendar-picker-indicator {
   opacity: 1;
-  filter: invert(37%) sepia(94%) saturate(2070%) hue-rotate(229deg) brightness(94%) contrast(92%);
+  filter: invert(62%) sepia(98%) saturate(1000%) hue-rotate(360deg) brightness(95%) contrast(92%);
 }
 
 /* Firefox date input */

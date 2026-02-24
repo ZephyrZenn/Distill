@@ -1,0 +1,106 @@
+/* ============================================
+   双主题：Paper Studio（浅） / 黑金曜石 Obsidian Gold（深）
+   ============================================ */
+
+/* 1. Paper Studio —— 极简灰白（与 demo 一致：中性灰 + 深色主色） */
+:root,
+[data-theme="paper"] {
+  --theme-bg: #F9FAFB;
+  --theme-surface: #FFFFFF;
+  --theme-surface-hover: #F3F4F6;
+  --theme-border: #E5E7EB;
+  --theme-text: #111827;
+  --theme-text-muted: #6B7280;
+  --theme-primary: #111827;
+  --theme-primary-hover: #374151;
+  --theme-accent: #F3F4F6;
+  --theme-accent-hover: #E5E7EB;
+  --theme-nav-active-bg: #F3F4F6;
+  --theme-nav-active-text: #111827;
+  --theme-nav-hover-bg: #F3F4F6;
+  --theme-nav-inactive: #6B7280;
+  --theme-selection: rgba(17, 24, 39, 0.12);
+  --theme-scrollbar-track: #F3F4F6;
+  --theme-scrollbar-thumb: #E5E7EB;
+  --theme-header-bg: rgba(255, 255, 255, 0.8);
+  --theme-overlay: rgba(0, 0, 0, 0.4);
+  --theme-on-primary: #FFFFFF;
+  --theme-on-accent: #111827;
+  --theme-interactive: #111827;
+  --theme-interactive-hover: #374151;
+  /* 状态：已配置 / 未配置（适配浅色主题） */
+  --theme-status-success-bg: #ECFDF5;
+  --theme-status-success-border: #A7F3D0;
+  --theme-status-success-text: #065F46;
+  --theme-status-warning-bg: #FFFBEB;
+  --theme-status-warning-border: #FDE68A;
+  --theme-status-warning-text: #92400E;
+}
+
+/* 2. 黑金曜石 Obsidian Gold —— 极客深邃 */
+[data-theme="obsidian"] {
+  --theme-bg: #0B0F1A;
+  --theme-surface: #161B28;
+  --theme-surface-hover: #1E2433;
+  --theme-border: #2D3748;
+  --theme-text: #F8FAFC;
+  --theme-text-muted: #94A3B8;
+  --theme-primary: #FFD54F;
+  --theme-primary-hover: #FFE082;
+  --theme-accent: #FFD54F;
+  --theme-accent-hover: #FFE082;
+  --theme-nav-active-bg: rgba(255, 213, 79, 0.15);
+  --theme-nav-active-text: #FFD54F;
+  --theme-nav-hover-bg: rgba(255, 255, 255, 0.06);
+  --theme-nav-inactive: #94A3B8;
+  --theme-selection: rgba(255, 213, 79, 0.25);
+  --theme-scrollbar-track: #0F1420;
+  --theme-scrollbar-thumb: #334155;
+  --theme-header-bg: rgba(22, 27, 40, 0.9);
+  --theme-overlay: rgba(0, 0, 0, 0.6);
+  --theme-on-primary: #0B0F1A;
+  --theme-on-accent: #0B0F1A;
+  --theme-interactive: #FFD54F;
+  --theme-interactive-hover: #FFE082;
+  /* 状态：已配置 / 未配置（适配深色主题） */
+  --theme-status-success-bg: rgba(16, 185, 129, 0.15);
+  --theme-status-success-border: rgba(16, 185, 129, 0.5);
+  --theme-status-success-text: #6EE7B7;
+  --theme-status-warning-bg: rgba(251, 191, 36, 0.12);
+  --theme-status-warning-border: rgba(251, 191, 36, 0.4);
+  --theme-status-warning-text: #FCD34D;
+}
+
+/* 主题相关工具类（供 Layout / 全局使用） */
+.theme-bg { background-color: var(--theme-bg); }
+.theme-surface { background-color: var(--theme-surface); }
+.theme-surface-hover:hover { background-color: var(--theme-surface-hover); }
+.theme-border { border-color: var(--theme-border); }
+.theme-text { color: var(--theme-text); }
+.theme-text-muted { color: var(--theme-text-muted); }
+.theme-primary-bg { background-color: var(--theme-primary); }
+.theme-primary-bg-hover:hover { background-color: var(--theme-primary-hover); }
+.theme-accent-bg { background-color: var(--theme-accent); }
+.theme-accent-text { color: var(--theme-interactive); }
+.theme-accent-text-hover:hover { color: var(--theme-interactive-hover); }
+.theme-on-primary { color: var(--theme-on-primary); }
+.theme-on-accent { color: var(--theme-on-accent); }
+
+/* 导航激活/悬停（需在组件内配合 data-theme 使用） */
+.nav-active { background-color: var(--theme-nav-active-bg); color: var(--theme-nav-active-text); }
+.nav-inactive { color: var(--theme-nav-inactive); }
+.nav-inactive:hover { background-color: var(--theme-nav-hover-bg); }
+.theme-btn-primary { background-color: var(--theme-primary); color: var(--theme-on-primary); }
+.theme-btn-primary:hover { background-color: var(--theme-primary-hover); }
+
+/* 状态块：已配置(成功) / 未配置(需关注)，随主题切换 */
+.theme-status-success {
+  background-color: var(--theme-status-success-bg);
+  border-color: var(--theme-status-success-border);
+  color: var(--theme-status-success-text);
+}
+.theme-status-warning {
+  background-color: var(--theme-status-warning-bg);
+  border-color: var(--theme-status-warning-border);
+  color: var(--theme-status-warning-text);
+}

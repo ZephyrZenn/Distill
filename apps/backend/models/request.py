@@ -39,13 +39,18 @@ class ModifyFeedRequest(CamelModel):
 
 class ModelConfigRequest(CamelModel):
     """Pydantic model for model configuration in requests.
-    
+
     Note: API keys are read from environment variables based on provider.
     Base URL is only required for 'other' provider.
     """
+
     model: str = Field(..., description="Model name")
-    provider: str = Field(..., description="Model provider (openai, deepseek, gemini, other)")
-    base_url: Optional[str] = Field(None, description="Base URL - only required for 'other' provider")
+    provider: str = Field(
+        ..., description="Model provider (openai, deepseek, gemini, other)"
+    )
+    base_url: Optional[str] = Field(
+        None, description="Base URL - only required for 'other' provider"
+    )
 
     @validator("model", "provider")
     def validate_required_fields(cls, v):
@@ -70,8 +75,57 @@ class ModelConfigRequest(CamelModel):
         return v.strip() if isinstance(v, str) and v else v
 
 
+class RateLimitSettingRequest(CamelModel):
+    requests_per_minute: Optional[float] = None
+    burst_size: Optional[int] = None
+    enable_rate_limit: Optional[bool] = None
+    max_retries: Optional[int] = None
+    base_delay: Optional[float] = None
+    max_delay: Optional[float] = None
+    enable_retry: Optional[bool] = None
+
+
+class ContextSettingRequest(CamelModel):
+    max_tokens: Optional[int] = None
+    compress_threshold: Optional[float] = None
+
+
+class AgentLimitsSettingRequest(CamelModel):
+    max_iterations: Optional[int] = None
+    max_tool_calls: Optional[int] = None
+    max_curations: Optional[int] = None
+    max_plan_reviews: Optional[int] = None
+    max_refines: Optional[int] = None
+    enable_hard_limits: Optional[bool] = None
+
+
+class EmbeddingSettingRequest(CamelModel):
+    model: str = Field(..., description="Embedding model name")
+    provider: str = Field(..., description="Provider (openai, deepseek, gemini, other)")
+    base_url: Optional[str] = Field(None, description="Base URL for 'other' provider")
+
+    @validator("model", "provider")
+    def validate_required_fields(cls, v):
+        if not v or (isinstance(v, str) and not v.strip()):
+            raise ValueError("Field cannot be empty")
+        return v.strip() if isinstance(v, str) else v
+
+    @validator("provider")
+    def validate_provider(cls, v):
+        try:
+            ModelProvider(v)
+        except ValueError as e:
+            raise ValueError(f"Invalid provider: {e}") from e
+        return v
+
+
 class ModifySettingRequest(CamelModel):
     model: Optional[ModelConfigRequest] = None
+    lightweight_model: Optional[ModelConfigRequest] = None
+    embedding: Optional[EmbeddingSettingRequest] = None
+    rate_limit: Optional[RateLimitSettingRequest] = None
+    context: Optional[ContextSettingRequest] = None
+    agent_limits: Optional[AgentLimitsSettingRequest] = None
 
 
 class CreateScheduleRequest(CamelModel):
@@ -107,6 +161,7 @@ class UpdateScheduleRequest(CamelModel):
         if value is not None and len(value) == 0:
             raise ValueError("group_ids cannot be empty")
         return value
+
 
 class GetBriefsRequest(CamelModel):
     start_date: Optional[date] = None

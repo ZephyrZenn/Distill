@@ -3,7 +3,6 @@ import {
   Zap,
   PlayCircle,
   RotateCcw,
-  Info,
   History,
   X,
   Clock,
@@ -54,8 +53,20 @@ const InstantLabPage = () => {
   const [selectedHistoryTask, setSelectedHistoryTask] = useState<HistoryTask | null>(null);
   const [loadingHistoryTask, setLoadingHistoryTask] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const focusInputRef = useRef<HTMLTextAreaElement>(null);
 
   const allGroups = groups ?? [];
+
+  // Auto-resize focus textarea by content (wrap, no horizontal scroll)
+  useEffect(() => {
+    const el = focusInputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const min = 40; // ~2.5rem
+    const max = 112; // max-h-28
+    const h = Math.min(max, Math.max(min, el.scrollHeight));
+    el.style.height = `${h}px`;
+  }, [generationFocus]);
 
   // 从 localStorage 加载历史记录
   useEffect(() => {
@@ -344,7 +355,7 @@ const InstantLabPage = () => {
     return (
       <Layout>
         <div className="h-full overflow-hidden p-4 md:p-12 flex flex-col items-center justify-center">
-          <div className="text-slate-400 text-sm">检查任务状态...</div>
+          <div className="theme-text-muted text-sm">检查任务状态...</div>
         </div>
       </Layout>
     );
@@ -353,20 +364,20 @@ const InstantLabPage = () => {
   // 历史记录侧边栏组件
   const HistorySidebar = () => (
     <div
-      className={`fixed right-0 top-0 h-full w-80 bg-white border-l border-slate-200 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+      className={`fixed right-0 top-0 h-full w-80 theme-surface border-l theme-border shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
         isHistoryOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
     >
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="p-4 border-b theme-border flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <History size={20} className="text-indigo-600" />
-            <h3 className="font-bold text-slate-800">生成历史</h3>
+            <History size={20} className="theme-accent-text" />
+            <h3 className="font-bold theme-text">生成历史</h3>
           </div>
           <button
             onClick={() => setIsHistoryOpen(false)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-2 theme-surface-hover rounded-lg transition-colors theme-text"
           >
             <X size={18} />
           </button>
@@ -375,7 +386,7 @@ const InstantLabPage = () => {
         {/* History List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {historyTasks.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-sm">
+            <div className="p-8 text-center theme-text-muted text-sm">
               暂无历史记录
             </div>
           ) : (
@@ -400,10 +411,10 @@ const InstantLabPage = () => {
                       key={task.taskId}
                       onClick={() => loadHistoryTaskDetail(task)}
                       disabled={loadingHistoryTask}
-                      className={`w-full p-3 mb-2 rounded-lg border transition-all text-left ${
+                      className={`w-full p-3 mb-2 rounded-lg border transition-all text-left theme-text ${
                         selectedHistoryTask?.taskId === task.taskId
-                          ? 'bg-indigo-50 border-indigo-300'
-                          : 'bg-white border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                          ? 'nav-active theme-border'
+                          : 'theme-surface theme-border theme-surface-hover theme-accent-text-hover'
                       } ${loadingHistoryTask ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
                     >
                     <div className="flex items-start justify-between gap-2">
@@ -418,17 +429,17 @@ const InstantLabPage = () => {
                              '等待中'}
                           </span>
                           {task.boostMode && (
-                            <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold">
+                            <span className="text-[10px] theme-accent-bg theme-on-accent px-1.5 py-0.5 rounded font-bold">
                               BOOST
                             </span>
                           )}
                         </div>
                         {task.focus && (
-                          <p className="text-xs text-slate-600 truncate mb-1">
+                          <p className="text-xs theme-text truncate mb-1">
                             {task.focus}
                           </p>
                         )}
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] theme-text-muted">
                           {date.toLocaleString('zh-CN', {
                             month: 'short',
                             day: 'numeric',
@@ -456,10 +467,10 @@ const InstantLabPage = () => {
           {/* History button */}
           <button
             onClick={() => setIsHistoryOpen(true)}
-            className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 bg-white border border-slate-200 rounded-xl shadow-lg hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl shadow-lg theme-surface-hover transition-all flex items-center gap-2 theme-text theme-accent-text-hover"
           >
-            <History size={18} className="text-indigo-600" />
-            <span className="text-xs font-bold text-slate-700 hidden sm:inline">历史</span>
+            <History size={18} className="theme-accent-text" />
+            <span className="text-xs font-bold hidden sm:inline">历史</span>
           </button>
 
           {/* History Sidebar */}
@@ -468,7 +479,8 @@ const InstantLabPage = () => {
           {/* Overlay when sidebar is open */}
           {isHistoryOpen && (
             <div
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 backdrop-blur-sm z-40"
+              style={{ backgroundColor: 'var(--theme-overlay)' }}
               onClick={() => setIsHistoryOpen(false)}
             />
           )}
@@ -506,13 +518,13 @@ const InstantLabPage = () => {
                     key={i}
                     className="flex gap-4 animate-in fade-in duration-700"
                   >
-                    <span className="text-indigo-500/60 shrink-0">
+                    <span className="text-amber-500/60 shrink-0">
                       [{log.time}]
                     </span>
                     <span
                       className={
                         i === agentLogs.length - 1
-                          ? 'text-indigo-300 font-bold border-l-2 border-indigo-500 pl-3 ml-2'
+                          ? 'text-amber-300 font-bold border-l-2 border-amber-500 pl-3 ml-2'
                           : 'text-slate-400 ml-3 pl-3 border-l border-white/5'
                       }
                     >
@@ -536,10 +548,10 @@ const InstantLabPage = () => {
         {/* History button */}
         <button
           onClick={() => setIsHistoryOpen(true)}
-          className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 bg-white border border-slate-200 rounded-xl shadow-lg hover:bg-slate-50 transition-all flex items-center gap-2"
+          className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl shadow-lg theme-surface-hover transition-all flex items-center gap-2 theme-text theme-accent-text-hover"
         >
-          <History size={18} className="text-indigo-600" />
-          <span className="text-xs font-bold text-slate-700 hidden sm:inline">历史</span>
+          <History size={18} className="theme-accent-text" />
+          <span className="text-xs font-bold hidden sm:inline">历史</span>
         </button>
 
         {/* History Sidebar */}
@@ -548,7 +560,8 @@ const InstantLabPage = () => {
         {/* Overlay when sidebar is open */}
         {isHistoryOpen && (
           <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+            className="fixed inset-0 backdrop-blur-sm z-40"
+            style={{ backgroundColor: 'var(--theme-overlay)' }}
             onClick={() => setIsHistoryOpen(false)}
           />
         )}
@@ -557,26 +570,85 @@ const InstantLabPage = () => {
           <div className="w-full max-w-3xl flex flex-col h-full max-h-[800px]">
             {/* Header */}
             <div className="mb-6 md:mb-8 flex items-center gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+              <div className="w-10 h-10 md:w-12 md:h-12 theme-primary-bg theme-on-primary rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg">
                 <Zap size={20} className="md:w-6 md:h-6" />
               </div>
               <div>
-                <h3 className="text-lg md:text-xl font-black text-slate-800">
+                <h3 className="text-lg md:text-xl font-black theme-text">
                   实时 Agent 总结
                 </h3>
-                <p className="text-slate-400 text-xs md:text-sm font-medium">
+                <p className="theme-text-muted text-xs md:text-sm font-medium">
                   配置偏好并启动即时分析
                 </p>
               </div>
             </div>
 
-            {/* Main content area - GPT chat-like */}
-            <div className="flex-1 flex flex-col bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Mode container: both modes shown, click to select */}
+            <div className="mb-3 md:mb-4 rounded-xl theme-surface p-3 md:p-4 theme-border border">
+              <div className="flex flex-col sm:flex-row items-stretch gap-2 md:gap-3">
+                {/* Workflow 模式 - card */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (boostMode) {
+                      setBoostMode(false);
+                      setSelectedGroupsForGen([]);
+                    }
+                  }}
+                  className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 theme-text ${
+                    !boostMode
+                      ? 'nav-active theme-border'
+                      : 'theme-border theme-surface theme-surface-hover'
+                  }`}
+                >
+                  <div className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 overflow-hidden shrink-0">
+                    <img src="/workflow.svg" alt="" className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain" />
+                  </div>
+                  <p className="mt-1.5 text-xs font-bold theme-text">Workflow</p>
+                  <p className="mt-0.5 text-[11px] theme-text-muted">仅根据分组内订阅源的信息生成总结</p>
+                </button>
+
+                {/* PS Agent 模式 - card */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (boostMode) return;
+                    try {
+                      const check = await api.getAgentConfigCheck();
+                      if (!check.ready) {
+                        showToast(
+                          `Agent 模式配置不完整：${check.missing.join('；')}`,
+                          { type: 'error' }
+                        );
+                        return;
+                      }
+                      setBoostMode(true);
+                    } catch (e) {
+                      showToast('检查 Agent 配置失败，请稍后重试', { type: 'error' });
+                    }
+                  }}
+                  className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 theme-text ${
+                    boostMode
+                      ? 'nav-active theme-border'
+                      : 'theme-border theme-surface theme-surface-hover'
+                  }`}
+                >
+                  <div className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 overflow-hidden shrink-0">
+                    <img src="/bot.svg" alt="" className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain" />
+                  </div>
+                  <p className="mt-1.5 text-xs font-bold theme-text">Agent</p>
+                  <p className="mt-0.5 text-[11px] theme-text-muted">根据关注点自主搜索信息，生成总结。<br/>注意：此模式会消耗较多Token。</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Main content area - height follows content */}
+            <div className="flex flex-col theme-surface rounded-2xl md:rounded-3xl border theme-border shadow-sm overflow-hidden w-full">
               {/* Top section - Group selection (standard mode only) */}
               {!boostMode && (
-                <div className="border-b border-slate-200 bg-slate-50/60 p-3 md:p-4">
+                <div className="border-b theme-border theme-surface-hover p-3 md:p-4">
                   <div className="flex items-start gap-3">
-                    <div className="pt-1 text-xs font-bold text-slate-600 whitespace-nowrap">
+                    <div className="pt-1 text-xs font-bold theme-text whitespace-nowrap">
                       目标分组 <span className="text-rose-400">*</span>
                     </div>
                     <div className="flex-1">
@@ -587,8 +659,8 @@ const InstantLabPage = () => {
                             onClick={() => toggleGroupForGen(group.id)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border whitespace-nowrap ${
                               selectedGroupsForGen.includes(group.id)
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                                : 'bg-white text-slate-600 border-slate-300 hover:border-indigo-300'
+                                ? 'theme-primary-bg theme-on-primary theme-border'
+                                : 'theme-surface theme-text theme-border theme-accent-text-hover'
                             }`}
                           >
                             {group.title}
@@ -605,98 +677,53 @@ const InstantLabPage = () => {
                 </div>
               )}
 
-              {/* Upper section - Focus input */}
-              <div className="flex-1 flex flex-col p-4 md:p-6">
-                <div className="flex-1 flex flex-col">
-                  <div className="mb-3 flex items-center gap-2">
-                    <label className="text-xs font-bold text-slate-600">
-                      用户关注点
-                    </label>
-                    {boostMode && <span className="text-rose-400 text-xs">*</span>}
-                    {!boostMode && <span className="text-slate-400 text-xs">(可选)</span>}
-                  </div>
+              {/* Chat-like input row: input + send icon in one bar */}
+              <div className="px-3 md:px-4 py-3 theme-text">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <label className="text-xs font-bold theme-text shrink-0">用户关注点</label>
+                  {boostMode && <span className="text-rose-400 text-xs">*</span>}
+                  {!boostMode && <span className="theme-text-muted text-xs">(可选)</span>}
+                </div>
+                <div
+                  className={`flex items-start rounded-lg md:rounded-xl theme-surface border overflow-hidden theme-border ${
+                    boostMode && !generationFocus.trim()
+                      ? 'ring-2 ring-rose-300 border-rose-200'
+                      : 'focus-within:ring-2 focus-within:ring-[var(--theme-primary)]/30 focus-within:border-[var(--theme-primary)]'
+                  }`}
+                >
                   <textarea
+                    ref={focusInputRef}
                     value={generationFocus}
                     onChange={(e) => setGenerationFocus(e.target.value)}
-                    placeholder={boostMode ? "请输入您的关注点..." : "例如：关注 AI 在移动端的应用..."}
-                    className={`flex-1 w-full bg-slate-50 border-none rounded-xl md:rounded-2xl px-4 md:px-5 py-3 md:py-4 text-sm md:text-base focus:ring-2 focus:ring-indigo-500/20 resize-none outline-none ${
-                      boostMode && !generationFocus.trim() ? 'ring-2 ring-rose-400' : ''
-                    }`}
-                    style={{ minHeight: '120px' }}
-                  />
-                  {boostMode && !generationFocus.trim() && (
-                    <p className="text-xs text-rose-400 mt-2 ml-1">Boost Mode 下必须填写用户关注点</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Lower section - Boost Mode toggle and controls */}
-              <div className="border-t border-slate-200 bg-slate-50/50 px-3 py-2 md:px-4 md:py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  {/* Boost Mode toggle with info icon */}
-                  <div className="flex items-center gap-3 flex-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBoostMode(!boostMode);
-                        // 切换到 boostMode 时清空已选择的分组
-                        if (!boostMode) {
-                          setSelectedGroupsForGen([]);
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (
+                          !(boostMode && !generationFocus.trim()) &&
+                          (boostMode || selectedGroupsForGen.length > 0)
+                        ) {
+                          startGeneration();
                         }
-                      }}
-                      className={`relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                        boostMode ? 'bg-indigo-600' : 'bg-slate-300'
-                      }`}
-                      role="switch"
-                      aria-checked={boostMode}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          boostMode ? 'translate-x-4' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                    
-                    <span className="text-xs font-medium text-slate-700">
-                      Boost Mode
-                    </span>
-                    
-                    {/* Info icon with tooltip */}
-                    <div className="relative group">
-                      <Info 
-                        size={16} 
-                        className="text-slate-400 hover:text-slate-600 cursor-help transition-colors" 
-                      />
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-0 mb-2 w-64 p-2.5 bg-slate-900 text-white text-[11px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                        <div className="font-bold mb-1">
-                          {boostMode ? 'Boost Mode' : 'Workflow'}
-                        </div>
-                        <div className="text-slate-300 leading-relaxed">
-                          {boostMode 
-                            ? 'BoostAgent 将自主选择所有可用订阅源，根据您的关注点智能生成内容。注意Token消耗会是workflow模式的两倍以上'
-                            : 'Agentic Workflow，LLM智能筛选你选中的分组的当日更新，并生成简报。'
-                          }
-                        </div>
-                        {/* Tooltip arrow */}
-                        <div className="absolute top-full left-6 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Generate button */}
+                      }
+                    }}
+                    placeholder={boostMode ? "请输入您的关注点..." : "例如：关注 AI 在移动端的应用..."}
+                    rows={1}
+                    className="flex-1 min-w-0 min-h-[2.25rem] md:min-h-10 max-h-28 py-2.5 px-3 md:px-4 bg-transparent border-none text-sm outline-none resize-none overflow-x-hidden overflow-y-auto break-words"
+                  />
                   <button
                     onClick={startGeneration}
                     disabled={
                       (boostMode && !generationFocus.trim()) ||
                       (!boostMode && selectedGroupsForGen.length === 0)
                     }
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-xs md:text-sm whitespace-nowrap"
+                    className="h-9 md:h-10 w-9 md:w-10 shrink-0 flex items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors mt-0.5"
                   >
-                    <PlayCircle size={16} />
-                    启动
+                    <PlayCircle size={20} />
                   </button>
                 </div>
+                {boostMode && !generationFocus.trim() && (
+                  <p className="text-xs text-rose-400 mt-1 ml-1">Boost Mode 下必须填写用户关注点</p>
+                )}
               </div>
             </div>
           </div>

@@ -38,12 +38,61 @@ export interface ModelSetting {
   model: string;
   provider: string;
   baseUrl?: string; // Only present for 'other' provider
-  apiKeyConfigured: boolean; // Whether the API key is configured
-  apiKeyEnvVar: string; // Environment variable name for the API key
+  apiKeyConfigured: boolean;
+  apiKeyEnvVar: string;
+}
+
+/** Rate limit & retry (advanced) */
+export interface RateLimitSetting {
+  requestsPerMinute: number;
+  burstSize: number;
+  enableRateLimit: boolean;
+  maxRetries: number;
+  baseDelay: number;
+  maxDelay: number;
+  enableRetry: boolean;
+}
+
+/** Context window (advanced) */
+export interface ContextSetting {
+  maxTokens: number;
+  compressThreshold: number;
+}
+
+/** Agent loop limits (advanced) */
+export interface AgentLimitsSetting {
+  maxIterations: number;
+  maxToolCalls: number;
+  maxCurations: number;
+  maxPlanReviews: number;
+  maxRefines: number;
+  enableHardLimits: boolean;
+}
+
+/** Embedding 配置（API Key 使用 EMBEDDING_API_KEY 环境变量） */
+export interface EmbeddingSetting {
+  model: string;
+  provider: string;
+  baseUrl?: string;
+  apiKeyConfigured: boolean;
+  apiKeyEnvVar: string;
 }
 
 export interface Setting {
   model: ModelSetting;
+  lightweightModel?: ModelSetting | null;
+  embedding?: EmbeddingSetting | null;
+  /** Tavily 网页搜索是否已配置（TAVILY_API_KEY） */
+  tavilyConfigured?: boolean;
+  rateLimit?: RateLimitSetting;
+  context?: ContextSetting;
+  agentLimits?: AgentLimitsSetting;
+}
+
+/** Agent 模式配置检查结果 */
+export interface AgentCheckResult {
+  ready: boolean;
+  missing: string[];
 }
 
 export type FeedGroupListResponse = ApiResponse<FeedGroup[]>;
@@ -74,8 +123,21 @@ export interface ModifySettingPayload {
   model?: {
     model: string;
     provider: string;
-    baseUrl?: string; // Only required for 'other' provider
+    baseUrl?: string;
   };
+  lightweightModel?: {
+    model: string;
+    provider: string;
+    baseUrl?: string;
+  };
+  embedding?: {
+    model: string;
+    provider: string;
+    baseUrl?: string;
+  };
+  rateLimit?: Partial<RateLimitSetting>;
+  context?: Partial<ContextSetting>;
+  agentLimits?: Partial<AgentLimitsSetting>;
 }
 
 export interface Schedule {

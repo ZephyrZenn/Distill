@@ -4,7 +4,6 @@ from typing import List, Optional
 from .common import CamelModel, CommonResult
 
 
-
 class FeedVO(CamelModel):
     id: int
     title: str
@@ -19,6 +18,7 @@ class FeedGroupVO(CamelModel):
     desc: str
     feeds: List[FeedVO]
 
+
 class FeedBriefVO(CamelModel):
     id: int
     groups: List[FeedGroupVO]
@@ -30,10 +30,11 @@ class FeedBriefVO(CamelModel):
 
 class ModelSettingVO(CamelModel):
     """Model setting view object.
-    
+
     Note: API keys are managed via environment variables, not exposed in API.
     Base URL is only present for 'other' provider.
     """
+
     model: str
     provider: str
     base_url: Optional[str] = None  # Only present for 'other' provider
@@ -41,8 +42,54 @@ class ModelSettingVO(CamelModel):
     api_key_env_var: str = ""  # Environment variable name for the API key
 
 
+class RateLimitSettingVO(CamelModel):
+    """Rate limit and retry settings (advanced)."""
+
+    requests_per_minute: float = 60.0
+    burst_size: int = 10
+    enable_rate_limit: bool = True
+    max_retries: int = 3
+    base_delay: float = 1.0
+    max_delay: float = 60.0
+    enable_retry: bool = True
+
+
+class ContextSettingVO(CamelModel):
+    """Context window settings (advanced)."""
+
+    max_tokens: int = 128000
+    compress_threshold: float = 0.8
+
+
+class AgentLimitsSettingVO(CamelModel):
+    """Agent loop limits (advanced)."""
+
+    max_iterations: int = 10
+    max_tool_calls: int = 50
+    max_curations: int = 8
+    max_plan_reviews: int = 3
+    max_refines: int = 3
+    enable_hard_limits: bool = True
+
+
+class EmbeddingSettingVO(CamelModel):
+    """Embedding config (API key from EMBEDDING_API_KEY env)."""
+
+    model: str
+    provider: str
+    base_url: Optional[str] = None
+    api_key_configured: bool = False
+    api_key_env_var: str = "EMBEDDING_API_KEY"
+
+
 class SettingVO(CamelModel):
     model: ModelSettingVO
+    lightweight_model: Optional[ModelSettingVO] = None
+    embedding: Optional[EmbeddingSettingVO] = None
+    tavily_configured: bool = False  # TAVILY_API_KEY for web search (Agent)
+    rate_limit: Optional[RateLimitSettingVO] = None
+    context: Optional[ContextSettingVO] = None
+    agent_limits: Optional[AgentLimitsSettingVO] = None
 
 
 class ScheduleVO(CamelModel):
@@ -60,6 +107,7 @@ class FeedBriefResponse(CommonResult[FeedBriefVO]):
 class FeedBriefListResponse(CommonResult[List[FeedBriefVO]]):
     pass
 
+
 class FeedGroupListResponse(CommonResult[List[FeedGroupVO]]):
     pass
 
@@ -71,7 +119,19 @@ class FeedGroupDetailResponse(CommonResult[FeedGroupVO]):
 class FeedListResponse(CommonResult[List[FeedVO]]):
     pass
 
+
 class SettingResponse(CommonResult[SettingVO]):
+    pass
+
+
+class AgentCheckVO(CamelModel):
+    """Agent 模式配置检查结果"""
+
+    ready: bool  # 配置是否齐全
+    missing: List[str]  # 缺失项描述（如未配置的 API Key 等）
+
+
+class AgentCheckResponse(CommonResult[AgentCheckVO]):
     pass
 
 
@@ -85,9 +145,11 @@ class ScheduleResponse(CommonResult[ScheduleVO]):
 
 class GenerateBriefResponse(CommonResult[dict]):
     """生成任务创建响应"""
+
     pass
 
 
 class BriefGenerationStatusResponse(CommonResult[dict]):
     """生成任务状态响应"""
+
     pass
