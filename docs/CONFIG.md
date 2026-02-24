@@ -25,7 +25,7 @@ Distill uses environment variables and a `config.toml` file for configuration.
 | `EMBEDDING_API_KEY` | API key for embedding service (required when using `[embedding]` section) |
 | `TAVILY_API_KEY` | API key for Tavily web search (enables agent web search) |
 | `THREAD_POOL_MAX_WORKERS` | Maximum worker threads (default: `4`) |
-| `THREAD_POOL_NAME_PREFIX` | Thread name prefix (default: `FlashNews`) |
+| `THREAD_POOL_NAME_PREFIX` | Thread name prefix (default: `Distill`) |
 | `BACKEND_URL` | Backend URL for Nginx templating (default: `http://backend:8000`) |
 | `BACKEND_HOST` | Backend host for Nginx templating (default: `backend`) |
 | `VITE_API_BASE_URL` | SPA to backend URL for dev mode (e.g., `http://localhost:8000/api`) |

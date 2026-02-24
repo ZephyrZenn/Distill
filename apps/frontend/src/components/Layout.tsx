@@ -89,7 +89,7 @@ export const Layout = ({
       case '/settings':
         return '系统全局设置';
       default:
-        return 'FlashAiNews';
+        return 'Distill';
     }
   };
 
@@ -114,7 +114,7 @@ export const Layout = ({
       >
         <div className="p-8 flex items-center gap-3">
           <img src="/favicon.svg" alt="" className="w-12 h-12 shrink-0" />
-          <h1 className="font-bold text-lg tracking-tight theme-text">FlashAiNews</h1>
+          <h1 className="font-bold text-lg tracking-tight theme-text">Distill</h1>
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">

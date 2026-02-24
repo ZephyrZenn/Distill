@@ -7,7 +7,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 
-const STORAGE_KEY = 'flashainews-theme';
+const STORAGE_KEY = 'distill-theme';
 export type ThemeId = 'paper' | 'obsidian';
 
 interface ThemeContextValue {

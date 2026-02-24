@@ -12,7 +12,7 @@ def get_thread_pool_config() -> dict:
     """Get thread pool configuration from environment or defaults"""
     return {
         "max_workers": int(os.getenv("THREAD_POOL_MAX_WORKERS", "4")),
-        "thread_name_prefix": os.getenv("THREAD_POOL_NAME_PREFIX", "FlashNews"),
+        "thread_name_prefix": os.getenv("THREAD_POOL_NAME_PREFIX", "Distill"),
     }
 
 

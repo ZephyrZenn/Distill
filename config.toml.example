@@ -1,4 +1,4 @@
-# FlashAiNews Configuration Example
+# Distill Configuration Example
 # Copy this file to config.toml and update with your settings
 
 [model]
