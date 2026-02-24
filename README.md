@@ -41,7 +41,6 @@ OPENAI_API_KEY=sk-your-openai-api-key
 
 # Optional extras
 TAVILY_API_KEY=your-tavily-api-key
-JINA_API_KEY=your-jina-api-key
 EMBEDDING_API_KEY=sk-your-openai-api-key
 EMBEDDING_BASE_URL=https://api.openai.com/v1
 EMBEDDING_MODEL=text-embedding-3-small

@@ -169,17 +169,17 @@ const SchedulesPage = () => {
             return (
               <div
                 key={task.id}
-                className={`bg-white rounded-2xl md:rounded-[2.5rem] border transition-all duration-500 flex flex-col md:flex-row items-stretch md:items-center p-4 md:p-8 gap-4 md:gap-8 shadow-sm group relative ${
+                className={`theme-surface rounded-2xl md:rounded-[2.5rem] border transition-all duration-500 flex flex-col md:flex-row items-stretch md:items-center p-4 md:p-8 gap-4 md:gap-8 shadow-sm group relative theme-border ${
                   isActive
-                    ? 'border-slate-100'
-                    : 'border-slate-50 opacity-60 bg-slate-50/50'
+                    ? ''
+                    : 'opacity-60 theme-surface-hover'
                 }`}
               >
                 {/* Time display */}
                 <div className="flex flex-row md:flex-col items-center md:items-center shrink-0 w-auto md:w-24 gap-4 md:gap-0">
                   <span
-                    className={`text-2xl md:text-3xl font-black transition-all ${
-                      isActive ? 'text-slate-800' : 'text-slate-400'
+                    className={`text-2xl md:text-3xl font-black transition-all theme-text ${
+                      isActive ? '' : 'theme-text-muted'
                     }`}
                   >
                     {task.time}
@@ -187,15 +187,15 @@ const SchedulesPage = () => {
                   <div
                     className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                       isActive
-                        ? 'bg-indigo-50 text-indigo-600 animate-pulse'
-                        : 'bg-slate-200 text-slate-500'
+                        ? 'nav-active animate-pulse'
+                        : 'theme-surface-hover theme-text-muted'
                     }`}
                   >
                     {isActive ? 'Next Run' : 'Paused'}
                   </div>
                 </div>
 
-                <div className="h-[1px] md:h-12 w-full md:w-[1px] bg-slate-100" />
+                <div className="h-[1px] md:h-12 w-full md:w-[1px] rounded-full" style={{ backgroundColor: 'var(--theme-border)' }} />
 
                 {/* Content */}
                 <div className="flex-1 min-w-0 space-y-3">
@@ -207,8 +207,8 @@ const SchedulesPage = () => {
                           key={gid}
                           className={`px-3 py-1 border rounded-xl text-[10px] font-bold transition-all ${
                             isActive
-                              ? 'bg-white border-indigo-100 text-indigo-500 shadow-sm'
-                              : 'bg-transparent border-slate-200 text-slate-400'
+                              ? 'theme-surface theme-border theme-accent-text shadow-sm'
+                              : 'bg-transparent theme-border theme-text-muted'
                           }`}
                         >
                           {group?.title || `分组 ${gid}`}
@@ -219,15 +219,11 @@ const SchedulesPage = () => {
                   <div className="flex items-start gap-2">
                     <Activity
                       size={14}
-                      className={
-                        isActive
-                          ? 'text-indigo-300 mt-0.5'
-                          : 'text-slate-300 mt-0.5'
-                      }
+                      className={`mt-0.5 ${isActive ? 'theme-accent-text' : 'theme-text-muted'}`}
                     />
                     <p
                       className={`text-sm font-medium leading-relaxed truncate max-w-md ${
-                        isActive ? 'text-slate-500' : 'text-slate-300'
+                        isActive ? 'theme-text-muted' : 'theme-text-muted opacity-80'
                       }`}
                     >
                       {task.focus || '默认广度总结模式'}
@@ -241,35 +237,36 @@ const SchedulesPage = () => {
                     <button
                       onClick={() => handleToggleSchedule(task)}
                       className={`relative w-16 md:w-20 h-8 md:h-10 rounded-full transition-all duration-300 flex items-center px-1 shadow-inner min-h-[44px] md:min-h-0 ${
-                        isActive ? 'bg-emerald-500' : 'bg-slate-300'
+                        isActive ? 'bg-emerald-500' : 'theme-surface-hover'
                       }`}
+                      style={!isActive ? { backgroundColor: 'var(--theme-border)' } : undefined}
                     >
                       <div
-                        className={`absolute transition-all duration-300 h-6 w-6 md:h-8 md:w-8 rounded-full bg-white shadow-md flex items-center justify-center ${
+                        className={`absolute transition-all duration-300 h-6 w-6 md:h-8 md:w-8 rounded-full theme-surface shadow-md flex items-center justify-center theme-border border ${
                           isActive ? 'translate-x-8 md:translate-x-10' : 'translate-x-0'
                         }`}
                       >
                         <Power
                           size={12}
                           className={`md:w-[14px] md:h-[14px] ${
-                            isActive ? 'text-emerald-500' : 'text-slate-400'
+                            isActive ? 'text-emerald-500' : 'theme-text-muted'
                           }`}
                         />
                       </div>
                     </button>
                   </div>
-                  <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
+                  <div className="h-10 w-[1px] hidden md:block rounded-full" style={{ backgroundColor: 'var(--theme-border)' }} />
                   <div className="flex flex-row md:flex-col gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300">
                     <button
                       onClick={() => handleOpenModal(task)}
-                      className="p-2 md:p-2.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      className="p-2 md:p-2.5 theme-text-muted theme-accent-text-hover theme-surface-hover rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
                       aria-label="编辑定时任务"
                     >
                       <Edit3 size={18} />
                     </button>
                     <button
                       onClick={() => handleDeleteSchedule(task.id)}
-                      className="p-2 md:p-2.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      className="p-2 md:p-2.5 theme-text-muted hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
                       aria-label="删除定时任务"
                     >
                       <Trash2 size={18} />
@@ -283,7 +280,7 @@ const SchedulesPage = () => {
           {/* Add new button */}
           <button
             onClick={() => handleOpenModal()}
-            className="w-full py-8 md:py-12 border-2 border-dashed border-slate-200 rounded-2xl md:rounded-[3rem] flex flex-col items-center justify-center text-slate-300 hover:text-indigo-600 transition-all gap-2 md:gap-3 min-h-[120px] md:min-h-0"
+            className="w-full py-8 md:py-12 border-2 border-dashed theme-border rounded-2xl md:rounded-[3rem] flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover transition-all gap-2 md:gap-3 min-h-[120px] md:min-h-0"
           >
             <Plus size={32} className="md:w-9 md:h-9" />
             <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">
@@ -303,7 +300,7 @@ const SchedulesPage = () => {
         <div className="space-y-6">
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+              <label className="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
                 执行时间
               </label>
               <input
@@ -314,13 +311,13 @@ const SchedulesPage = () => {
                     prev ? { ...prev, time: e.target.value } : null
                   )
                 }
-                className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                className="w-full theme-surface theme-text theme-border border rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+            <label className="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
               涉及分组 <span className="text-rose-400">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
@@ -330,8 +327,8 @@ const SchedulesPage = () => {
                   onClick={() => toggleGroupInSchedule(g.id)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                     editingSchedule?.groupIds.includes(g.id)
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-slate-400 border-slate-100'
+                      ? 'theme-primary-bg theme-on-primary theme-border'
+                      : 'theme-surface theme-text-muted theme-border theme-accent-text-hover'
                   }`}
                 >
                   {g.title}
@@ -344,7 +341,7 @@ const SchedulesPage = () => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+            <label className="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
               关注点
             </label>
             <textarea
@@ -355,7 +352,7 @@ const SchedulesPage = () => {
                 )
               }
               rows={2}
-              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm resize-none outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full theme-surface theme-text theme-border border rounded-2xl px-5 py-3 text-sm resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20"
             />
           </div>
         </div>

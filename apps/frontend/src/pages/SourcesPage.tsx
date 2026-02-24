@@ -137,7 +137,7 @@ const SourcesPage = () => {
         {allSourcesWithGroupInfo.map((source) => (
           <div
             key={source.id}
-            className="bg-white border border-slate-100 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all relative group flex flex-col justify-between min-h-[120px] md:h-[130px] cursor-pointer"
+            className="theme-surface border theme-border rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all relative group flex flex-col justify-between min-h-[120px] md:h-[130px] cursor-pointer"
             onClick={() => handleOpenModal(source)}
           >
             {/* Status indicator - top right corner */}
@@ -170,15 +170,15 @@ const SourcesPage = () => {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-slate-800 text-xs md:text-sm truncate mb-1">
+              <h4 className="font-bold theme-text text-xs md:text-sm truncate mb-1">
                 {source.title}
               </h4>
-              <p className="text-[10px] md:text-xs text-slate-500 line-clamp-2 leading-snug">
+              <p className="text-[10px] md:text-xs theme-text-muted line-clamp-2 leading-snug">
                 {source.desc || '暂无描述信息'}
               </p>
             </div>
             <div className="mt-2 flex items-center justify-between shrink-0">
-              <span className="text-[9px] font-black text-slate-400 uppercase bg-slate-50 px-1.5 py-0.5 rounded truncate max-w-[80px]">
+              <span className="text-[9px] font-black theme-text-muted uppercase theme-accent-bg theme-on-accent px-1.5 py-0.5 rounded truncate max-w-[80px]">
                 {source.groupName}
               </span>
               <div className="flex items-center gap-2">
@@ -186,7 +186,7 @@ const SourcesPage = () => {
                   href={source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-slate-200 hover:text-indigo-600 transition-colors flex-shrink-0"
+                  className="theme-text-muted theme-accent-text-hover transition-colors shrink-0"
                   title="打开订阅源链接"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -210,7 +210,7 @@ const SourcesPage = () => {
         {/* Add new button */}
         <button
           onClick={() => handleOpenModal()}
-          className="border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-300 hover:text-indigo-600 min-h-[120px] md:h-[130px] transition-all min-w-[44px] min-h-[44px]"
+          className="border-2 border-dashed theme-border rounded-2xl flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover min-h-[120px] md:h-[130px] transition-all min-w-[44px] min-h-[44px]"
         >
           <Plus size={24} />
           <span className="text-[10px] font-bold mt-2 uppercase">添加源</span>
@@ -226,7 +226,7 @@ const SourcesPage = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+            <label className="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
               别名
             </label>
             <input
@@ -237,11 +237,11 @@ const SourcesPage = () => {
                   prev ? { ...prev, name: e.target.value } : null
                 )
               }
-              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+              className="w-full theme-surface theme-text theme-border border rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+            <label className="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
               描述
             </label>
             <textarea
@@ -252,16 +252,16 @@ const SourcesPage = () => {
                 )
               }
               rows={3}
-              className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none"
+              className="w-full theme-surface theme-text theme-border border rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none resize-none"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+            <label className="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
               RSS URL
             </label>
             <div className="relative">
               <LinkIcon
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
+                className="absolute left-4 top-1/2 -translate-y-1/2 theme-text-muted"
                 size={16}
               />
               <input
@@ -272,7 +272,7 @@ const SourcesPage = () => {
                     prev ? { ...prev, url: e.target.value } : null
                   )
                 }
-                className="w-full bg-slate-50 border-none rounded-2xl pl-11 pr-5 py-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                className="w-full theme-surface theme-text theme-border border rounded-2xl pl-11 pr-5 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none"
               />
             </div>
           </div>

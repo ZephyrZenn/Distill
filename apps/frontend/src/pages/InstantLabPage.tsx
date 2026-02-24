@@ -355,7 +355,7 @@ const InstantLabPage = () => {
     return (
       <Layout>
         <div className="h-full overflow-hidden p-4 md:p-12 flex flex-col items-center justify-center">
-          <div className="text-slate-400 text-sm">检查任务状态...</div>
+          <div className="theme-text-muted text-sm">检查任务状态...</div>
         </div>
       </Layout>
     );
@@ -364,20 +364,20 @@ const InstantLabPage = () => {
   // 历史记录侧边栏组件
   const HistorySidebar = () => (
     <div
-      className={`fixed right-0 top-0 h-full w-80 bg-white border-l border-slate-200 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+      className={`fixed right-0 top-0 h-full w-80 theme-surface border-l theme-border shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
         isHistoryOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
     >
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="p-4 border-b theme-border flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <History size={20} className="text-indigo-600" />
-            <h3 className="font-bold text-slate-800">生成历史</h3>
+            <History size={20} className="theme-accent-text" />
+            <h3 className="font-bold theme-text">生成历史</h3>
           </div>
           <button
             onClick={() => setIsHistoryOpen(false)}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-2 theme-surface-hover rounded-lg transition-colors theme-text"
           >
             <X size={18} />
           </button>
@@ -386,7 +386,7 @@ const InstantLabPage = () => {
         {/* History List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {historyTasks.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-sm">
+            <div className="p-8 text-center theme-text-muted text-sm">
               暂无历史记录
             </div>
           ) : (
@@ -411,10 +411,10 @@ const InstantLabPage = () => {
                       key={task.taskId}
                       onClick={() => loadHistoryTaskDetail(task)}
                       disabled={loadingHistoryTask}
-                      className={`w-full p-3 mb-2 rounded-lg border transition-all text-left ${
+                      className={`w-full p-3 mb-2 rounded-lg border transition-all text-left theme-text ${
                         selectedHistoryTask?.taskId === task.taskId
-                          ? 'bg-indigo-50 border-indigo-300'
-                          : 'bg-white border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                          ? 'nav-active theme-border'
+                          : 'theme-surface theme-border theme-surface-hover theme-accent-text-hover'
                       } ${loadingHistoryTask ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
                     >
                     <div className="flex items-start justify-between gap-2">
@@ -429,17 +429,17 @@ const InstantLabPage = () => {
                              '等待中'}
                           </span>
                           {task.boostMode && (
-                            <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold">
+                            <span className="text-[10px] theme-accent-bg theme-on-accent px-1.5 py-0.5 rounded font-bold">
                               BOOST
                             </span>
                           )}
                         </div>
                         {task.focus && (
-                          <p className="text-xs text-slate-600 truncate mb-1">
+                          <p className="text-xs theme-text truncate mb-1">
                             {task.focus}
                           </p>
                         )}
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] theme-text-muted">
                           {date.toLocaleString('zh-CN', {
                             month: 'short',
                             day: 'numeric',
@@ -467,10 +467,10 @@ const InstantLabPage = () => {
           {/* History button */}
           <button
             onClick={() => setIsHistoryOpen(true)}
-            className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 bg-white border border-slate-200 rounded-xl shadow-lg hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl shadow-lg theme-surface-hover transition-all flex items-center gap-2 theme-text theme-accent-text-hover"
           >
-            <History size={18} className="text-indigo-600" />
-            <span className="text-xs font-bold text-slate-700 hidden sm:inline">历史</span>
+            <History size={18} className="theme-accent-text" />
+            <span className="text-xs font-bold hidden sm:inline">历史</span>
           </button>
 
           {/* History Sidebar */}
@@ -479,7 +479,8 @@ const InstantLabPage = () => {
           {/* Overlay when sidebar is open */}
           {isHistoryOpen && (
             <div
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 backdrop-blur-sm z-40"
+              style={{ backgroundColor: 'var(--theme-overlay)' }}
               onClick={() => setIsHistoryOpen(false)}
             />
           )}
@@ -517,13 +518,13 @@ const InstantLabPage = () => {
                     key={i}
                     className="flex gap-4 animate-in fade-in duration-700"
                   >
-                    <span className="text-indigo-500/60 shrink-0">
+                    <span className="text-amber-500/60 shrink-0">
                       [{log.time}]
                     </span>
                     <span
                       className={
                         i === agentLogs.length - 1
-                          ? 'text-indigo-300 font-bold border-l-2 border-indigo-500 pl-3 ml-2'
+                          ? 'text-amber-300 font-bold border-l-2 border-amber-500 pl-3 ml-2'
                           : 'text-slate-400 ml-3 pl-3 border-l border-white/5'
                       }
                     >
@@ -547,10 +548,10 @@ const InstantLabPage = () => {
         {/* History button */}
         <button
           onClick={() => setIsHistoryOpen(true)}
-          className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 bg-white border border-slate-200 rounded-xl shadow-lg hover:bg-slate-50 transition-all flex items-center gap-2"
+          className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl shadow-lg theme-surface-hover transition-all flex items-center gap-2 theme-text theme-accent-text-hover"
         >
-          <History size={18} className="text-indigo-600" />
-          <span className="text-xs font-bold text-slate-700 hidden sm:inline">历史</span>
+          <History size={18} className="theme-accent-text" />
+          <span className="text-xs font-bold hidden sm:inline">历史</span>
         </button>
 
         {/* History Sidebar */}
@@ -559,7 +560,8 @@ const InstantLabPage = () => {
         {/* Overlay when sidebar is open */}
         {isHistoryOpen && (
           <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+            className="fixed inset-0 backdrop-blur-sm z-40"
+            style={{ backgroundColor: 'var(--theme-overlay)' }}
             onClick={() => setIsHistoryOpen(false)}
           />
         )}
@@ -568,21 +570,21 @@ const InstantLabPage = () => {
           <div className="w-full max-w-3xl flex flex-col h-full max-h-[800px]">
             {/* Header */}
             <div className="mb-6 md:mb-8 flex items-center gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+              <div className="w-10 h-10 md:w-12 md:h-12 theme-primary-bg theme-on-primary rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg">
                 <Zap size={20} className="md:w-6 md:h-6" />
               </div>
               <div>
-                <h3 className="text-lg md:text-xl font-black text-slate-800">
+                <h3 className="text-lg md:text-xl font-black theme-text">
                   实时 Agent 总结
                 </h3>
-                <p className="text-slate-400 text-xs md:text-sm font-medium">
+                <p className="theme-text-muted text-xs md:text-sm font-medium">
                   配置偏好并启动即时分析
                 </p>
               </div>
             </div>
 
             {/* Mode container: both modes shown, click to select */}
-            <div className="mb-3 md:mb-4 rounded-xl bg-slate-50/80 p-3 md:p-4">
+            <div className="mb-3 md:mb-4 rounded-xl theme-surface p-3 md:p-4 theme-border border">
               <div className="flex flex-col sm:flex-row items-stretch gap-2 md:gap-3">
                 {/* Workflow 模式 - card */}
                 <button
@@ -593,17 +595,17 @@ const InstantLabPage = () => {
                       setSelectedGroupsForGen([]);
                     }
                   }}
-                  className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 ${
+                  className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 theme-text ${
                     !boostMode
-                      ? 'border-indigo-400 bg-indigo-50/90'
-                      : 'border-slate-200 bg-white/70 hover:border-slate-300 hover:bg-white/90'
+                      ? 'nav-active theme-border'
+                      : 'theme-border theme-surface theme-surface-hover'
                   }`}
                 >
                   <div className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 overflow-hidden shrink-0">
                     <img src="/workflow.svg" alt="" className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain" />
                   </div>
-                  <p className="mt-1.5 text-xs font-bold text-slate-800">Workflow</p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">仅根据分组内订阅源的信息生成总结</p>
+                  <p className="mt-1.5 text-xs font-bold theme-text">Workflow</p>
+                  <p className="mt-0.5 text-[11px] theme-text-muted">仅根据分组内订阅源的信息生成总结</p>
                 </button>
 
                 {/* PS Agent 模式 - card */}
@@ -625,28 +627,28 @@ const InstantLabPage = () => {
                       showToast('检查 Agent 配置失败，请稍后重试', { type: 'error' });
                     }
                   }}
-                  className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 ${
+                  className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 theme-text ${
                     boostMode
-                      ? 'border-indigo-400 bg-indigo-50/90'
-                      : 'border-slate-200 bg-white/70 hover:border-slate-300 hover:bg-white/90'
+                      ? 'nav-active theme-border'
+                      : 'theme-border theme-surface theme-surface-hover'
                   }`}
                 >
                   <div className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 overflow-hidden shrink-0">
                     <img src="/bot.svg" alt="" className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain" />
                   </div>
-                  <p className="mt-1.5 text-xs font-bold text-slate-800">Agent</p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">根据关注点自主搜索信息，生成总结。<br/>注意：此模式会消耗较多Token。</p>
+                  <p className="mt-1.5 text-xs font-bold theme-text">Agent</p>
+                  <p className="mt-0.5 text-[11px] theme-text-muted">根据关注点自主搜索信息，生成总结。<br/>注意：此模式会消耗较多Token。</p>
                 </button>
               </div>
             </div>
 
             {/* Main content area - height follows content */}
-            <div className="flex flex-col bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm overflow-hidden w-full">
+            <div className="flex flex-col theme-surface rounded-2xl md:rounded-3xl border theme-border shadow-sm overflow-hidden w-full">
               {/* Top section - Group selection (standard mode only) */}
               {!boostMode && (
-                <div className="border-b border-slate-200 bg-slate-50/60 p-3 md:p-4">
+                <div className="border-b theme-border theme-surface-hover p-3 md:p-4">
                   <div className="flex items-start gap-3">
-                    <div className="pt-1 text-xs font-bold text-slate-600 whitespace-nowrap">
+                    <div className="pt-1 text-xs font-bold theme-text whitespace-nowrap">
                       目标分组 <span className="text-rose-400">*</span>
                     </div>
                     <div className="flex-1">
@@ -657,8 +659,8 @@ const InstantLabPage = () => {
                             onClick={() => toggleGroupForGen(group.id)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border whitespace-nowrap ${
                               selectedGroupsForGen.includes(group.id)
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                                : 'bg-white text-slate-600 border-slate-300 hover:border-indigo-300'
+                                ? 'theme-primary-bg theme-on-primary theme-border'
+                                : 'theme-surface theme-text theme-border theme-accent-text-hover'
                             }`}
                           >
                             {group.title}
@@ -676,17 +678,17 @@ const InstantLabPage = () => {
               )}
 
               {/* Chat-like input row: input + send icon in one bar */}
-              <div className="px-3 md:px-4 py-3">
+              <div className="px-3 md:px-4 py-3 theme-text">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <label className="text-xs font-bold text-slate-600 shrink-0">用户关注点</label>
+                  <label className="text-xs font-bold theme-text shrink-0">用户关注点</label>
                   {boostMode && <span className="text-rose-400 text-xs">*</span>}
-                  {!boostMode && <span className="text-slate-400 text-xs">(可选)</span>}
+                  {!boostMode && <span className="theme-text-muted text-xs">(可选)</span>}
                 </div>
                 <div
-                  className={`flex items-start rounded-lg md:rounded-xl bg-slate-100 border overflow-hidden ${
+                  className={`flex items-start rounded-lg md:rounded-xl theme-surface border overflow-hidden theme-border ${
                     boostMode && !generationFocus.trim()
                       ? 'ring-2 ring-rose-300 border-rose-200'
-                      : 'border-slate-200 focus-within:ring-2 focus-within:ring-indigo-400/30 focus-within:border-indigo-300'
+                      : 'focus-within:ring-2 focus-within:ring-[var(--theme-primary)]/30 focus-within:border-[var(--theme-primary)]'
                   }`}
                 >
                   <textarea
@@ -714,7 +716,7 @@ const InstantLabPage = () => {
                       (boostMode && !generationFocus.trim()) ||
                       (!boostMode && selectedGroupsForGen.length === 0)
                     }
-                    className="h-9 md:h-10 w-9 md:w-10 shrink-0 flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent transition-colors mt-0.5"
+                    className="h-9 md:h-10 w-9 md:w-10 shrink-0 flex items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors mt-0.5"
                   >
                     <PlayCircle size={20} />
                   </button>

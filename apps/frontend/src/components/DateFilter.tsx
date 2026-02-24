@@ -127,9 +127,9 @@ export const DateFilter = ({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-6 flex-wrap">
-        <div className="flex items-center gap-3 bg-indigo-50 px-4 py-2 rounded-2xl border border-indigo-100">
-          <Calendar size={16} className="text-indigo-500" />
-          <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">
+        <div className="flex items-center gap-3 theme-accent-bg px-4 py-2 rounded-2xl border theme-border theme-on-accent">
+          <Calendar size={16} className="theme-on-accent" />
+          <span className="text-[11px] font-black uppercase tracking-widest theme-on-accent">
             时间筛选
           </span>
         </div>
@@ -140,8 +140,8 @@ export const DateFilter = ({
             onClick={handleToday}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               isTodaySelected
-                ? 'bg-indigo-500 text-white shadow-md'
-                : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-200 hover:text-indigo-600'
+                ? 'theme-primary-bg theme-on-primary shadow-md'
+                : 'theme-surface border theme-border theme-text theme-accent-text-hover'
             }`}
           >
             当日
@@ -150,8 +150,8 @@ export const DateFilter = ({
             onClick={handleLastWeek}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               isLastWeekSelected
-                ? 'bg-indigo-500 text-white shadow-md'
-                : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-200 hover:text-indigo-600'
+                ? 'theme-primary-bg theme-on-primary shadow-md'
+                : 'theme-surface border theme-border theme-text theme-accent-text-hover'
             }`}
           >
             最近一周
@@ -161,9 +161,9 @@ export const DateFilter = ({
         <div className="relative" ref={popoverRef}>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-5 py-3 text-sm font-medium text-slate-700 outline-none hover:border-indigo-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm hover:shadow-md cursor-pointer min-w-[280px]"
+            className="flex items-center gap-3 theme-surface border theme-border rounded-2xl px-5 py-3 text-sm font-medium theme-text outline-none transition-all shadow-sm hover:shadow-md cursor-pointer min-w-[280px] theme-accent-text-hover focus:ring-4 focus:ring-[var(--theme-primary)]/20 focus:border-[var(--theme-primary)]"
           >
-            <Calendar size={16} className="text-slate-400" />
+            <Calendar size={16} className="theme-text-muted" />
             <span className="flex-1 text-left">{displayText}</span>
             {selectedRange && (
               <X 
@@ -181,7 +181,7 @@ export const DateFilter = ({
 
           {isOpen && (
             <div className="absolute top-full left-0 mt-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-              <div className="bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 p-4 day-picker-container">
+              <div className="theme-surface rounded-[1.5rem] shadow-2xl border theme-border p-4 day-picker-container">
                 <DayPicker
                   mode="range"
                   selected={selectedRange}
@@ -194,23 +194,23 @@ export const DateFilter = ({
                     months: 'flex gap-4',
                     month: 'space-y-4',
                     month_caption: 'flex justify-center pt-1 relative items-center mb-4',
-                    caption_label: 'text-sm font-bold text-slate-800',
+                    caption_label: 'text-sm font-bold theme-text',
                     nav: 'flex gap-1 absolute right-0',
-                    button_previous: 'h-7 w-7 bg-transparent hover:bg-indigo-50 rounded-lg transition-colors',
-                    button_next: 'h-7 w-7 bg-transparent hover:bg-indigo-50 rounded-lg transition-colors',
+                    button_previous: 'h-7 w-7 bg-transparent theme-surface-hover rounded-lg transition-colors',
+                    button_next: 'h-7 w-7 bg-transparent theme-surface-hover rounded-lg transition-colors',
                     month_grid: 'border-collapse',
                     weekdays: 'flex',
-                    weekday: 'text-slate-400 rounded-lg w-9 font-bold text-[10px] uppercase tracking-widest',
+                    weekday: 'theme-text-muted rounded-lg w-9 font-bold text-[10px] uppercase tracking-widest',
                     week: 'flex w-full mt-2',
-                    day: 'h-9 w-9 text-center text-sm p-0 relative rounded-lg hover:bg-slate-50 transition-colors',
-                    day_button: 'h-9 w-9 p-0 font-medium rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-all',
-                    selected: 'bg-indigo-500 text-white hover:bg-indigo-600 hover:text-white font-bold',
-                    range_start: 'bg-indigo-500 text-white',
-                    range_end: 'bg-indigo-500 text-white',
-                    range_middle: 'bg-indigo-50 text-indigo-600',
-                    today: 'border border-indigo-200 font-bold',
-                    disabled: 'text-slate-300 opacity-50 cursor-not-allowed hover:bg-transparent',
-                    outside: 'text-slate-300',
+                    day: 'h-9 w-9 text-center text-sm p-0 relative rounded-lg theme-surface-hover transition-colors',
+                    day_button: 'h-9 w-9 p-0 font-medium rounded-lg theme-text transition-all',
+                    selected: 'theme-primary-bg theme-on-primary theme-btn-primary font-bold',
+                    range_start: 'theme-primary-bg theme-on-primary',
+                    range_end: 'theme-primary-bg theme-on-primary',
+                    range_middle: 'theme-accent-bg theme-accent-text',
+                    today: 'theme-border border font-bold',
+                    disabled: 'theme-text-muted opacity-50 cursor-not-allowed hover:bg-transparent',
+                    outside: 'theme-text-muted',
                     hidden: 'invisible',
                   }}
                 />

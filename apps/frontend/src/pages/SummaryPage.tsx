@@ -13,20 +13,6 @@ import { DateFilter } from '@/components/DateFilter';
 import { useToast } from '@/context/ToastContext';
 import type { FeedBrief } from '@/types/api';
 
-// Card colors for visual variety - matching t.tsx exactly
-const cardStyles = [
-  { color: 'bg-amber-50', rotation: '-rotate-1' },
-  { color: 'bg-blue-50', rotation: 'rotate-1' },
-  { color: 'bg-emerald-50', rotation: '-rotate-0.5' },
-  { color: 'bg-rose-50', rotation: 'rotate-0.5' },
-  { color: 'bg-violet-50', rotation: '-rotate-1' },
-  { color: 'bg-cyan-50', rotation: 'rotate-1' },
-];
-
-const getCardStyle = (index: number) => {
-  return cardStyles[index % cardStyles.length];
-};
-
 // 简单 slug 生成，供标题锚点使用
 const slugify = (text: string) =>
   text
@@ -309,15 +295,14 @@ const SummaryPage = () => {
     return (
       <Layout>
         <div className="h-full flex items-center justify-center">
-          <div className="text-slate-400 text-sm">加载中...</div>
+          <div className="theme-text-muted text-sm">加载中...</div>
         </div>
       </Layout>
     );
   }
 
-  // Detail view - exactly matching t.tsx selectedSummary view
+  // Detail view
   if (selectedBrief) {
-    const cardStyle = getCardStyle(selectedBrief.id);
     const headings = extractHeadings(selectedBrief.content || '');
     
     // 调试：检查标题提取
@@ -327,9 +312,9 @@ const SummaryPage = () => {
     
     return (
       <Layout showBackButton onBackClick={handleBackClick}>
-        <div className="h-full p-2 md:p-4 flex items-center justify-center bg-slate-100/30">
-          <div className={`w-full max-w-7xl h-full flex flex-col bg-white shadow-2xl rounded-sm overflow-hidden relative ${cardStyle.color}`}>
-            <div className="p-4 md:p-12 pb-4 md:pb-6 border-b border-black/5 mx-2 md:mx-12 shrink-0">
+        <div className="h-full p-2 md:p-4 flex items-center justify-center theme-bg">
+          <div className="w-full max-w-7xl h-full flex flex-col theme-surface shadow-2xl rounded-sm overflow-hidden relative border theme-border">
+            <div className="p-4 md:p-12 pb-4 md:pb-6 border-b theme-border mx-2 md:mx-12 shrink-0">
               <div className="flex justify-between items-start">
                 {/* Group tags */}
                 <div className="flex flex-wrap gap-2">
@@ -337,13 +322,13 @@ const SummaryPage = () => {
                     selectedBrief.groups.map((group) => (
                       <span
                         key={group.id}
-                        className="px-4 py-2 bg-white/60 backdrop-blur-sm border border-black/10 text-slate-700 rounded-xl text-sm font-bold shadow-sm"
+                        className="px-4 py-2 theme-surface theme-border border backdrop-blur-sm theme-text rounded-xl text-sm font-bold shadow-sm opacity-90"
                       >
                         {group.title}
                       </span>
                     ))
                   ) : (
-                    <span className="px-4 py-2 bg-white/60 backdrop-blur-sm border border-black/10 text-slate-400 rounded-xl text-sm">
+                    <span className="px-4 py-2 theme-surface theme-border border backdrop-blur-sm theme-text-muted rounded-xl text-sm opacity-90">
                       未分组
                     </span>
                   )}
@@ -353,7 +338,7 @@ const SummaryPage = () => {
                   {/* Copy button */}
                   <button
                     onClick={handleCopyContent}
-                    className="p-2 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                    className="p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors"
                     title="复制内容"
                     aria-label="复制内容"
                   >
@@ -365,7 +350,7 @@ const SummaryPage = () => {
                   </button>
                   {/* Close button */}
                   <X
-                    className="cursor-pointer text-slate-300 hover:text-slate-800 transition-colors"
+                    className="cursor-pointer theme-text-muted theme-accent-text-hover transition-colors"
                     onClick={handleBackClick}
                   />
                 </div>
@@ -374,7 +359,7 @@ const SummaryPage = () => {
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
               {/* 主内容区域 */}
               <div 
-                className="flex-1 overflow-y-auto px-4 md:px-12 py-6 md:py-10 text-sm md:text-md leading-[2.0] text-slate-700 font-medium custom-scrollbar prose prose-slate max-w-none"
+                className="flex-1 overflow-y-auto px-4 md:px-12 py-6 md:py-10 text-sm md:text-md leading-[2.0] theme-text font-medium custom-scrollbar prose prose-slate max-w-none"
                 id="brief-content"
               >
                 <ReactMarkdown
@@ -407,7 +392,7 @@ const SummaryPage = () => {
                             (firstChild.props.href.startsWith('#ref-') || firstChild.props.href.startsWith('#fn'))) {
                           // 这是脚注引用，渲染为角标样式，并处理点击事件
                           return (
-                            <sup className="text-indigo-600 font-semibold text-xs ml-0.5">
+                            <sup className="theme-accent-text font-semibold text-xs ml-0.5">
                               {React.cloneElement(firstChild, {
                                 onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
                                   e.preventDefault();
@@ -464,16 +449,16 @@ const SummaryPage = () => {
 
               {/* 大纲侧边栏 - 只在展开时渲染 */}
               {headings.length > 0 && showOutline && (
-                <div className="w-full md:w-64 border-t md:border-t-0 md:border-l border-black/5 bg-white/70 backdrop-blur-sm shrink-0 max-h-[40vh] md:max-h-none">
+                <div className="w-full md:w-64 border-t md:border-t-0 md:border-l theme-border theme-surface shrink-0 max-h-[40vh] md:max-h-none opacity-95 backdrop-blur-sm">
                   <div className="sticky top-0 p-4 md:p-6 max-h-full overflow-y-auto custom-scrollbar">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                      <h3 className="text-xs font-bold theme-text uppercase tracking-wider flex items-center gap-2">
                         <List size={14} />
                         文章大纲
                       </h3>
                       <button
                         onClick={() => setShowOutline(false)}
-                        className="text-slate-400 hover:text-slate-700 transition-colors text-xs"
+                        className="theme-text-muted theme-accent-text-hover transition-colors text-xs"
                       >
                         隐藏
                       </button>
@@ -483,12 +468,12 @@ const SummaryPage = () => {
                         <a
                           key={index}
                           href={`#${heading.id}`}
-                          className={`block py-1.5 px-3 rounded-md text-xs transition-colors hover:bg-slate-100 ${
-                            heading.level === 1
-                              ? 'font-bold text-slate-800'
+                          className={`block py-1.5 px-3 rounded-md text-xs transition-colors theme-surface-hover ${
+                              heading.level === 1
+                              ? 'font-bold theme-text'
                               : heading.level === 2
-                              ? 'font-semibold text-slate-700 ml-2'
-                              : 'text-slate-600 ml-4'
+                              ? 'font-semibold theme-text ml-2'
+                              : 'theme-text-muted ml-4'
                           }`}
                           style={{ marginLeft: `${(heading.level - 1) * 0.75}rem` }}
                           onClick={(e) => {
@@ -512,7 +497,7 @@ const SummaryPage = () => {
             {headings.length > 0 && !showOutline && (
               <button
                 onClick={() => setShowOutline(true)}
-                className="fixed md:absolute right-4 md:right-2 bottom-20 md:bottom-auto md:top-1/2 md:-translate-y-1/2 w-12 h-12 md:w-10 md:h-20 bg-white/95 backdrop-blur-sm border border-black/10 rounded-lg md:rounded-l-lg shadow-xl flex flex-col items-center justify-center gap-1 text-slate-600 hover:text-slate-800 hover:bg-white transition-all z-50 min-w-[44px] min-h-[44px]"
+                className="fixed md:absolute right-4 md:right-2 bottom-20 md:bottom-auto md:top-1/2 md:-translate-y-1/2 w-12 h-12 md:w-10 md:h-20 theme-surface backdrop-blur-sm border theme-border rounded-lg md:rounded-l-lg shadow-xl flex flex-col items-center justify-center gap-1 theme-text theme-accent-text-hover theme-surface-hover transition-all z-50 min-w-[44px] min-h-[44px]"
                 title="显示大纲"
                 aria-label="显示大纲"
               >
@@ -531,7 +516,7 @@ const SummaryPage = () => {
     return (
       <Layout>
         <div className="h-full flex items-center justify-center">
-          <div className="text-slate-400 text-sm">加载中...</div>
+          <div className="theme-text-muted text-sm">加载中...</div>
         </div>
       </Layout>
     );
@@ -551,7 +536,7 @@ const SummaryPage = () => {
         <div className="h-full p-4 md:p-12 custom-scrollbar overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             {/* Date filter */}
-            <div className="mb-6 md:mb-8 p-4 md:p-6 bg-white rounded-[2rem] border border-slate-100 shadow-sm">
+            <div className="mb-6 md:mb-8 p-4 md:p-6 theme-surface rounded-[2rem] border theme-border shadow-sm">
               <DateFilter
                 startDate={startDate}
                 endDate={endDate}
@@ -563,13 +548,13 @@ const SummaryPage = () => {
             {/* Empty state */}
             <div className="flex flex-col items-center justify-center text-center pt-6 md:pt-12">
               <div className="relative mb-6 md:mb-8">
-                <div className="absolute inset-0 bg-indigo-500/20 blur-[40px] rounded-full" />
-                <div className="relative p-6 md:p-8 bg-white border border-slate-100 rounded-[2.5rem] shadow-xl">
-                  <FileText size={40} className="md:w-12 md:h-12 text-indigo-600" />
+                <div className="absolute inset-0 bg-amber-500/20 blur-[40px] rounded-full" />
+                <div className="relative p-6 md:p-8 theme-surface border theme-border rounded-[2.5rem] shadow-xl">
+                  <FileText size={40} className="md:w-12 md:h-12 theme-accent-text" />
                 </div>
               </div>
-              <h2 className="text-2xl md:text-3xl font-black text-slate-800 mb-3 px-4">{emptyMessage}</h2>
-              <p className="text-slate-400 max-w-md leading-relaxed px-4 text-sm md:text-base">
+              <h2 className="text-2xl md:text-3xl font-black theme-text mb-3 px-4">{emptyMessage}</h2>
+              <p className="theme-text-muted max-w-md leading-relaxed px-4 text-sm md:text-base">
                 {emptyDetail}
               </p>
             </div>
@@ -585,7 +570,7 @@ const SummaryPage = () => {
       <div className="h-full overflow-y-auto p-4 md:p-12 custom-scrollbar">
         <div className="max-w-7xl mx-auto">
           {/* Date filter */}
-          <div className="mb-6 md:mb-8 p-4 md:p-6 bg-white rounded-[2rem] border border-slate-100 shadow-sm">
+          <div className="mb-6 md:mb-8 p-4 md:p-6 theme-surface rounded-[2rem] border theme-border shadow-sm">
             <DateFilter
               startDate={startDate}
               endDate={endDate}
@@ -594,46 +579,43 @@ const SummaryPage = () => {
             />
           </div>
 
-          {/* Grid view */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 md:gap-x-12 gap-y-8 md:gap-y-16">
-            {displayBriefs.map((brief, index) => {
-              const cardStyle = getCardStyle(index);
-              // 优先使用 summary（二级标题列表，用 \n 分隔），如果没有则从 content 提取
+          {/* 近期摘要列表 - 主题一致卡片 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {displayBriefs.map((brief) => {
               const keyPoints = brief.summary
                 ? brief.summary.split('\n').filter(line => line.trim()).slice(0, 4)
                 : extractKeyPoints(brief.content || '');
               const groupTitle = brief.groups?.[0]?.title || '分组';
-              
+
               return (
-                <div
+                <button
+                  type="button"
                   key={brief.id}
                   onClick={() => handleBriefClick(brief)}
-                  className={`group relative p-6 md:p-8 cursor-pointer transition-all duration-500 hover:scale-[1.03] ${cardStyle.color} ${cardStyle.rotation} rounded-sm shadow-sm hover:shadow-2xl min-h-[280px] md:h-[340px] flex flex-col border border-black/5`}
+                  className="group w-full text-left p-5 md:p-6 rounded-xl theme-surface border theme-border shadow-sm hover:shadow-md theme-surface-hover transition-all duration-200 min-h-[240px] md:min-h-[260px] flex flex-col"
                 >
-                  {/* Paper clip effect */}
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-24 h-8 bg-white/40 backdrop-blur-[6px] -rotate-1 border border-white/40 z-0" />
-                  
-                  {/* Header */}
-                  <div className="flex justify-between items-center mb-4 md:mb-6 text-[10px] font-black uppercase tracking-widest opacity-40">
+                  {/* 标题行：分组 + 日期 */}
+                  <div className="flex justify-between items-center mb-3 text-xs font-semibold theme-text-muted">
                     <span className="truncate">{groupTitle}</span>
-                    <span className="text-[9px] md:text-[10px]">{formatDate(brief.pubDate)}</span>
+                    <span className="text-[11px] shrink-0 ml-2">{formatDate(brief.pubDate)}</span>
                   </div>
-                  
-                  {/* Key points */}
-                  <ul className="space-y-3 md:space-y-4 mb-6 md:mb-8 text-sm md:text-[15px] leading-relaxed text-slate-800 font-medium flex-1 overflow-hidden">
+
+                  {/* 要点列表 */}
+                  <ul className="space-y-2.5 flex-1 text-sm leading-relaxed theme-text">
                     {keyPoints.map((point, i) => (
-                      <li key={i} className="flex gap-3">
-                        <span className="shrink-0 mt-2 w-1 h-1 rounded-full bg-slate-400" />
+                      <li key={i} className="flex gap-2.5">
+                        <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full theme-accent-bg opacity-80" />
                         <span className="line-clamp-2">{point}</span>
                       </li>
                     ))}
                   </ul>
-                  
-                  {/* Footer */}
-                  <div className="mt-auto border-t border-black/5 text-[10px] font-black opacity-30 flex justify-end items-center uppercase tracking-widest">
-                    <ChevronRight size={14} />
+
+                  {/* 进入箭头 */}
+                  <div className="mt-4 pt-3 border-t theme-border flex justify-end items-center theme-text-muted group-hover:theme-accent-text transition-colors">
+                    <span className="text-xs font-medium mr-1">查看</span>
+                    <ChevronRight size={16} />
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

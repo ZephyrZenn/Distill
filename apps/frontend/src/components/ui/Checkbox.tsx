@@ -23,8 +23,8 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           className={`
             pointer-events-none inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-lg border-2 transition-colors
             border-slate-300 bg-white
-            peer-checked:bg-indigo-600 peer-checked:border-indigo-600
-            peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500/30 peer-focus-visible:ring-offset-1
+            peer-checked:bg-amber-600 peer-checked:border-amber-600
+            peer-focus-visible:ring-2 peer-focus-visible:ring-amber-500/30 peer-focus-visible:ring-offset-1
             peer-disabled:opacity-50
             ${className}
           `}

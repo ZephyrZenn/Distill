@@ -97,9 +97,9 @@ const SettingsPage = () => {
   };
 
   const inputCls =
-    'w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-medium text-slate-700 min-h-[44px]';
-  const labelCls = 'text-[10px] font-black text-slate-400 uppercase tracking-widest';
-  const sectionCls = 'rounded-xl bg-slate-50/80 p-4 border border-slate-100';
+    'w-full theme-surface theme-text theme-border border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none transition-all font-medium min-h-[44px]';
+  const labelCls = 'text-[10px] font-black theme-text-muted uppercase tracking-widest';
+  const sectionCls = 'rounded-xl theme-surface p-4 border theme-border';
 
   const renderModelSection = (
     title: string,
@@ -112,10 +112,10 @@ const SettingsPage = () => {
     <div className={sectionCls}>
       <div className="flex items-center gap-2 mb-3">
         {icon}
-        <h4 className="text-sm font-bold text-slate-700">{title}</h4>
+        <h4 className="text-sm font-bold theme-text">{title}</h4>
       </div>
       {description && (
-        <p className="text-xs text-slate-500 mb-3 leading-relaxed">{description}</p>
+        <p className="text-xs theme-text-muted mb-3 leading-relaxed">{description}</p>
       )}
       <div className="space-y-3">
         <div>
@@ -144,14 +144,14 @@ const SettingsPage = () => {
               value={state.baseUrl}
               onChange={(e) => setState((s) => ({ ...s, baseUrl: e.target.value }))}
               placeholder="https://your-api.com/v1"
-              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono text-slate-600 min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full theme-surface theme-text theme-border border rounded-xl px-4 py-3 text-sm font-mono min-h-[44px] outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20"
             />
           </div>
         )}
         {apiKeyHint && !apiKeyHint.configured && (
-          <p className="text-xs text-amber-600 flex items-center gap-1">
+          <p className="text-xs theme-accent-text flex items-center gap-1">
             <AlertTriangle size={12} />
-            请配置环境变量 <code className="bg-amber-100 px-1 rounded font-mono text-[10px]">{apiKeyHint.envVar}</code>
+            请配置环境变量 <code className="theme-accent-bg theme-on-accent px-1 rounded font-mono text-[10px]">{apiKeyHint.envVar}</code>
           </p>
         )}
       </div>
@@ -164,12 +164,12 @@ const SettingsPage = () => {
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="w-full max-w-2xl mx-auto pb-6">
             {/* Header */}
-            <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 pb-4 border-b border-slate-50">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-100 rounded-xl md:rounded-2xl flex items-center justify-center text-indigo-600">
+            <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 pb-4 border-b theme-border">
+              <div className="w-10 h-10 md:w-12 md:h-12 theme-accent-bg theme-on-accent rounded-xl md:rounded-2xl flex items-center justify-center">
                 <Settings size={20} className="md:w-6 md:h-6" />
               </div>
               <div>
-                <h3 className="text-lg md:text-xl font-black text-slate-800 tracking-tight">
+                <h3 className="text-lg md:text-xl font-black theme-text tracking-tight">
                   模型配置
                 </h3>
               </div>
@@ -177,12 +177,12 @@ const SettingsPage = () => {
 
             {/* API Key Warning - 主模型 */}
             {setting && !setting.model.apiKeyConfigured && (
-              <div className="mb-4 p-3 md:p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 md:gap-3">
-                <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="mb-4 p-3 md:p-4 theme-accent-bg theme-on-accent border theme-border rounded-xl flex items-start gap-2 md:gap-3">
+                <AlertTriangle size={18} className="flex-shrink-0 mt-0.5 opacity-90" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs md:text-sm font-semibold text-amber-800">主模型 API Key 未配置</p>
-                  <p className="text-[10px] md:text-xs text-amber-600 mt-1">
-                    请设置环境变量 <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-[9px] md:text-[10px]">{setting.model.apiKeyEnvVar}</code> 以启用 AI 功能。
+                  <p className="text-xs md:text-sm font-semibold opacity-95">主模型 API Key 未配置</p>
+                  <p className="text-[10px] md:text-xs mt-1 opacity-90">
+                    请设置环境变量 <code className="opacity-90 px-1.5 py-0.5 rounded font-mono text-[9px] md:text-[10px]" style={{ backgroundColor: 'var(--theme-primary-hover)' }}>{setting.model.apiKeyEnvVar}</code> 以启用 AI 功能。
                   </p>
                 </div>
               </div>
@@ -191,7 +191,7 @@ const SettingsPage = () => {
             <div className="space-y-4">
               {renderModelSection(
                 '主模型 (Model)',
-                <Cpu size={14} className="text-indigo-500" />,
+                <Cpu size={14} className="theme-accent-text" />,
                 modelConfig,
                 setModelConfig,
                 setting ? { configured: setting.model.apiKeyConfigured, envVar: setting.model.apiKeyEnvVar } : undefined,
@@ -199,7 +199,7 @@ const SettingsPage = () => {
               )}
               {renderModelSection(
                 '轻量模型 (Lightweight)（可选）',
-                <Zap size={14} className="text-indigo-500" />,
+                <Zap size={14} className="theme-accent-text" />,
                 lightweightConfig,
                 setLightweightConfig,
                 setting?.lightweightModel
@@ -209,7 +209,7 @@ const SettingsPage = () => {
               )}
               {renderModelSection(
                 'Embedding（可选）',
-                <Layers size={14} className="text-indigo-500" />,
+                <Layers size={14} className="theme-accent-text" />,
                 embeddingConfig,
                 setEmbeddingConfig,
                 setting?.embedding
@@ -219,45 +219,43 @@ const SettingsPage = () => {
               )}
             </div>
 
-            {/* Tavily 配置状态 */}
+            {/* Tavily 配置状态：已配置 / 未配置 用主题内状态色区分 */}
             {setting && (
               <div
                 className={`mt-4 p-3 rounded-xl border text-sm ${
-                  setting.tavilyConfigured
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-amber-50 border-amber-200 text-amber-800'
+                  setting.tavilyConfigured ? 'theme-status-success' : 'theme-status-warning'
                 }`}
               >
                 {setting.tavilyConfigured ? (
                   <span>Tavily（网页搜索）：已配置</span>
                 ) : (
                   <span>
-                    Tavily（网页搜索）：未配置。Agent 模式需设置环境变量 <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-xs">TAVILY_API_KEY</code> 以启用网络搜索。
+                    Tavily（网页搜索）：未配置。Agent 模式需设置环境变量 <code className="opacity-90 px-1.5 py-0.5 rounded font-mono text-xs" style={{ backgroundColor: 'var(--theme-surface)', color: 'var(--theme-status-warning-text)' }}>TAVILY_API_KEY</code> 以启用网络搜索。
                   </span>
                 )}
               </div>
             )}
 
             {/* 高级设置入口 */}
-            <div className="mt-6 pt-4 border-t border-slate-100">
+            <div className="mt-6 pt-4 border-t theme-border">
               <button
                 type="button"
                 onClick={() => navigate('/settings/advanced')}
-                className="flex items-center justify-between w-full py-3 px-3 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors text-sm font-medium"
+                className="flex items-center justify-between w-full py-3 px-3 rounded-xl theme-text theme-surface-hover theme-accent-text-hover transition-colors text-sm font-medium"
               >
                 <span>高级设置</span>
-                <ChevronRight size={18} className="text-slate-400" />
+                <ChevronRight size={18} className="theme-text-muted" />
               </button>
-              <p className="text-xs text-slate-400 mt-1 ml-3">限流、上下文与 Agent 循环上限等</p>
+              <p className="text-xs theme-text-muted mt-1 ml-3">限流、上下文与 Agent 循环上限等</p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-slate-100 bg-white/95 backdrop-blur p-4 md:p-6">
+        <div className="shrink-0 border-t theme-border theme-surface backdrop-blur p-4 md:p-6">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div
-              className={`flex items-center gap-2 text-emerald-500 text-[10px] font-bold transition-all duration-500 ${
+              className={`flex items-center gap-2 theme-accent-text text-[10px] font-bold transition-all duration-500 ${
                 showSaveToast ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
               }`}
             >
@@ -266,7 +264,7 @@ const SettingsPage = () => {
             <button
               onClick={handleSaveConfig}
               disabled={saveMutation.isPending}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-6 md:px-10 py-3 rounded-xl md:rounded-2xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 text-xs md:text-sm uppercase tracking-wider min-h-[44px] disabled:opacity-60"
+              className="flex items-center gap-2 theme-btn-primary theme-on-primary px-6 md:px-10 py-3 rounded-xl md:rounded-2xl font-black shadow-lg transition-all active:scale-95 text-xs md:text-sm uppercase tracking-wider min-h-[44px] disabled:opacity-60"
             >
               <Save size={16} className="md:w-[18px] md:h-[18px]" /> 保存
             </button>

@@ -20,7 +20,6 @@ All configuration lives in environment variables plus a small `config.toml`. Thi
 | Embedding | `EMBEDDING_BASE_URL` | No | — | Base URL for embedding API |
 | Embedding | `EMBEDDING_MODEL` | No | `text-embedding-3-small` | Embedding model |
 | Search | `TAVILY_API_KEY` | No | — | Web search enrichment |
-| Crawl fallback | `JINA_API_KEY` | No | — | Jina Reader fallback extraction |
 | Threads | `THREAD_POOL_MAX_WORKERS` | No | `4` | Worker threads |
 | Threads | `THREAD_POOL_NAME_PREFIX` | No | `FlashNews` | Thread name prefix |
 | Frontend | `BACKEND_URL`, `BACKEND_HOST` | No | `http://backend:8000`, `backend` | Nginx templating in Docker |
@@ -87,7 +86,6 @@ OPENAI_API_KEY=sk-your-openai-api-key
 
 # Optional extras
 TAVILY_API_KEY=your-tavily-api-key
-JINA_API_KEY=your-jina-api-key
 EMBEDDING_API_KEY=sk-your-openai-api-key
 EMBEDDING_BASE_URL=https://api.openai.com/v1
 EMBEDDING_MODEL=text-embedding-3-small

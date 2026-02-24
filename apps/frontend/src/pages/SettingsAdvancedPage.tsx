@@ -82,8 +82,8 @@ const SettingsAdvancedPage = () => {
   });
 
   const inputCls =
-    'bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm w-full min-w-0';
-  const labelCls = 'text-xs text-slate-600 mb-1 block';
+    'theme-surface theme-text theme-border border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 text-sm w-full min-w-0';
+  const labelCls = 'text-xs theme-text-muted mb-1 block';
 
   return (
     <Layout>
@@ -95,16 +95,16 @@ const SettingsAdvancedPage = () => {
               <button
                 type="button"
                 onClick={() => navigate('/settings')}
-                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                className="p-2 rounded-lg theme-text-muted theme-surface-hover theme-accent-text-hover transition-colors"
                 aria-label="返回设置"
               >
                 <ArrowLeft size={20} />
               </button>
               <div>
-                <h1 className="text-lg md:text-xl font-black text-slate-800 tracking-tight">
+                <h1 className="text-lg md:text-xl font-black theme-text tracking-tight">
                   高级设置
                 </h1>
-                <p className="text-slate-400 text-xs font-medium">
+                <p className="theme-text-muted text-xs font-medium">
                   限流、上下文与 Agent 循环上限
                 </p>
               </div>
@@ -112,10 +112,10 @@ const SettingsAdvancedPage = () => {
 
             <div className="space-y-6 pb-8">
               {/* 限流与重试 */}
-              <section className="rounded-xl bg-slate-50/80 p-4 md:p-5 border border-slate-100">
+              <section className="rounded-xl theme-surface p-4 md:p-5 border theme-border">
                 <div className="flex items-center gap-2 mb-4">
-                  <Gauge size={16} className="text-indigo-500" />
-                  <h2 className="text-sm font-bold text-slate-700">限流与重试</h2>
+                  <Gauge size={16} className="theme-accent-text" />
+                  <h2 className="text-sm font-bold theme-text">限流与重试</h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">
@@ -224,7 +224,7 @@ const SettingsAdvancedPage = () => {
                           })
                         }
                       />
-                      <span className="text-sm text-slate-600">启用限流</span>
+                      <span className="text-sm theme-text">启用限流</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <Checkbox
@@ -239,17 +239,17 @@ const SettingsAdvancedPage = () => {
                           })
                         }
                       />
-                      <span className="text-sm text-slate-600">失败时自动重试</span>
+                      <span className="text-sm theme-text">失败时自动重试</span>
                     </label>
                   </div>
                 </div>
               </section>
 
               {/* 上下文 */}
-              <section className="rounded-xl bg-slate-50/80 p-4 md:p-5 border border-slate-100">
+              <section className="rounded-xl theme-surface p-4 md:p-5 border theme-border">
                 <div className="flex items-center gap-2 mb-4">
-                  <LayoutList size={16} className="text-indigo-500" />
-                  <h2 className="text-sm font-bold text-slate-700">上下文</h2>
+                  <LayoutList size={16} className="theme-accent-text" />
+                  <h2 className="text-sm font-bold theme-text">上下文</h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">
@@ -294,10 +294,10 @@ const SettingsAdvancedPage = () => {
               </section>
 
               {/* Agent 循环上限 */}
-              <section className="rounded-xl bg-slate-50/80 p-4 md:p-5 border border-slate-100">
+              <section className="rounded-xl theme-surface p-4 md:p-5 border theme-border">
                 <div className="flex items-center gap-2 mb-4">
-                  <Bot size={16} className="text-indigo-500" />
-                  <h2 className="text-sm font-bold text-slate-700">Agent 循环上限</h2>
+                  <Bot size={16} className="theme-accent-text" />
+                  <h2 className="text-sm font-bold theme-text">Agent 循环上限</h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">
@@ -404,7 +404,7 @@ const SettingsAdvancedPage = () => {
                           })
                         }
                       />
-                      <span className="text-sm text-slate-600">启用硬性上限</span>
+                      <span className="text-sm theme-text">启用硬性上限</span>
                     </label>
                   </div>
                 </div>
@@ -414,7 +414,7 @@ const SettingsAdvancedPage = () => {
         </div>
 
         {/* Sticky footer */}
-        <div className="shrink-0 border-t border-slate-100 bg-white/95 backdrop-blur p-4 md:p-6">
+        <div className="shrink-0 border-t theme-border theme-surface backdrop-blur p-4 md:p-6">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div
               className={`flex items-center gap-2 text-emerald-500 text-xs font-bold transition-all duration-500 ${
@@ -427,14 +427,14 @@ const SettingsAdvancedPage = () => {
               <button
                 type="button"
                 onClick={() => navigate('/settings')}
-                className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-sm transition-colors"
+                className="px-4 py-2.5 rounded-xl theme-text theme-surface-hover theme-accent-text-hover font-medium text-sm transition-colors"
               >
                 返回
               </button>
               <button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 text-sm disabled:opacity-60"
+                className="flex items-center gap-2 theme-btn-primary theme-on-primary px-6 py-2.5 rounded-xl font-bold shadow-lg transition-all active:scale-95 text-sm disabled:opacity-60"
               >
                 <Save size={16} /> 保存
               </button>

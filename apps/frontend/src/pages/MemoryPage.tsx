@@ -148,7 +148,7 @@ const MemoryPage = () => {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-600 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-100">
                     <FileText size={20} className="md:w-6 md:h-6" />
                   </div>
                   <div>
@@ -191,7 +191,7 @@ const MemoryPage = () => {
                     if (typeof firstChild === 'object' && firstChild?.props?.href && 
                         (firstChild.props.href.startsWith('#ref-') || firstChild.props.href.startsWith('#fn'))) {
                       return (
-                        <sup className="text-indigo-600 font-semibold text-xs ml-0.5">
+                        <sup className="text-amber-600 font-semibold text-xs ml-0.5">
                           {React.cloneElement(firstChild, {
                             onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
                               e.preventDefault();

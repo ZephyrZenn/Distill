@@ -151,7 +151,7 @@ const GroupsPage = () => {
         {allGroups.map((group) => (
           <div
             key={group.id}
-            className="bg-white border border-slate-100 rounded-[2.5rem] p-6 md:p-8 shadow-sm hover:shadow-md transition-all relative group/card flex flex-col min-h-[200px] md:min-h-[220px]"
+            className="theme-surface border theme-border rounded-[2.5rem] p-6 md:p-8 shadow-sm hover:shadow-md transition-all relative group/card flex flex-col min-h-[200px] md:min-h-[220px]"
           >
             <button
               onClick={(e) => {
@@ -163,20 +163,20 @@ const GroupsPage = () => {
               <Trash2 size={18} />
             </button>
             <div className="flex-1 min-w-0 pr-4 md:pr-6">
-              <h3 className="text-lg md:text-xl font-black text-slate-800 mb-2 truncate">
+              <h3 className="text-lg md:text-xl font-black theme-text mb-2 truncate">
                 {group.title}
               </h3>
-              <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 mb-4">
+              <p className="text-xs theme-text-muted leading-relaxed line-clamp-3 mb-4">
                 {group.desc || '暂无描述信息'}
               </p>
             </div>
-            <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between shrink-0">
-              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest italic">
+            <div className="mt-auto pt-4 border-t theme-border flex items-center justify-between shrink-0">
+              <span className="text-[10px] font-black theme-accent-text uppercase tracking-widest italic">
                 {group.feeds?.length || 0} 个订阅源
               </span>
               <button
                 onClick={() => handleOpenModal(group)}
-                className="text-slate-300 hover:text-indigo-600 p-2 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="theme-text-muted theme-accent-text-hover p-2 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <Edit3 size={18} />
               </button>
@@ -187,7 +187,7 @@ const GroupsPage = () => {
         {/* Add new button */}
         <button
           onClick={() => handleOpenModal()}
-          className="border-2 border-dashed border-slate-200 rounded-[2.5rem] p-6 flex flex-col items-center justify-center text-slate-300 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all min-h-[200px] md:min-h-[220px]"
+          className="border-2 border-dashed theme-border rounded-[2.5rem] p-6 flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover transition-all min-h-[200px] md:min-h-[220px]"
         >
           <FolderPlus size={32} className="md:w-9 md:h-9 mb-2" strokeWidth={1.5} />
           <span className="text-xs md:text-sm font-black uppercase">新建分组</span>
@@ -204,7 +204,7 @@ const GroupsPage = () => {
         <div className="space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+              <label className="block text-[12px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
                 分组名称
               </label>
               <input
@@ -215,11 +215,11 @@ const GroupsPage = () => {
                     prev ? { ...prev, name: e.target.value } : null
                   )
                 }
-                className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                className="w-full theme-surface theme-text theme-border border rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none"
               />
             </div>
             <div>
-              <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+              <label className="block text-[12px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
                 描述
               </label>
               <textarea
@@ -230,13 +230,13 @@ const GroupsPage = () => {
                   )
                 }
                 rows={2}
-                className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-indigo-500/20 resize-none outline-none"
+                className="w-full theme-surface theme-text theme-border border rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 resize-none outline-none"
               />
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100">
-            <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-4 block">
+          <div className="pt-4 border-t theme-border">
+            <label className="text-[12px] font-black theme-text-muted uppercase tracking-widest ml-1 mb-4 block">
               下属源管理
             </label>
             <div className="space-y-1.5 mb-4 max-h-64 overflow-y-auto custom-scrollbar">
@@ -246,7 +246,7 @@ const GroupsPage = () => {
                   source && (
                     <div
                       key={sourceId}
-                      className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg"
+                      className="flex items-center justify-between px-3 py-2 theme-surface-hover theme-text rounded-lg theme-border border"
                     >
                       <span className="text-xs font-medium truncate">
                         {source.title}
@@ -287,7 +287,7 @@ const GroupsPage = () => {
               </div>
               <button
                 onClick={handleAddSourceToGroup}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+                className="theme-btn-primary theme-on-primary px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95 min-h-[44px]"
               >
                 <Plus size={16} />
               </button>
