@@ -6,6 +6,7 @@ import {
   Edit3,
   ExternalLink,
   Link as LinkIcon,
+  FileUp,
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
@@ -25,6 +26,8 @@ const SourcesPage = () => {
   const { confirm } = useConfirm();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [opmlContent, setOpmlContent] = useState('');
   const [editingSource, setEditingSource] = useState<{
     id?: number;
     name: string;
@@ -93,6 +96,22 @@ const SourcesPage = () => {
     },
   });
 
+  const importMutation = useApiMutation(async () => {
+    const content = opmlContent.trim();
+    if (!content) return;
+    await api.importFeeds({ content });
+  }, {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.feeds });
+      setIsImportModalOpen(false);
+      setOpmlContent('');
+      showToast('OPML 导入成功');
+    },
+    onError: (error) => {
+      showToast(error.message || '导入失败，请检查 OPML 格式', { type: 'error' });
+    },
+  });
+
   const handleOpenModal = (source?: Feed) => {
     if (source) {
       setEditingSource({
@@ -130,10 +149,34 @@ const SourcesPage = () => {
     }
   };
 
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      setOpmlContent(text);
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+  };
+
   return (
     <Layout onNewClick={() => handleOpenModal()}>
-      {/* Grid layout matching t.tsx sources exactly */}
-      <div className="h-full overflow-y-auto p-4 md:p-10 custom-scrollbar grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-x-4 md:gap-y-4 content-start">
+      <div className="h-full overflow-y-auto p-4 md:p-10 custom-scrollbar flex flex-col">
+        {/* 工具栏：导入 OPML */}
+        <div className="flex justify-end mb-3 md:mb-4">
+          <button
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold theme-text-muted theme-accent-text-hover theme-surface-hover border theme-border transition-colors min-h-[44px]"
+          >
+            <FileUp size={18} />
+            导入 OPML
+          </button>
+        </div>
+        {/* Grid layout matching t.tsx sources exactly */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-x-4 md:gap-y-4 content-start">
         {allSourcesWithGroupInfo.map((source) => (
           <div
             key={source.id}
@@ -215,7 +258,54 @@ const SourcesPage = () => {
           <Plus size={24} />
           <span className="text-[10px] font-bold mt-2 uppercase">添加源</span>
         </button>
+        </div>
       </div>
+
+      {/* 导入 OPML 弹窗 */}
+      <Modal
+        isOpen={isImportModalOpen}
+        onClose={() => {
+          setIsImportModalOpen(false);
+          setOpmlContent('');
+        }}
+        title="导入 OPML"
+        onConfirm={() => importMutation.mutate()}
+        confirmText="导入"
+        confirmDisabled={!opmlContent.trim() || importMutation.isPending}
+      >
+        <div className="space-y-4">
+          <p className="text-sm theme-text-muted">
+            上传 OPML 文件或粘贴内容，将批量添加订阅源（与现有源重复的 URL 会跳过）。
+          </p>
+          <div>
+            <label className="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
+              选择文件
+            </label>
+            <label className="flex items-center justify-center gap-2 w-full theme-surface theme-border border border-dashed rounded-2xl px-5 py-4 text-sm theme-text-muted theme-accent-text-hover theme-surface-hover cursor-pointer transition-colors min-h-[52px]">
+              <FileUp size={18} />
+              <span>点击选择 .opml 文件</span>
+              <input
+                type="file"
+                accept=".opml,application/xml,text/xml"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+            </label>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
+              或粘贴 OPML 内容
+            </label>
+            <textarea
+              value={opmlContent}
+              onChange={(e) => setOpmlContent(e.target.value)}
+              placeholder='<?xml version="1.0"?><opml>...</opml>'
+              rows={8}
+              className="w-full theme-surface theme-text theme-border border rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none resize-y font-mono"
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal - matching t.tsx source modal */}
       <Modal

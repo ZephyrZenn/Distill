@@ -192,22 +192,8 @@ def _to_context_config(config: dict) -> ContextConfig:
     All fields are optional and will use defaults if not provided.
     """
     return ContextConfig(
-        # Context window settings
         max_tokens=int(config.get("max_tokens", 128000)),
         compress_threshold=float(config.get("compress_threshold", 0.8)),
-        compress_strategy=str(config.get("compress_strategy", "truncate")),
-        # Content optimization settings
-        article_max_length=int(config.get("article_max_length", 500)),
-        summary_max_length=int(config.get("summary_max_length", 200)),
-        memory_max_length=int(config.get("memory_max_length", 300)),
-        # Message compression settings
-        history_max_messages=int(config.get("history_max_messages", 50)),
-        compression_strategy=str(config.get("compression_strategy", "sliding_window")),
-        keep_system=config.get("keep_system", True),
-        keep_recent_tool_calls=int(config.get("keep_recent_tool_calls", 5)),
-        # Tool result limits
-        tool_result_max_chars=int(config.get("tool_result_max_chars", 5000)),
-        tool_result_max_items=int(config.get("tool_result_max_items", 20)),
     )
 
 
@@ -245,9 +231,9 @@ def _to_embedding_config(config: dict) -> EmbeddingConfig:
 
 
 def load_config(
-    reload: bool = False, use_env_overrides: bool = True, path: Optional[str] = None
+    reload: bool = False, path: Optional[str] = None
 ) -> GlobalConfig:
-    """Load configuration with caching, validation, and environment overrides"""
+    """Load configuration with caching and validation"""
     global _config
 
     if _config and not reload:
@@ -280,9 +266,7 @@ def load_config(
         with open(config_path, "r", encoding="utf-8") as f:
             file_config = toml.load(f)
 
-        # Apply environment variable overrides if enabled
-        if use_env_overrides:
-            file_config = _apply_env_overrides(file_config)
+        # NOTE: 禁止使用环境变量覆盖 config.toml 的配置。
 
         summary = get_config_summary(file_config)
         logger.info(f"Configuration summary: {summary}")
@@ -342,34 +326,6 @@ def load_config(
     )
 
     return _config
-
-
-def _apply_env_overrides(config: dict) -> dict:
-    """Apply environment variable overrides to configuration.
-
-    Note: API keys are now read directly from environment variables based on provider,
-    not stored in config. Base URLs are auto-determined except for OTHER provider.
-    """
-    # Override model configuration from environment variables
-    if "model" not in config:
-        config["model"] = {}
-
-    # Override model name from environment
-    if model_name := os.getenv("MODEL_NAME"):
-        config["model"]["model"] = model_name
-        logger.debug("Overriding model from MODEL_NAME environment variable")
-
-    # Override provider from environment
-    if provider := os.getenv("MODEL_PROVIDER"):
-        config["model"]["provider"] = provider
-        logger.debug("Overriding provider from MODEL_PROVIDER environment variable")
-
-    # Override base_url from environment (only applies to OTHER provider)
-    if base_url := os.getenv("MODEL_BASE_URL"):
-        config["model"]["base_url"] = base_url
-        logger.debug("Overriding base_url from MODEL_BASE_URL environment variable")
-
-    return config
 
 
 def get_config() -> GlobalConfig:

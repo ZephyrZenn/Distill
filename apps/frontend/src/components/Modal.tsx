@@ -7,6 +7,7 @@ interface ModalProps {
   title: string;
   onConfirm?: () => void;
   confirmText?: string;
+  confirmDisabled?: boolean;
 }
 
 export const Modal = ({
@@ -16,6 +17,7 @@ export const Modal = ({
   children,
   onConfirm,
   confirmText = '保存',
+  confirmDisabled = false,
 }: PropsWithChildren<ModalProps>) => {
   if (!isOpen) return null;
 
@@ -51,7 +53,8 @@ export const Modal = ({
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 py-3 rounded-2xl font-bold theme-btn-primary theme-on-primary shadow-lg transition-all min-h-[44px]"
+            disabled={confirmDisabled}
+            className="flex-1 py-3 rounded-2xl font-bold theme-btn-primary theme-on-primary shadow-lg transition-all min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {confirmText}
           </button>

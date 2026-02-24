@@ -103,7 +103,7 @@ class MaterialCurationNode:
         kept_items, discarded_items, audit_analysis = await self._audit_stage1_snippet(
             state, items
         )
-        if not audit_analysis.get("is_sufficient"):
+        if not audit_analysis or not audit_analysis.get("is_sufficient"):
 
             return {
                 **log_step(
@@ -120,7 +120,7 @@ class MaterialCurationNode:
                 "messages": [
                     Message.assistant(
                         f"Stage 1 审计完成：保留 {len(kept_items)} 条，"
-                        f"丢弃 {len(discarded_items)} 条。{audit_analysis.get("reason")}"
+                        f"丢弃 {len(discarded_items)} 条。{audit_analysis.get('reason') if audit_analysis else '审计失败，继续研究。'}"
                     )
                 ],
             }

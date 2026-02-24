@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TypeVar
+from collections.abc import Sequence
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
+T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class BatchProcessor:
     def __init__(self, batch_size: int = 15) -> None:
         self.batch_size = batch_size
 
-    def create_batches[T](self, items: Sequence[T]) -> list[list[T]]:
+    def create_batches(self, items: Sequence[T]) -> list[list[T]]:
         """Split items into batches.
 
         Args:
@@ -30,9 +30,9 @@ class BatchProcessor:
         Returns:
             List of batches (each batch is a list of items)
         """
-        batches = []
+        batches: list[list[T]] = []
         for i in range(0, len(items), self.batch_size):
-            batch = list(items[i : i + self.batch_size])
+            batch: list[T] = list(items[i : i + self.batch_size])
             batches.append(batch)
 
         logger.info(
@@ -41,7 +41,9 @@ class BatchProcessor:
         )
         return batches
      
-    def create_batches_with_size[T](self, items: Sequence[T], batch_size: int) -> list[list[T]]:
+    def create_batches_with_size(
+        self, items: Sequence[T], batch_size: int
+    ) -> list[list[T]]:
         """Split items into batches with a specific batch size.
 
         Args:
