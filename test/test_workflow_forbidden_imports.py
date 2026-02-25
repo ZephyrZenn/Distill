@@ -34,7 +34,13 @@ class WorkflowForbiddenImportsTest(unittest.TestCase):
             self._assert_no_forbidden_imports(py_file, forbidden)
 
     def test_workflow_lib_path_has_no_db_coupling_imports(self):
-        lib_dir = Path(__file__).resolve().parent.parent / "distill_workflow_lib"
+        lib_dir = (
+            Path(__file__).resolve().parent.parent
+            / "packages"
+            / "distill_workflow_lib"
+            / "src"
+            / "distill_workflow_lib"
+        )
         forbidden = {
             "agent.tools.db_tool",
             "agent.tools.memory_tool",
