@@ -143,6 +143,10 @@ The PS Agent keeps a typed state across nodes (e.g. `run_id`, `focus`, `messages
 
 Research and writing limits are set in `config.toml` under `[agent_limits]` (e.g. `max_iterations`, `max_tool_calls`, `max_curations`, `max_plan_reviews`, `max_refines`, `enable_hard_limits`). See `docs/CONFIG.md` for the full list.
 
+## Workflow Library Packaging Roadmap
+
+A concrete monorepo subpackage migration plan for introducing a separate package boundary for `distill_workflow_lib` is documented in [`docs/DISTILL_WORKFLOW_LIB_PACKAGING_PLAN.md`](./DISTILL_WORKFLOW_LIB_PACKAGING_PLAN.md).
+
 ## Directory Structure
 
 ```

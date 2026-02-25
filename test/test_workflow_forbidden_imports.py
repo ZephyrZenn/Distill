@@ -4,6 +4,19 @@ import unittest
 
 
 class WorkflowForbiddenImportsTest(unittest.TestCase):
+    def test_backend_workflow_db_provider_shim_removed(self):
+        shim = (
+            Path(__file__).resolve().parent.parent
+            / "apps"
+            / "backend"
+            / "adapters"
+            / "workflow_db_provider.py"
+        )
+        self.assertFalse(
+            shim.exists(),
+            "Legacy backend workflow_db_provider shim should not exist; use agent.workflow.db_providers directly.",
+        )
+
     def _assert_no_forbidden_imports(self, py_file: Path, forbidden: set[str]):
         tree = ast.parse(py_file.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
