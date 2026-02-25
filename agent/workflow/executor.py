@@ -8,13 +8,16 @@ from agent.models import (
     AgentCriticResult,
     log_step,
 )
-from agent.tools import (
+from agent.tools.search_tool import (
     search_web,
     fetch_web_contents,
     is_search_engine_available,
-    get_article_content,
 )
 from agent.tools.writing_tool import write_article, review_article
+from agent.workflow.providers import (
+    DBWorkflowArticleContentProvider,
+    WorkflowArticleContentProvider,
+)
 from core.llm_client import LLMClient
 from core.models.search import SearchResult
 
@@ -23,14 +26,22 @@ logger = logging.getLogger(__name__)
 
 class AgentExecutor:
 
-    def __init__(self, client: LLMClient, max_retries: int = 3):
+    def __init__(
+        self,
+        client: LLMClient,
+        max_retries: int = 3,
+        article_content_provider: WorkflowArticleContentProvider | None = None,
+    ):
         self.client = client
         self.max_retries = max_retries
+        self.article_content_provider = (
+            article_content_provider or DBWorkflowArticleContentProvider()
+        )
 
     async def execute(self, state: AgentState) -> list[tuple[str, bool]]:
         plan = state["plan"]
         article_ids = [article["id"] for article in state["scored_articles"]]
-        db_articles = await get_article_content(article_ids)
+        db_articles = await self.article_content_provider.get_article_content(article_ids)
         for article in state["scored_articles"]:
             if article["id"] in db_articles:
                 article["content"] = db_articles[article["id"]]
