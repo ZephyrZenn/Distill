@@ -179,9 +179,10 @@ class MaterialCurationNode:
                 )
             )
 
-            kept_items.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
+            # result_parser stores Stage1 score in `relevance`
+            kept_items.sort(key=lambda x: x.get("relevance", 0), reverse=True)
             kept_items = kept_items[:max_keep_items]
-            
+
             # Convert discarded items to DiscardedItem format
             discarded = [
                 DiscardedItem(
@@ -189,7 +190,7 @@ class MaterialCurationNode:
                     title=item.get("title", ""),
                     url=item.get("url", ""),
                     reason=item.get("audit_reason", "LLM snippet audit: discarded"),
-                    score=item.get("relevance_score", 0.0),
+                    score=item.get("relevance", 0.0),
                 )
                 for item in discarded_items
             ]
