@@ -21,12 +21,12 @@ class TaskStatus(str, Enum):
 
 class TaskInfo:
     def __init__(
-        self, task_id: str, group_ids: list[int], focus: str, boost_mode: bool = False
+        self, task_id: str, group_ids: list[int], focus: str, agent_mode: bool = False
     ):
         self.task_id = task_id
         self.group_ids = group_ids
         self.focus = focus
-        self.boost_mode = boost_mode
+        self.agent_mode = agent_mode
         self.status = TaskStatus.PENDING
         self.logs: List[dict] = []
         self.result: Optional[str] = None
@@ -56,13 +56,13 @@ class TaskInfo:
 _tasks: Dict[str, TaskInfo] = {}
 
 
-def create_task(group_ids: list[int], focus: str = "", boost_mode: bool = False) -> str:
+def create_task(group_ids: list[int], focus: str = "", agent_mode: bool = False) -> str:
     """创建新任务并返回任务ID"""
     task_id = str(uuid.uuid4())
-    task = TaskInfo(task_id, group_ids, focus, boost_mode)
+    task = TaskInfo(task_id, group_ids, focus, agent_mode)
     _tasks[task_id] = task
     logger.info(
-        f"Created task {task_id} for groups {group_ids}, boost_mode={boost_mode}"
+        f"Created task {task_id} for groups {group_ids}, agent_mode={agent_mode}"
     )
     return task_id
 
@@ -94,12 +94,29 @@ async def execute_brief_generation_task(task_id: str):
                     f"Error in on_step callback for task {task_id}: {e}", exc_info=True
                 )
 
-        # 执行总结（使用brief_service的异步方法）
-        from apps.backend.services.brief_service import generate_brief_for_groups_async
+        brief: str
 
-        brief = await generate_brief_for_groups_async(
-            task_id=task_id, group_ids=task.group_ids, focus=task.focus, on_step=on_step
-        )
+        # 根据模式选择不同的执行方式
+        if task.agent_mode:
+            # 使用 PS Agent 执行
+            from agent.ps_agent import PlanSolveAgent
+
+            task.add_log("🔧 使用 PlanSolveAgent 模式执行...")
+
+            agent = PlanSolveAgent(lazy_init=True)
+            brief = await agent.run(focus=task.focus, on_step=on_step)
+
+            # 保存简报到数据库
+            from apps.backend.services.brief_service import _insert_brief
+
+            _insert_brief(task.group_ids or [], brief, ext_info=None)
+        else:
+            # 使用原有的 workflow 方式
+            from apps.backend.services.brief_service import generate_brief_for_groups_async
+
+            brief = await generate_brief_for_groups_async(
+                task_id=task_id, group_ids=task.group_ids, focus=task.focus, on_step=on_step
+            )
 
         # 再次检查任务是否存在（可能在执行过程中被清理）
         if task_id not in _tasks:
@@ -125,6 +142,14 @@ async def execute_brief_generation_task(task_id: str):
             task.status = TaskStatus.FAILED
             task.error = f"API Key 未配置。请设置环境变量 {e.env_var}"
             task.add_log(f"❌ API Key 未配置: 请设置环境变量 {e.env_var}")
+    except ValueError as e:
+        # PS Agent 依赖检查失败（如 embedding、tavily 未配置）
+        logger.warning(f"Task {task_id} failed: PS Agent requirements - {e}")
+        if task_id in _tasks:
+            task = _tasks[task_id]
+            task.status = TaskStatus.FAILED
+            task.error = str(e)
+            task.add_log(f"❌ PS Agent 依赖未配置: {str(e)}")
     except Exception as e:
         logger.exception(f"Task {task_id} failed: {e}")
         # 确保任务状态被更新

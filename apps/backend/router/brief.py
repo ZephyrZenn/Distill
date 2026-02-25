@@ -20,7 +20,7 @@ router = APIRouter(prefix="/briefs")
 class GenerateBriefRequest(BaseModel):
     group_ids: list[int]
     focus: str = ""
-    boost_mode: bool = False
+    agent_mode: bool = False
 
 
 @router.get("/", response_model=FeedBriefListResponse)
@@ -63,24 +63,24 @@ async def generate_brief(request: GenerateBriefRequest):
     """
     异步生成brief，立即返回任务ID用于轮询状态。
     """
-    # BoostMode 需要填写 focus
-    if request.boost_mode and not request.focus.strip():
-        raise HTTPException(status_code=400, detail="focus cannot be empty when boost_mode is true")
-    
-    # BoostMode 不需要 group_ids，原模式需要至少一个分组
-    if not request.boost_mode and not request.group_ids:
-        raise HTTPException(status_code=400, detail="group_ids cannot be empty when boost_mode is false")
-    
+    # AgentMode 需要填写 focus
+    if request.agent_mode and not request.focus.strip():
+        raise HTTPException(status_code=400, detail="focus cannot be empty when agent_mode is true")
+
+    # AgentMode 不需要 group_ids，原模式需要至少一个分组
+    if not request.agent_mode and not request.group_ids:
+        raise HTTPException(status_code=400, detail="group_ids cannot be empty when agent_mode is false")
+
     # 创建任务
     task_id = task_service.create_task(
         group_ids=request.group_ids if request.group_ids else [],
         focus=request.focus.strip(),
-        boost_mode=request.boost_mode
+        agent_mode=request.agent_mode
     )
-    
+
     # 在后台异步执行brief生成任务
     asyncio.create_task(task_service.execute_brief_generation_task(task_id))
-    
+
     return success_with_data({"task_id": task_id})
 
 

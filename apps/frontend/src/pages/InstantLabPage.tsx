@@ -29,7 +29,7 @@ interface HistoryTask {
   createdAt: string;
   status?: 'pending' | 'running' | 'completed' | 'failed' | 'deleted';
   focus?: string;
-  boostMode?: boolean;
+  agentMode?: boolean;
 }
 
 const TASK_STORAGE_KEY = 'instant_lab_active_task';
@@ -46,7 +46,7 @@ const InstantLabPage = () => {
   const [agentLogs, setAgentLogs] = useState<LogEntry[]>([]);
   const [generationFocus, setGenerationFocus] = useState('');
   const [selectedGroupsForGen, setSelectedGroupsForGen] = useState<number[]>([]);
-  const [boostMode, setBoostMode] = useState(false);
+  const [agentMode, setAgentMode] = useState(false);
   const [isRecovering, setIsRecovering] = useState(true); // 标记是否正在恢复状态
   const [historyTasks, setHistoryTasks] = useState<HistoryTask[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -228,7 +228,7 @@ const InstantLabPage = () => {
       createdAt: new Date().toISOString(),
       status: 'completed',
       focus: generationFocus,
-      boostMode: boostMode,
+      agentMode: agentMode,
     };
     saveHistoryTask(completedTask);
     setTaskId(null);
@@ -236,7 +236,7 @@ const InstantLabPage = () => {
     showToast('简报生成成功！');
     queryClient.invalidateQueries({ queryKey: queryKeys.briefs() });
     queryClient.invalidateQueries({ queryKey: queryKeys.defaultBriefs });
-  }, [showToast, queryClient, taskId, generationFocus, boostMode, saveHistoryTask]);
+  }, [showToast, queryClient, taskId, generationFocus, agentMode, saveHistoryTask]);
 
   // 任务失败时的处理
   const handleTaskError = useCallback((error: string) => {
@@ -246,13 +246,13 @@ const InstantLabPage = () => {
       createdAt: new Date().toISOString(),
       status: 'failed',
       focus: generationFocus,
-      boostMode: boostMode,
+      agentMode: agentMode,
     };
     saveHistoryTask(failedTask);
     setTaskId(null);
     localStorage.removeItem(TASK_STORAGE_KEY);
     showToast(`生成失败: ${error}`, { type: 'error' });
-  }, [showToast, taskId, generationFocus, boostMode, saveHistoryTask]);
+  }, [showToast, taskId, generationFocus, agentMode, saveHistoryTask]);
 
   // 日志更新处理
   const handleLogUpdate = useCallback((logs: Array<{ text: string; time: string }>) => {
@@ -292,23 +292,23 @@ const InstantLabPage = () => {
   });
 
   const startGeneration = async () => {
-    // BoostMode 需要填写 focus，原模式需要至少选择一个分组
-    if (boostMode && !generationFocus.trim()) {
-      showToast('Boost Mode 下必须填写用户关注点', { type: 'error' });
+    // Agent Mode 需要填写 focus，Workflow Mode 需要至少选择一个分组
+    if (agentMode && !generationFocus.trim()) {
+      showToast('Agent Mode 下必须填写用户关注点', { type: 'error' });
       return;
     }
-    if (!boostMode && selectedGroupsForGen.length === 0) return;
+    if (!agentMode && selectedGroupsForGen.length === 0) return;
     
     try {
       setIsGenerating(true);
       setAgentLogs([]);
       
       // 创建brief生成任务并获取任务ID
-      // BoostMode 时传递空数组，后端会忽略 group_ids
+      // AgentMode 时传递空数组，后端会忽略 group_ids
       const { task_id } = await api.generateBrief(
-        boostMode ? [] : selectedGroupsForGen,
+        agentMode ? [] : selectedGroupsForGen,
         generationFocus.trim(),
-        boostMode
+        agentMode,
       );
       
       // 保存到 localStorage，以便页面切换后恢复
@@ -321,7 +321,7 @@ const InstantLabPage = () => {
         createdAt: new Date().toISOString(),
         status: 'pending',
         focus: generationFocus.trim(),
-        boostMode: boostMode,
+        agentMode: agentMode,
       };
       saveHistoryTask(newTask);
     } catch (error: any) {
@@ -338,7 +338,7 @@ const InstantLabPage = () => {
     setTaskId(null);
     setGenerationFocus('');
     setSelectedGroupsForGen([]);
-    setBoostMode(false);
+    setAgentMode(false);
     localStorage.removeItem(TASK_STORAGE_KEY);
   };
 
@@ -428,9 +428,9 @@ const InstantLabPage = () => {
                              task.status === 'running' ? '运行中' :
                              '等待中'}
                           </span>
-                          {task.boostMode && (
+                          {task.agentMode && (
                             <span className="text-[10px] theme-accent-bg theme-on-accent px-1.5 py-0.5 rounded font-bold">
-                              BOOST
+                              AGENT
                             </span>
                           )}
                         </div>
@@ -590,13 +590,13 @@ const InstantLabPage = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    if (boostMode) {
-                      setBoostMode(false);
+                    if (agentMode) {
+                      setAgentMode(false);
                       setSelectedGroupsForGen([]);
                     }
                   }}
                   className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 theme-text ${
-                    !boostMode
+                    !agentMode
                       ? 'nav-active theme-border'
                       : 'theme-border theme-surface theme-surface-hover'
                   }`}
@@ -612,7 +612,7 @@ const InstantLabPage = () => {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (boostMode) return;
+                    if (agentMode) return;
                     try {
                       const check = await api.getAgentConfigCheck();
                       if (!check.ready) {
@@ -622,13 +622,13 @@ const InstantLabPage = () => {
                         );
                         return;
                       }
-                      setBoostMode(true);
+                      setAgentMode(true);
                     } catch (e) {
                       showToast('检查 Agent 配置失败，请稍后重试', { type: 'error' });
                     }
                   }}
                   className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 theme-text ${
-                    boostMode
+                    agentMode
                       ? 'nav-active theme-border'
                       : 'theme-border theme-surface theme-surface-hover'
                   }`}
@@ -645,7 +645,7 @@ const InstantLabPage = () => {
             {/* Main content area - height follows content */}
             <div className="flex flex-col theme-surface rounded-2xl md:rounded-3xl border theme-border shadow-sm overflow-hidden w-full">
               {/* Top section - Group selection (standard mode only) */}
-              {!boostMode && (
+              {!agentMode && (
                 <div className="border-b theme-border theme-surface-hover p-3 md:p-4">
                   <div className="flex items-start gap-3">
                     <div className="pt-1 text-xs font-bold theme-text whitespace-nowrap">
@@ -681,12 +681,12 @@ const InstantLabPage = () => {
               <div className="px-3 md:px-4 py-3 theme-text">
                 <div className="flex items-center gap-2 mb-1.5">
                   <label className="text-xs font-bold theme-text shrink-0">用户关注点</label>
-                  {boostMode && <span className="text-rose-400 text-xs">*</span>}
-                  {!boostMode && <span className="theme-text-muted text-xs">(可选)</span>}
+                  {agentMode && <span className="text-rose-400 text-xs">*</span>}
+                  {!agentMode && <span className="theme-text-muted text-xs">(可选)</span>}
                 </div>
                 <div
                   className={`flex items-start rounded-lg md:rounded-xl theme-surface border overflow-hidden theme-border ${
-                    boostMode && !generationFocus.trim()
+                    agentMode && !generationFocus.trim()
                       ? 'ring-2 ring-rose-300 border-rose-200'
                       : 'focus-within:ring-2 focus-within:ring-[var(--theme-primary)]/30 focus-within:border-[var(--theme-primary)]'
                   }`}
@@ -699,30 +699,30 @@ const InstantLabPage = () => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         if (
-                          !(boostMode && !generationFocus.trim()) &&
-                          (boostMode || selectedGroupsForGen.length > 0)
+                          !(agentMode && !generationFocus.trim()) &&
+                          (agentMode || selectedGroupsForGen.length > 0)
                         ) {
                           startGeneration();
                         }
                       }
                     }}
-                    placeholder={boostMode ? "请输入您的关注点..." : "例如：关注 AI 在移动端的应用..."}
+                    placeholder={agentMode ? "请输入您的关注点..." : "例如：关注 AI 在移动端的应用..."}
                     rows={1}
                     className="flex-1 min-w-0 min-h-[2.25rem] md:min-h-10 max-h-28 py-2.5 px-3 md:px-4 bg-transparent border-none text-sm outline-none resize-none overflow-x-hidden overflow-y-auto break-words"
                   />
                   <button
                     onClick={startGeneration}
                     disabled={
-                      (boostMode && !generationFocus.trim()) ||
-                      (!boostMode && selectedGroupsForGen.length === 0)
+                      (agentMode && !generationFocus.trim()) ||
+                      (!agentMode && selectedGroupsForGen.length === 0)
                     }
                     className="h-9 md:h-10 w-9 md:w-10 shrink-0 flex items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors mt-0.5"
                   >
                     <PlayCircle size={20} />
                   </button>
                 </div>
-                {boostMode && !generationFocus.trim() && (
-                  <p className="text-xs text-rose-400 mt-1 ml-1">Boost Mode 下必须填写用户关注点</p>
+                {agentMode && !generationFocus.trim() && (
+                  <p className="text-xs text-rose-400 mt-1 ml-1">Agent Mode 下必须填写用户关注点</p>
                 )}
               </div>
             </div>
