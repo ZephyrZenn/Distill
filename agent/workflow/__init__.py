@@ -7,9 +7,13 @@ from agent.models import AgentState, RawArticle, StepCallback, log_step
 from agent.workflow.executor import AgentExecutor
 from agent.workflow.planner import AgentPlanner
 from agent.workflow.providers import (
+    DBWorkflowArticleContentProvider,
     DBWorkflowDataProvider,
+    DBWorkflowMemoryProvider,
     DBWorkflowPersistenceProvider,
+    WorkflowArticleContentProvider,
     WorkflowDataProvider,
+    WorkflowMemoryProvider,
     WorkflowPersistenceProvider,
 )
 from core.llm_client import auto_build_client
@@ -24,6 +28,8 @@ class SummarizeAgenticWorkflow:
         lazy_init: bool = False,
         data_provider: WorkflowDataProvider | None = None,
         persistence_provider: WorkflowPersistenceProvider | None = None,
+        memory_provider: WorkflowMemoryProvider | None = None,
+        article_content_provider: WorkflowArticleContentProvider | None = None,
     ):
         """Initialize the agent workflow.
 
@@ -32,6 +38,8 @@ class SummarizeAgenticWorkflow:
                       This allows the app to start without API keys configured.
             data_provider: Workflow data provider; defaults to DB-backed implementation.
             persistence_provider: Workflow persistence provider; defaults to DB-backed implementation.
+            memory_provider: Planner memory provider; defaults to DB-backed implementation.
+            article_content_provider: Executor article-content provider; defaults to DB-backed implementation.
         """
         self._client = None
         self._planner = None
@@ -40,6 +48,10 @@ class SummarizeAgenticWorkflow:
         self._data_provider = data_provider or DBWorkflowDataProvider()
         self._persistence_provider = (
             persistence_provider or DBWorkflowPersistenceProvider()
+        )
+        self._memory_provider = memory_provider or DBWorkflowMemoryProvider()
+        self._article_content_provider = (
+            article_content_provider or DBWorkflowArticleContentProvider()
         )
 
         self._cleanup_task: asyncio.Task | None = None
@@ -56,8 +68,14 @@ class SummarizeAgenticWorkflow:
         """
         if self._client is None:
             self._client = auto_build_client()
-            self._planner = AgentPlanner(self._client)
-            self._executor = AgentExecutor(self._client)
+            self._planner = AgentPlanner(
+                self._client,
+                memory_provider=self._memory_provider,
+            )
+            self._executor = AgentExecutor(
+                self._client,
+                article_content_provider=self._article_content_provider,
+            )
 
     @property
     def planner(self) -> AgentPlanner:

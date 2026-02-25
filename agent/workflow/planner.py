@@ -5,7 +5,8 @@ import time
 from agent.models import AgentPlanResult, AgentState, Article, RawArticle, log_step
 from agent.prompts import PLANNER_USER_PROMPT, PLANNER_SYSTEM_PROMPT
 from agent.utils import extract_json
-from agent.tools import find_keywords_with_llm, search_memory
+from agent.tools.filter_tool import find_keywords_with_llm
+from agent.workflow.providers import DBWorkflowMemoryProvider, WorkflowMemoryProvider
 from core.llm_client import LLMClient
 from core.models.llm import Message
 
@@ -14,11 +15,16 @@ logger = logging.getLogger(__name__)
 
 class AgentPlanner:
     def __init__(
-        self, client: LLMClient, batch_size: int = 20, max_article_count: int = 30
+        self,
+        client: LLMClient,
+        batch_size: int = 20,
+        max_article_count: int = 30,
+        memory_provider: WorkflowMemoryProvider | None = None,
     ):
         self.client = client
         self.batch_size = batch_size
         self.max_article_count = max_article_count
+        self.memory_provider = memory_provider or DBWorkflowMemoryProvider()
 
     async def plan(self, state: AgentState) -> AgentPlanResult:
         result = None
@@ -30,7 +36,7 @@ class AgentPlanner:
         state["scored_articles"] = ranked_articles
         keywords = await find_keywords_with_llm(self.client, state["scored_articles"])
         log_step(state, f"🔍 提取到 {len(keywords)} 个关键词: {keywords}")
-        memories = await search_memory(keywords)
+        memories = await self.memory_provider.search_memory(keywords)
         memory_topics = [m["topic"] for m in memories.values()] if memories else []
         log_step(state, f"🔍 从记忆中找到 {len(memories)} 个相关记忆: {memory_topics}")
         state["history_memories"] = memories

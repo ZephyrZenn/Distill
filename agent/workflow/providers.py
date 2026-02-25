@@ -1,11 +1,11 @@
-"""Workflow data/persistence provider interfaces and default adapters."""
+"""Workflow data/access/persistence provider interfaces and default adapters."""
 
 from __future__ import annotations
 
-from typing import Protocol
+from importlib import import_module
+from typing import Protocol, Sequence
 
-from agent.models import AgentState, RawArticle
-from agent.tools import get_recent_group_update, save_current_execution_records
+from agent.models import AgentState, RawArticle, SummaryMemory
 from core.models.feed import FeedGroup
 
 
@@ -28,6 +28,20 @@ class WorkflowPersistenceProvider(Protocol):
         ...
 
 
+class WorkflowMemoryProvider(Protocol):
+    """Loads historical memory records used by planner."""
+
+    async def search_memory(self, queries: Sequence[str]) -> dict[int, SummaryMemory]:
+        ...
+
+
+class WorkflowArticleContentProvider(Protocol):
+    """Loads full text for selected article IDs used by executor."""
+
+    async def get_article_content(self, article_ids: list[str]) -> dict[str, str]:
+        ...
+
+
 class DBWorkflowDataProvider:
     """Default data provider backed by existing DB tool implementation."""
 
@@ -37,14 +51,32 @@ class DBWorkflowDataProvider:
         group_ids: list[int] | None,
         focus: str = "",
     ) -> tuple[list[FeedGroup], list[RawArticle]]:
-        return await get_recent_group_update(hour_gap, group_ids or [], focus)
+        db_tool = import_module("agent.tools.db_tool")
+        return await db_tool.get_recent_group_update(hour_gap, group_ids or [], focus)
 
 
 class DBWorkflowPersistenceProvider:
     """Default persistence provider backed by existing DB tool implementation."""
 
     async def save_current_execution_records(self, state: AgentState) -> None:
-        await save_current_execution_records(state)
+        memory_tool = import_module("agent.tools.memory_tool")
+        await memory_tool.save_current_execution_records(state)
+
+
+class DBWorkflowMemoryProvider:
+    """Default memory provider backed by existing memory tool implementation."""
+
+    async def search_memory(self, queries: Sequence[str]) -> dict[int, SummaryMemory]:
+        memory_tool = import_module("agent.tools.memory_tool")
+        return await memory_tool.search_memory(queries)
+
+
+class DBWorkflowArticleContentProvider:
+    """Default article-content provider backed by existing DB tool implementation."""
+
+    async def get_article_content(self, article_ids: list[str]) -> dict[str, str]:
+        db_tool = import_module("agent.tools.db_tool")
+        return await db_tool.get_article_content(article_ids)
 
 
 class InMemoryWorkflowDataProvider:
@@ -75,3 +107,23 @@ class NoopWorkflowPersistenceProvider:
 
     async def save_current_execution_records(self, state: AgentState) -> None:
         return None
+
+
+class InMemoryWorkflowMemoryProvider:
+    """In-memory memory provider for DB-free runtime/tests."""
+
+    def __init__(self, memories: dict[int, SummaryMemory] | None = None):
+        self.memories = memories or {}
+
+    async def search_memory(self, queries: Sequence[str]) -> dict[int, SummaryMemory]:
+        return self.memories
+
+
+class InMemoryWorkflowArticleContentProvider:
+    """In-memory article-content provider for DB-free runtime/tests."""
+
+    def __init__(self, article_contents: dict[str, str] | None = None):
+        self.article_contents = article_contents or {}
+
+    async def get_article_content(self, article_ids: list[str]) -> dict[str, str]:
+        return {aid: self.article_contents.get(aid, "") for aid in article_ids}

@@ -5,7 +5,9 @@ from datetime import datetime
 from agent.models import AgentState
 from agent.workflow import SummarizeAgenticWorkflow
 from agent.workflow.providers import (
+    DBWorkflowArticleContentProvider,
     DBWorkflowDataProvider,
+    DBWorkflowMemoryProvider,
     DBWorkflowPersistenceProvider,
     InMemoryWorkflowDataProvider,
     NoopWorkflowPersistenceProvider,
@@ -49,6 +51,10 @@ class WorkflowProviderTest(unittest.TestCase):
         self.assertIsInstance(workflow._data_provider, DBWorkflowDataProvider)
         self.assertIsInstance(
             workflow._persistence_provider, DBWorkflowPersistenceProvider
+        )
+        self.assertIsInstance(workflow._memory_provider, DBWorkflowMemoryProvider)
+        self.assertIsInstance(
+            workflow._article_content_provider, DBWorkflowArticleContentProvider
         )
 
     def test_in_memory_noop_providers_for_db_free_runtime(self):
