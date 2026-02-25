@@ -6,7 +6,7 @@ from agent.models import AgentPlanResult, AgentState, Article, RawArticle, log_s
 from agent.prompts import PLANNER_USER_PROMPT, PLANNER_SYSTEM_PROMPT
 from agent.utils import extract_json
 from agent.tools.filter_tool import find_keywords_with_llm
-from agent.workflow.db_providers import DBWorkflowMemoryProvider
+from apps.backend.adapters.workflow_db_provider import DBWorkflowMemoryProvider
 from agent.workflow.providers import WorkflowMemoryProvider
 from core.llm_client import LLMClient
 from core.models.llm import Message

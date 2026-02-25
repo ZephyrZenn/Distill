@@ -1,8 +1,4 @@
-"""DB-backed workflow providers.
-
-Separated from provider protocols/in-memory providers to keep reusable workflow-lib
-paths DB-free by default.
-"""
+"""DB-backed workflow providers for Distill backend wiring only."""
 
 from __future__ import annotations
 

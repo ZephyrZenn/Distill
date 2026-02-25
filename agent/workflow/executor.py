@@ -14,7 +14,7 @@ from agent.tools.search_tool import (
     is_search_engine_available,
 )
 from agent.tools.writing_tool import write_article, review_article
-from agent.workflow.db_providers import DBWorkflowArticleContentProvider
+from apps.backend.adapters.workflow_db_provider import DBWorkflowArticleContentProvider
 from agent.workflow.providers import WorkflowArticleContentProvider
 from core.llm_client import LLMClient
 from core.models.search import SearchResult

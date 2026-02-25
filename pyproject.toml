@@ -35,8 +35,6 @@ db = [
     "psycopg[binary,pool]>=3.3.3",
 ]
 
-[project.scripts]
-distill-workflow = "distill_workflow_lib.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["agent*", "apps*", "core*", "distill_workflow_lib*"]

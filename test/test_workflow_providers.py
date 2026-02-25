@@ -4,14 +4,13 @@ from datetime import datetime
 
 from agent.models import AgentState
 from agent.workflow import SummarizeAgenticWorkflow
-from agent.workflow.providers import (
+from apps.backend.adapters.workflow_db_provider import (
     DBWorkflowArticleContentProvider,
     DBWorkflowDataProvider,
     DBWorkflowMemoryProvider,
     DBWorkflowPersistenceProvider,
-    InMemoryWorkflowDataProvider,
-    NoopWorkflowPersistenceProvider,
 )
+from agent.workflow.providers import InMemoryWorkflowDataProvider, NoopWorkflowPersistenceProvider
 from core.models.feed import FeedGroup
 
 
