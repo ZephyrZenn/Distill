@@ -4,7 +4,7 @@ from datetime import datetime
 
 from agent.models import AgentState
 from agent.workflow import SummarizeAgenticWorkflow
-from apps.backend.adapters.workflow_db_provider import (
+from agent.workflow.db_providers import (
     DBWorkflowArticleContentProvider,
     DBWorkflowDataProvider,
     DBWorkflowMemoryProvider,
