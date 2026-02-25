@@ -6,11 +6,13 @@ from typing import Optional
 from agent.models import AgentState, RawArticle, StepCallback, log_step
 from agent.workflow.executor import AgentExecutor
 from agent.workflow.planner import AgentPlanner
-from agent.workflow.providers import (
+from agent.workflow.db_providers import (
     DBWorkflowArticleContentProvider,
     DBWorkflowDataProvider,
     DBWorkflowMemoryProvider,
     DBWorkflowPersistenceProvider,
+)
+from agent.workflow.providers import (
     WorkflowArticleContentProvider,
     WorkflowDataProvider,
     WorkflowMemoryProvider,
