@@ -4,9 +4,14 @@ import logging
 from contextlib import suppress
 from typing import Optional
 from agent.models import AgentState, RawArticle, StepCallback, log_step
-from agent.tools import get_recent_group_update, save_current_execution_records
 from agent.workflow.executor import AgentExecutor
 from agent.workflow.planner import AgentPlanner
+from agent.workflow.providers import (
+    DBWorkflowDataProvider,
+    DBWorkflowPersistenceProvider,
+    WorkflowDataProvider,
+    WorkflowPersistenceProvider,
+)
 from core.llm_client import auto_build_client
 from core.models.feed import FeedGroup
 
@@ -14,18 +19,29 @@ logger = logging.getLogger(__name__)
 
 
 class SummarizeAgenticWorkflow:
-    def __init__(self, lazy_init: bool = False):
+    def __init__(
+        self,
+        lazy_init: bool = False,
+        data_provider: WorkflowDataProvider | None = None,
+        persistence_provider: WorkflowPersistenceProvider | None = None,
+    ):
         """Initialize the agent workflow.
 
         Args:
             lazy_init: If True, defer AI client initialization until first use.
                       This allows the app to start without API keys configured.
+            data_provider: Workflow data provider; defaults to DB-backed implementation.
+            persistence_provider: Workflow persistence provider; defaults to DB-backed implementation.
         """
         self._client = None
         self._planner = None
         self._executor = None
         self._states = {}
-        
+        self._data_provider = data_provider or DBWorkflowDataProvider()
+        self._persistence_provider = (
+            persistence_provider or DBWorkflowPersistenceProvider()
+        )
+
         self._cleanup_task: asyncio.Task | None = None
         self._cleanup_stop = asyncio.Event()
 
@@ -64,7 +80,9 @@ class SummarizeAgenticWorkflow:
         # This will raise APIKeyNotConfiguredError if API key is not set
         self._init_client()
 
-        groups, articles = await get_recent_group_update(hour_gap, group_ids, focus)
+        groups, articles = await self._data_provider.get_recent_group_update(
+            hour_gap, group_ids, focus
+        )
 
         if task_id in self._states:
             raise ValueError(f"Task {task_id} already exists")
@@ -85,8 +103,8 @@ class SummarizeAgenticWorkflow:
             log_step(state, f"✅ Agent执行完成，共生成 {sum(success_statuses)} 篇")
             if not results:
                 return "", []
-            # 使用工具保存执行记录
-            await save_current_execution_records(state)
+            # 使用持久化 provider 保存执行记录
+            await self._persistence_provider.save_current_execution_records(state)
 
             # 返回简报内容和外部搜索结果
             ext_info = state.get("ext_info", [])
