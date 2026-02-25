@@ -1,9 +1,9 @@
 """Compatibility exports for workflow providers.
 
-Canonical provider definitions now live under `distill_workflow_lib.providers`.
+Canonical provider definitions now live under `distill_lib.providers`.
 """
 
-from distill_workflow_lib.providers import (  # noqa: F401
+from distill_lib.providers import (  # noqa: F401
     InMemoryWorkflowArticleContentProvider,
     InMemoryWorkflowDataProvider,
     InMemoryWorkflowMemoryProvider,

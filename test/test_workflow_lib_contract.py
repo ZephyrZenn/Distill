@@ -3,7 +3,7 @@ from datetime import datetime
 import unittest
 from unittest.mock import patch
 
-from distill_workflow_lib.api import run_workflow_from_articles, run_workflow_from_opml
+import distill_lib.api as workflow_api
 
 
 class _FakePlanner:
@@ -62,11 +62,11 @@ class WorkflowLibContractTest(unittest.TestCase):
         ]
 
         with (
-            patch("distill_workflow_lib.api.auto_build_client", return_value=object()),
-            patch("distill_workflow_lib.api.AgentPlanner", _FakePlanner),
-            patch("distill_workflow_lib.api.AgentExecutor", _FakeExecutor),
+            patch.object(workflow_api, "auto_build_client", return_value=object()),
+            patch.object(workflow_api, "AgentPlanner", _FakePlanner),
+            patch.object(workflow_api, "AgentExecutor", _FakeExecutor),
         ):
-            result = asyncio.run(run_workflow_from_articles(articles=articles, focus="AI"))
+            result = asyncio.run(workflow_api.run_workflow_from_articles(articles=articles, focus="AI"))
 
         self.assertEqual(result.summary, "mock-summary")
         self.assertEqual(result.ext_info, [])
@@ -77,13 +77,13 @@ class WorkflowLibContractTest(unittest.TestCase):
         fake_feed = type("FeedObj", (), {"id": "a1", "title": "t", "url": "https://x", "summary": "s", "pub_date": datetime.now(), "content": "c"})
 
         with (
-            patch("distill_workflow_lib.api.parse_opml", return_value=[]),
-            patch("distill_workflow_lib.api.parse_feed", return_value={"f": [fake_feed]}),
-            patch("distill_workflow_lib.api.auto_build_client", return_value=object()),
-            patch("distill_workflow_lib.api.AgentPlanner", _FakePlanner),
-            patch("distill_workflow_lib.api.AgentExecutor", _FakeExecutor),
+            patch.object(workflow_api, "parse_opml", return_value=[]),
+            patch.object(workflow_api, "parse_feed", return_value={"f": [fake_feed]}),
+            patch.object(workflow_api, "auto_build_client", return_value=object()),
+            patch.object(workflow_api, "AgentPlanner", _FakePlanner),
+            patch.object(workflow_api, "AgentExecutor", _FakeExecutor),
         ):
-            result = asyncio.run(run_workflow_from_opml("<opml></opml>"))
+            result = asyncio.run(workflow_api.run_workflow_from_opml("<opml></opml>"))
 
         self.assertEqual(result.summary, "mock-summary")
         self.assertEqual(result.article_count, 1)

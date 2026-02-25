@@ -6,7 +6,7 @@ from agent.models import AgentPlanResult, AgentState, Article, RawArticle, log_s
 from agent.prompts import PLANNER_USER_PROMPT, PLANNER_SYSTEM_PROMPT
 from agent.utils import extract_json
 from agent.tools.filter_tool import find_keywords_with_llm
-from distill_workflow_lib.providers import (
+from distill_lib.providers import (
     InMemoryWorkflowMemoryProvider,
     WorkflowMemoryProvider,
 )

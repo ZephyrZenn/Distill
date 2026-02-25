@@ -14,7 +14,7 @@ from agent.tools.search_tool import (
     is_search_engine_available,
 )
 from agent.tools.writing_tool import write_article, review_article
-from distill_workflow_lib.providers import (
+from distill_lib.providers import (
     InMemoryWorkflowArticleContentProvider,
     WorkflowArticleContentProvider,
 )

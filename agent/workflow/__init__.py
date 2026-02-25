@@ -1,5 +1,5 @@
-"""Compatibility export for workflow orchestration implementation in distill_workflow_lib."""
+"""Compatibility export for workflow orchestration implementation in distill_lib."""
 
-from distill_workflow_lib.workflow import SummarizeAgenticWorkflow
+from distill_lib.workflow import SummarizeAgenticWorkflow
 
 __all__ = ["SummarizeAgenticWorkflow"]

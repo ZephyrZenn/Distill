@@ -4,15 +4,15 @@ import logging
 from contextlib import suppress
 from typing import Optional
 from agent.models import AgentState, RawArticle, StepCallback, log_step
-from distill_workflow_lib.executor import AgentExecutor
-from distill_workflow_lib.planner import AgentPlanner
+from distill_lib.executor import AgentExecutor
+from distill_lib.planner import AgentPlanner
 from agent.workflow.db_providers import (
     DBWorkflowArticleContentProvider,
     DBWorkflowDataProvider,
     DBWorkflowMemoryProvider,
     DBWorkflowPersistenceProvider,
 )
-from distill_workflow_lib.providers import (
+from distill_lib.providers import (
     WorkflowArticleContentProvider,
     WorkflowDataProvider,
     WorkflowMemoryProvider,

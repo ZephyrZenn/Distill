@@ -4,15 +4,15 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from agent.models import RawArticle
-from distill_workflow_lib.executor import AgentExecutor
-from distill_workflow_lib.planner import AgentPlanner
-from distill_workflow_lib.providers import (
+from distill_lib.executor import AgentExecutor
+from distill_lib.planner import AgentPlanner
+from distill_lib.providers import (
     InMemoryWorkflowArticleContentProvider,
     InMemoryWorkflowDataProvider,
     InMemoryWorkflowMemoryProvider,
     NoopWorkflowPersistenceProvider,
 )
-from distill_workflow_lib.workflow import SummarizeAgenticWorkflow
+from distill_lib.workflow import SummarizeAgenticWorkflow
 from core.llm_client import auto_build_client
 from core.models.feed import Feed, FeedArticle, FeedGroup
 from core.parsers import parse_feed, parse_opml

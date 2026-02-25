@@ -37,9 +37,9 @@ class WorkflowForbiddenImportsTest(unittest.TestCase):
         lib_dir = (
             Path(__file__).resolve().parent.parent
             / "packages"
-            / "distill_workflow_lib"
+            / "distill_lib"
             / "src"
-            / "distill_workflow_lib"
+            / "distill_lib"
         )
         forbidden = {
             "agent.tools.db_tool",
