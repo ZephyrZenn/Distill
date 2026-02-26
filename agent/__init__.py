@@ -1,6 +1,12 @@
 import logging
 from typing import Optional
 from agent.workflow import SummarizeAgenticWorkflow
+from agent.workflow.db_providers import (
+    DBWorkflowArticleContentProvider,
+    DBWorkflowDataProvider,
+    DBWorkflowMemoryProvider,
+    DBWorkflowPersistenceProvider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +24,13 @@ def init_agent() -> SummarizeAgenticWorkflow:
     global _agent_instance
     if _agent_instance is None:
         # Use lazy_init=True to allow app to start without API key
-        _agent_instance = SummarizeAgenticWorkflow(lazy_init=True)
+        _agent_instance = SummarizeAgenticWorkflow(
+            lazy_init=True,
+            data_provider=DBWorkflowDataProvider(),
+            persistence_provider=DBWorkflowPersistenceProvider(),
+            memory_provider=DBWorkflowMemoryProvider(),
+            article_content_provider=DBWorkflowArticleContentProvider(),
+        )
         logger.info("Agent initialized (lazy mode - API key checked on first use)")
     return _agent_instance
 
