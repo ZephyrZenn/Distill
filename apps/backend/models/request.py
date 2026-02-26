@@ -4,7 +4,7 @@ from typing import Optional, Union
 from pydantic import validator, Field
 
 from .common import CamelModel
-from core.models.llm import ModelProvider
+from distill_lib.core.models.llm import ModelProvider
 
 
 def _normalize_brief_time(value: Union[time, str]) -> time:

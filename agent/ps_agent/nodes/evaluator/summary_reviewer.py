@@ -5,9 +5,9 @@ from agent.ps_agent.prompts.review import (
     SUMMARY_REVIEWER_SYSTEM_PROMPT,
 )
 from agent.ps_agent.state import PSAgentState, log_step
-from agent.utils import extract_json
-from core.llm_client import LLMClient
-from core.models.llm import Message
+from distill_lib.core.utils import extract_json
+from distill_lib.core.llm_client import LLMClient
+from distill_lib.core.models.llm import Message
 
 logger = logging.getLogger(__name__)
 

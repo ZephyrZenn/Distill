@@ -4,7 +4,7 @@ import json
 from agent.ps_agent.prompts.bootstrap import (
     BOOTSTRAP_REPLAN_PROMPT,
 )
-from core.llm_client import LLMClient
+from distill_lib.core.llm_client import LLMClient
 from agent.ps_agent.state import PSAgentState, log_step
 from agent.ps_agent.prompts import (
     BOOTSTRAP_INTENT_DIMENSIONS_PROMPT,
@@ -12,8 +12,8 @@ from agent.ps_agent.prompts import (
     BOOTSTRAP_EXCLUSION_PROMPT,
     build_bootstrap_user_prompt,
 )
-from agent.utils import extract_json
-from core.models.llm import Message
+from distill_lib.core.utils import extract_json
+from distill_lib.core.models.llm import Message
 from agent.ps_agent.models import Dimension, ReplanDiagnosis
 
 logger = logging.getLogger(__name__)

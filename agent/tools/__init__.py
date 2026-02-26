@@ -27,17 +27,17 @@ from agent.tools.memory_tool import (
 )
 
 # 搜索工具函数
-from agent.tools.search_tool import (
+from distill_lib.agent.tools.search_tool import (
     fetch_web_contents,
     search_web,
     is_search_engine_available,
 )
 
 # 过滤/关键词提取函数
-from agent.tools.filter_tool import find_keywords_with_llm
+from distill_lib.agent.tools.filter_tool import find_keywords_with_llm
 
 # 写作工具函数
-from agent.tools.writing_tool import write_article, review_article
+from distill_lib.agent.tools.writing_tool import write_article, review_article
 
 
 __all__ = [

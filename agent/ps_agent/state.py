@@ -20,7 +20,7 @@ from uuid import uuid4
 
 from typing_extensions import NotRequired
 
-from core.models.llm import Message
+from distill_lib.core.models.llm import Message
 
 StepCallback = Callable[[str], None]
 

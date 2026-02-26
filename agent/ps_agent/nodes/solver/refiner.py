@@ -1,7 +1,7 @@
 from agent.ps_agent.models import SectionUnit
 from agent.ps_agent.prompts.writing import DEEP_WRITER_REFINE_PROMPT, DEEP_WRITER_SYSTEM_PROMPT
-from core.llm_client import LLMClient
-from core.models.llm import Message
+from distill_lib.core.llm_client import LLMClient
+from distill_lib.core.models.llm import Message
 from agent.ps_agent.state import PSAgentState, log_step
 import logging
 

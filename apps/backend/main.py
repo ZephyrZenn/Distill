@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from agent import init_agent
-from core.config.loader import load_config
+from distill_lib.core.config.loader import load_config
 from apps.backend.config.thread import init_thread_pool, shutdown_thread_pool
 from fastapi.exceptions import RequestValidationError
 from apps.backend.exception import (

@@ -1,9 +1,9 @@
 from typing import Optional
 
-from agent.tools import is_search_engine_available
-from core.config.loader import get_config, reload_config
-from core.config.utils import write_config
-from core.models.config import EmbeddingConfig, ModelConfig
+from distill_lib.agent.tools import is_search_engine_available
+from distill_lib.core.config.loader import get_config, reload_config
+from distill_lib.core.config.utils import write_config
+from distill_lib.core.models.config import EmbeddingConfig, ModelConfig
 
 from apps.backend.models.converters import (
     agent_limits_config_to_vo,

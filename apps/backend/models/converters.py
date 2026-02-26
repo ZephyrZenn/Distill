@@ -2,19 +2,19 @@
 
 import os
 
-from core.config.loader import (
+from distill_lib.core.config.loader import (
     get_base_url_for_provider,
     is_api_key_configured,
     get_api_key_env_var,
 )
-from core.models.config import (
+from distill_lib.core.models.config import (
     AgentLimitsConfig,
     ContextConfig,
     EmbeddingConfig,
     ModelConfig,
     RateLimitConfig,
 )
-from core.models.llm import ModelProvider
+from distill_lib.core.models.llm import ModelProvider
 
 from .request import (
     AgentLimitsSettingRequest,

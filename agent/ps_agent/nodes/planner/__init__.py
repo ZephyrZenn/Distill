@@ -1,4 +1,4 @@
-from core.llm_client import LLMClient
+from distill_lib.core.llm_client import LLMClient
 from agent.ps_agent.nodes.planner.bootstrap import BootstrapNode
 from agent.ps_agent.nodes.planner.researcher import ResearchPlannerNode
 from agent.ps_agent.nodes.planner.structure import StructureNode

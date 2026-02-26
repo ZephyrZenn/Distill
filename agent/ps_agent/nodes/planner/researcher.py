@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import logging
 
-from core.llm_client import LLMClient
-from core.models.llm import CompletionResponse, Message
+from distill_lib.core.llm_client import LLMClient
+from distill_lib.core.models.llm import CompletionResponse, Message
 
 from agent.ps_agent.prompts import (
     RESEARCH_PLANNER_PROMPT,

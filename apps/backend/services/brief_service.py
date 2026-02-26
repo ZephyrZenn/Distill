@@ -5,7 +5,7 @@ import logging
 import re
 
 from core.db.pool import get_connection
-from core.models.feed import FeedBrief
+from distill_lib.core.models.feed import FeedBrief
 
 logger = logging.getLogger(__name__)
 

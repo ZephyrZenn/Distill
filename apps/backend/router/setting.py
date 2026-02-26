@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from agent.ps_agent import check_ps_agent_requirements
-from core.config.loader import get_config, get_api_key_env_var, is_api_key_configured
+from distill_lib.core.config.loader import get_config, get_api_key_env_var, is_api_key_configured
 
 from apps.backend.models.common import success_with_data
 from apps.backend.models.converters import request_to_model_config

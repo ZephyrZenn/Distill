@@ -1,7 +1,7 @@
 from agent.ps_agent.nodes.evaluator.material_curation import MaterialCurationNode
 from agent.ps_agent.nodes.evaluator.plan_reviewer import PlanReviewerNode
 from agent.ps_agent.nodes.evaluator.summary_reviewer import SummaryReviewerNode
-from core.llm_client import LLMClient
+from distill_lib.core.llm_client import LLMClient
 from agent.ps_agent.state import PSAgentState
 
 _material_curation_node: MaterialCurationNode | None = None

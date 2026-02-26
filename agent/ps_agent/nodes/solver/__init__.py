@@ -1,7 +1,7 @@
 
 from agent.ps_agent.nodes.solver.writer import DeepWriterNode
 from agent.ps_agent.nodes.solver.tool_executor import ToolExecutorNode
-from core.llm_client import LLMClient
+from distill_lib.core.llm_client import LLMClient
 from agent.ps_agent.state import PSAgentState
 import logging
 from .refiner import RefinerNode

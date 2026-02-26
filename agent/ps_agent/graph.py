@@ -10,8 +10,8 @@ from langgraph.graph import END, StateGraph
 from agent.ps_agent.nodes.planner import set_planner_client, bootstrap_node, research_planner_node, structure_node
 from agent.ps_agent.nodes.solver import set_solver_client, tool_node, writer_node, refiner_node
 from agent.ps_agent.nodes.evaluator import set_evaluator_client, material_curation_node, plan_reviewer_node, summary_reviewer_node
-from core.llm_client import LLMClient
-from core.models.llm import Message
+from distill_lib.core.llm_client import LLMClient
+from distill_lib.core.models.llm import Message
 
 
 from .state import PSAgentState, log_step

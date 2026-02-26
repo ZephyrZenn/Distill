@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Coroutine
 
-from core.models.llm import FunctionDefinition, Tool
+from distill_lib.core.models.llm import FunctionDefinition, Tool
 
 from agent.ps_agent.state import PSAgentState
 
