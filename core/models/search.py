@@ -1,8 +1,8 @@
-from typing import TypedDict, NotRequired
+"""Compatibility shim for search result models.
 
-class SearchResult(TypedDict):
-    title: str
-    url: str
-    content: str
-    score: float
-    raw_content: NotRequired[str]  # Tavily 返回的原始网页内容（需开启 include_raw_content）
+Canonical definitions live in distill_lib.core.models.search.
+"""
+
+from distill_lib.core.models.search import NotRequired, SearchResult, TypedDict
+
+__all__ = ["NotRequired", "SearchResult", "TypedDict"]

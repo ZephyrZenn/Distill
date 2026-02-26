@@ -1,4 +1,4 @@
-from .loader import (
+from distill_lib.core.config.loader import (
     ConfigValidationError,
     get_config,
     get_config_path,
@@ -8,14 +8,14 @@ from .loader import (
     validate_config,
 )
 
-from .utils import (
+from distill_lib.core.config.utils import (
     create_default_config,
     get_config_summary,
     validate_config_file_exists,
+    write_config,
 )
 
 __all__ = [
-    # Configuration loading and management
     "get_config",
     "load_config",
     "reload_config",
@@ -23,8 +23,8 @@ __all__ = [
     "ConfigValidationError",
     "get_config_path",
     "validate_config",
-    # Configuration utilities
     "validate_config_file_exists",
     "get_config_summary",
     "create_default_config",
+    "write_config",
 ]
