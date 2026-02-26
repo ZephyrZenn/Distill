@@ -9,11 +9,7 @@ from distill_lib.core.models.config import (
     EmbeddingConfig,
     GlobalConfig,
     ModelConfig,
-    ModelProvider,
-    Optional,
     RateLimitConfig,
-    dataclass,
-    field,
 )
 
 __all__ = [
@@ -22,9 +18,5 @@ __all__ = [
     "EmbeddingConfig",
     "GlobalConfig",
     "ModelConfig",
-    "ModelProvider",
-    "Optional",
     "RateLimitConfig",
-    "dataclass",
-    "field",
 ]
