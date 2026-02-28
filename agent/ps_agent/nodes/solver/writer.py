@@ -42,10 +42,16 @@ class DeepWriterNode:
         return content, summary
 
     async def __call__(self, state: PSAgentState) -> dict:
+        run_id = state.get("run_id", "-")
         plan = state.get("plan")
+        chapters = plan.get("chapters", []) if plan else []
+        logger.info(
+            "[ps_agent] run_id=%s node=writer entry chapters=%d",
+            run_id, len(chapters),
+        )
         if not plan:
+            log_step(state, "[writer] 失败: 无写作指南")
             return {
-                **log_step(state, "❌ writer: 无法写作，没有写作指南"),
                 "status": "failed",
                 "last_error": "No plan found",
             }
@@ -95,10 +101,8 @@ class DeepWriterNode:
             )
             context["previous_summary"] = summary
 
-        msg_done = f"✍️ writer: 滑动窗口写作完成 (len={len(sections)})"
-        log_step(state, msg_done)
+        log_step(state, f"[writer] 完成: 滑动窗口写作完成，{len(sections)} 个章节")
         return {
-            "log_history": [msg_start, msg_done],
             "sections": sections,
             "status": "reviewing",  # Next step
             "messages": [Message.assistant("采用滑动窗口式写作完成深度报告。")],

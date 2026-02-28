@@ -36,7 +36,10 @@ class ResearchPlannerNode:
     async def __call__(self, state: PSAgentState) -> dict:
         run_id = state.get("run_id", "-")
         iteration = state.get("iteration", 0)
-
+        logger.info(
+            "[ps_agent] run_id=%s node=research entry iteration=%d",
+            run_id, iteration,
+        )
         # Check iteration limits
         # TODO: 检查状态流转
 
@@ -76,8 +79,8 @@ class ResearchPlannerNode:
             tool_calls = response.tool_calls or []
             if not tool_calls:
                 logger.info("[planner] No tool calls generated.")
+                log_step(state, "[planner] 完成: 未生成搜索查询，进入评审")
                 return {
-                    **log_step(state, "✅ planner: 未生成搜索查询，进入评审"),
                     "messages": [
                         Message.assistant(response.content or "搜索计划完成。")
                     ],
@@ -88,10 +91,8 @@ class ResearchPlannerNode:
             rationale = response.content or "Search queries generated"
             assistant_msg = Message.assistant(content=rationale, tool_calls=tool_calls)
 
-            log_msg = f"🛠️ planner: 生成 {len(tool_calls)} 个搜索查询"
-
+            log_step(state, f"[planner] 完成: 已生成 {len(tool_calls)} 个搜索查询")
             return {
-                **log_step(state, log_msg),
                 "messages": [assistant_msg],
                 "iteration": iteration + 1,
                 "status": "research",
@@ -101,8 +102,8 @@ class ResearchPlannerNode:
 
         except Exception as exc:
             logger.exception("[planner] failed")
+            log_step(state, f"[planner] 失败: 规划异常 {exc}")
             return {
-                **log_step(state, f"❌ planner: 规划失败: {exc}"),
                 "status": "failed",
                 "last_error": str(exc),
             }

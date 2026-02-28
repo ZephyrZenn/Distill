@@ -88,29 +88,33 @@ class MaterialCurationNode:
         self.audit_analyzer = AuditAnalyzer(client)
 
     async def __call__(self, state: PSAgentState) -> dict:
+        run_id = state.get("run_id", "-")
         items = list(state.get("research_items", []))
+        logger.info(
+            "[ps_agent] run_id=%s node=curation entry research_items=%d",
+            run_id, len(items),
+        )
         if not items:
+            log_step(state, "[curation] 完成: 暂无可筛选素材，继续研究")
             return {
-                **log_step(state, "ℹ️ curation: 暂无可筛选素材，继续研究"),
                 "status": "researching",
                 "ready_for_review": False,
                 "curation_count": state.get("curation_count", 0) + 1,
                 "messages": [Message.assistant("暂无可筛选素材，继续研究。")],
             }
 
+        log_step(state, f"📌 curation: 正在审核 {len(items)} 条素材 (Stage 1)...")
         # Stage 1: Snippet Audit (fast, title + summary only)
         # After Stage 1, decide if sufficient → either continue research or go to Stage 2
         kept_items, discarded_items, audit_analysis = await self._audit_stage1_snippet(
             state, items
         )
         if not audit_analysis or not audit_analysis.get("is_sufficient"):
-
+            log_step(
+                state,
+                f"[curation] 完成: Stage1 完成 kept={len(kept_items)} discarded={len(discarded_items)}，继续研究",
+            )
             return {
-                **log_step(
-                    state,
-                    f"🔍 audit:stage1 complete kept={len(kept_items)} "
-                    f"discarded={len(discarded_items)} → 继续研究",
-                ),
                 "research_items": kept_items,
                 "discarded_items": list(state.get("discarded_items", []))
                 + discarded_items,
@@ -125,12 +129,14 @@ class MaterialCurationNode:
                 ],
             }
 
+        log_step(state, f"📌 curation: Stage 1 完成，正在获取全文并执行 Stage 2 深度审核 ({len(kept_items)} 条)...")
         web_contents, feed_contents = await fetch_contents(kept_items)
         for item in kept_items:
             if item.get("source") == "web":
                 item["content"] = web_contents.get(item.get("url", ""), "")
             elif item.get("source") == "feed":
                 item["content"] = feed_contents.get(item.get("id", ""), "")
+        log_step(state, f"📌 curation: 已获取 {len(kept_items)} 条素材的全文")
 
         # Stage 2: Full Content Audit (deep, with full content)
         # Only executed when materials are confirmed sufficient
@@ -138,8 +144,9 @@ class MaterialCurationNode:
         scored_items, discarded, metadata = await self._audit_stage2_full(
             state, kept_items
         )
+        log_step(state, f"📌 curation: Stage 2 完成，正在评分 {len(scored_items)} 条素材")
+        log_step(state, "[curation] 完成: 审计完成，进入 plan_review")
         return {
-            **log_step(state, "✅ curation: audit completed"),
             "research_items": scored_items,
             "discarded_items": list(state.get("discarded_items", [])) + discarded,
             "status": "plan_review",

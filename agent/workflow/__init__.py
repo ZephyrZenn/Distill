@@ -70,19 +70,33 @@ class SummarizeAgenticWorkflow:
             raise ValueError(f"Task {task_id} already exists")
         state = self._build_state(groups, articles, focus, on_step)
         self._states[task_id] = state
+        n_articles = len(state["raw_articles"])
+        n_groups = len(groups)
+        logger.info(
+            "[workflow] task_id=%s start articles=%d groups=%d focus=%s",
+            task_id, n_articles, n_groups, focus or "(empty)",
+        )
         try:
             state["status"] = "RUNNING"
-            log_step(state, f"🚀 Agent启动，获取到 {len(state['raw_articles'])} 篇文章")
+            log_step(state, f"🚀 Agent启动，获取到 {n_articles} 篇文章")
             log_step(state, "📋 开始规划阶段...")
             plan = await self.planner.plan(state)
-            logger.info("Plan: %s", plan)
+            n_focal = len(plan.get("focal_points", []))
+            logger.info(
+                "[workflow] task_id=%s plan_done focal_points=%d plan_keys=%s",
+                task_id, n_focal, list(plan.keys()) if isinstance(plan, dict) else type(plan).__name__,
+            )
             log_step(state, "⚡ 开始执行阶段...")
             results = await self.executor.execute(state)
-            logger.info("Results: %s", results)
-            # 提取结果字符串和成功状态
             result_strings = [result for result, _ in results]
             success_statuses = [success for _, success in results]
-            log_step(state, f"✅ Agent执行完成，共生成 {sum(success_statuses)} 篇")
+            n_ok = sum(success_statuses)
+            n_fail = len(results) - n_ok
+            logger.info(
+                "[workflow] task_id=%s execute_done total=%d success=%d fail=%d",
+                task_id, len(results), n_ok, n_fail,
+            )
+            log_step(state, f"✅ Agent执行完成，共生成 {n_ok} 篇")
             if not results:
                 return "", []
             # 使用工具保存执行记录
@@ -94,7 +108,10 @@ class SummarizeAgenticWorkflow:
             return "\n\n".join(result_strings), ext_info
         except Exception as e:
             state["status"] = "FAILED"
-            logger.exception("Task %s failed: %s", task_id, e)
+            logger.exception(
+                "[workflow] task_id=%s failed status=%s error=%s",
+                task_id, state.get("status"), e,
+            )
             raise
 
     def _build_state(

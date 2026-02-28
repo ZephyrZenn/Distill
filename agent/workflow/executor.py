@@ -29,15 +29,21 @@ class AgentExecutor:
 
     async def execute(self, state: AgentState) -> list[tuple[str, bool]]:
         plan = state["plan"]
+        focal_points = plan.get("focal_points", [])
+        n_points = len(focal_points)
+        logger.info("[workflow:executor] execute() start focal_points=%d", n_points)
         article_ids = [article["id"] for article in state["scored_articles"]]
         db_articles = await get_article_content(article_ids)
         for article in state["scored_articles"]:
             if article["id"] in db_articles:
                 article["content"] = db_articles[article["id"]]
         tasks = []
-        log_step(state, f"🔄 开始并行执行 {len(plan['focal_points'])} 个任务...")
+        log_step(state, f"🔄 开始并行执行 {n_points} 个任务...")
 
         async def run_point(point: FocalPoint) -> tuple[str, bool]:
+            topic = point.get("topic", "")
+            strategy = point.get("strategy", "")
+            logger.info("[workflow:executor] point start topic=%s strategy=%s", topic[:48], strategy)
             try:
                 result = None
                 if point["strategy"] == "SUMMARIZE":
@@ -48,11 +54,12 @@ class AgentExecutor:
                     result = await self.handle_flash_news(point, state)
                 else:
                     raise ValueError(f"未知策略: {point['strategy']}")
+                logger.info("[workflow:executor] point done topic=%s ok=1", topic[:48])
                 return (result, True)
             except Exception as e:  # noqa: BLE001
                 msg = f"❌ 话题 '{point['topic']}' 执行失败: {e}"
                 log_step(state, msg)
-                logger.exception(msg)
+                logger.exception("[workflow:executor] point failed topic=%s strategy=%s error=%s", topic[:48], strategy, e)
                 # 返回占位字符串，保证 summary_results 与 focal_points 对齐
                 error_result = f"[FAILED] {point['topic']}: {e}"
                 return (error_result, False)
@@ -61,6 +68,9 @@ class AgentExecutor:
             tasks.append(run_point(point))
 
         results = await asyncio.gather(*tasks, return_exceptions=False)
+        n_ok = sum(1 for _, success in results if success)
+        n_fail = len(results) - n_ok
+        logger.info("[workflow:executor] execute() done total=%d success=%d fail=%d", len(results), n_ok, n_fail)
         log_step(state, "✨ 所有任务执行完成")
         # 保持向后兼容：summary_results 存储字符串列表
         state["summary_results"] = [result for result, _ in results]

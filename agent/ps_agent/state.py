@@ -31,8 +31,7 @@ class PSAgentState(TypedDict):
     # Correlation id for a single run (useful when multiple agents run concurrently).
     run_id: str
 
-    # UI/CLI progress stream.
-    log_history: Annotated[list[str], add]
+    # UI/CLI progress stream (on_step only; no persistent log in state).
     on_step: NotRequired[StepCallback]
 
     # User intent
@@ -133,7 +132,6 @@ def create_initial_state(
 
     state = PSAgentState(
         run_id=uuid4().hex[:10],
-        log_history=[],
         focus=focus,
         current_date=today,
         execution_mode="NORMAL",
@@ -181,7 +179,7 @@ def create_initial_state(
 
 
 def log_step(state: PSAgentState, message: str) -> dict:
-    """Record a human-readable execution trace entry (and stream it if configured)."""
+    """Emit a progress message via on_step callback (if configured). No state update."""
     callback = state.get("on_step")
     if callback:
         try:
@@ -189,7 +187,7 @@ def log_step(state: PSAgentState, message: str) -> dict:
         except Exception:
             # Never fail the workflow because UI logging failed.
             pass
-    return {"log_history": [message]}
+    return {}
 
 
 def check_layer1_limits(state: PSAgentState, counter_name: str, counter_value: int) -> tuple[bool, str | None]:

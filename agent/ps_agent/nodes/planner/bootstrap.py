@@ -154,12 +154,15 @@ class BootstrapNode:
         focus = state["focus"].strip()
         is_replan = state.get("execution_mode") == "REPLAN_MODE"
 
+        run_id = state.get("run_id", "-")
+        log_step(
+            state,
+            "📌 bootstrap: 正在初始化研究维度与排除规则..."
+            + (" (REPLAN)" if is_replan else ""),
+        )
         logger.info(
-            "[bootstrap] run_id=%s focus=%s date=%s is_replan=%s",
-            state.get("run_id", "-"),
-            focus,
-            state["current_date"],
-            is_replan,
+            "[ps_agent] run_id=%s node=bootstrap entry focus=%s date=%s is_replan=%s",
+            run_id, focus[:64] if focus else "", state["current_date"], is_replan,
         )
 
         # TODO: replan 结构统一
@@ -170,6 +173,7 @@ class BootstrapNode:
             is_replan=is_replan,
             replan_diagnosis=replan_diagnosis,
         )
+        log_step(state, "📌 bootstrap: 已生成研究维度，正在生成排除关键词...")
 
         # 生成排除关键词
         negative_keywords = await _generate_negative_keywords(
@@ -200,11 +204,11 @@ class BootstrapNode:
                 f"[bootstrap] REPLAN_MODE detected, processing replan (replan_count={replan_count})"
             )
 
+            log_step(
+                state,
+                f"[bootstrap] 完成: REPLAN 完成，重新生成 {len(focus_dimensions)} 个意图维度",
+            )
             return {
-                **log_step(
-                    state,
-                    f"🔄 REPLAN: 重新生成了 {len(focus_dimensions)} 个意图维度",
-                ),
                 "messages": messages,
                 "focus_dimensions": focus_dimensions,
                 "negative_keywords": negative_keywords,
@@ -217,11 +221,11 @@ class BootstrapNode:
             }
 
         # 7. Normal bootstrap
+        log_step(
+            state,
+            f"[bootstrap] 完成: 已建立研究框架 focus='{focus}' dimensions={len(focus_dimensions)}",
+        )
         return {
-            **log_step(
-                state,
-                f"📋 bootstrap: focus='{focus}' dimensions={len(focus_dimensions)}",
-            ),
             "messages": messages,
             "focus_dimensions": focus_dimensions,
             "negative_keywords": negative_keywords,

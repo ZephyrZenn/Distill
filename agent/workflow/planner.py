@@ -22,31 +22,35 @@ class AgentPlanner:
 
     async def plan(self, state: AgentState) -> AgentPlanResult:
         result = None
+        n_raw = len(state.get("raw_articles", []))
+        logger.info("[workflow:planner] plan() start raw_articles=%d", n_raw)
         log_step(state, "🔍 正在评估当前素材")
         ranked_articles = await self._rank_articles(
-            state["raw_articles"], state["focus"]
+            state["raw_articles"], state["focus"], state
         )
         log_step(state, f"🔍 已筛选出 {len(ranked_articles)} 篇相关文章")
         state["scored_articles"] = ranked_articles
+        logger.info("[workflow:planner] rank_articles done kept=%d", len(ranked_articles))
         keywords = await find_keywords_with_llm(self.client, state["scored_articles"])
         log_step(state, f"🔍 提取到 {len(keywords)} 个关键词: {keywords}")
         memories = await search_memory(keywords)
         memory_topics = [m["topic"] for m in memories.values()] if memories else []
         log_step(state, f"🔍 从记忆中找到 {len(memories)} 个相关记忆: {memory_topics}")
         state["history_memories"] = memories
+        logger.info("[workflow:planner] keywords=%d memories=%d", len(keywords), len(memories))
 
         log_step(state, "🤖 正在调用LLM进行规划...")
         prompt = await self._build_prompt(state)
-        logger.info("Sending planner prompt to LLM: %s", prompt)
-        # 记录plan的耗时
+        logger.info("[workflow:planner] sending prompt to LLM len=%d", len(prompt) if isinstance(prompt, (str, list)) else 0)
         start_time = time.time()
         response = await self.client.completion(prompt)
-        end_time = time.time()
-        log_step(state, f"🤖 规划完成：耗时 {end_time - start_time} 秒")
-        logger.info("Received planner response from LLM: %s", response)
+        elapsed = time.time() - start_time
+        log_step(state, f"🤖 规划完成：耗时 {elapsed} 秒")
+        logger.info("[workflow:planner] LLM response received elapsed=%.2fs response_len=%d", elapsed, len(response) if isinstance(response, str) else 0)
         try:
             result: AgentPlanResult = extract_json(response)
-            logger.info("Parsed planner response: %s", result)
+            n_focal = len(result.get("focal_points", []))
+            logger.info("[workflow:planner] plan() done focal_points=%d discarded=%d", n_focal, len(result.get("discarded_items", [])))
             for point in result["focal_points"]:
                 point["article_ids"] = [str(aid) for aid in point["article_ids"]]
             state["plan"] = result
@@ -61,11 +65,11 @@ class AgentPlanner:
             return result
         except json.JSONDecodeError as e:
             log_step(state, "❌ 规划失败：无法解析LLM响应")
-            logger.error("Failed to parse planner response: %s", response)
+            logger.error("[workflow:planner] parse failed response_len=%d error=%s", len(response) if isinstance(response, str) else 0, e)
             raise ValueError(f"Failed to parse planner response: {response}") from e
 
     async def _rank_articles(
-        self, articles: list[RawArticle], focus: str
+        self, articles: list[RawArticle], focus: str, state: AgentState
     ) -> list[Article]:
         """使用 LLM 批量打分文章相关性，并按分数排序。
 
@@ -78,15 +82,18 @@ class AgentPlanner:
             按相关性分数排序的文章列表
         """
         if not articles or not focus:
+            logger.info("[workflow:planner] _rank_articles skip articles=%d focus_empty=%s", len(articles), not focus)
             return articles
         batch_size = self.batch_size
         scored_articles = []
+        logger.info("[workflow:planner] _rank_articles start total=%d batch_size=%d", len(articles), batch_size)
 
         # 分批处理
         for i in range(0, len(articles), batch_size):
             batch = articles[i : i + batch_size]
             logger.info(
-                "📊 正在为第 %d 批文章打分 (%d 篇)...", i // batch_size + 1, len(batch)
+                "[workflow:planner] batch score batch_index=%d batch_len=%d",
+                i // batch_size + 1, len(batch),
             )
 
             # 构建简化的文章信息
@@ -165,17 +172,17 @@ class AgentPlanner:
                         )
                     )
 
+                batch_scores = [a["score"] for a in scored_articles[-len(batch) :]]
                 logger.info(
-                    "Batch %d scored: avg=%.1f, min=%d, max=%d",
+                    "[workflow:planner] batch done batch_index=%d avg=%.1f min=%d max=%d",
                     i // batch_size + 1,
-                    sum(a["score"] for a in scored_articles[-len(batch) :])
-                    / len(batch),
-                    min(a["score"] for a in scored_articles[-len(batch) :]),
-                    max(a["score"] for a in scored_articles[-len(batch) :]),
+                    sum(batch_scores) / len(batch) if batch else 0,
+                    min(batch_scores) if batch_scores else 0,
+                    max(batch_scores) if batch_scores else 0,
                 )
 
             except Exception as e:
-                logger.error("Failed to score batch %d: %s", i // batch_size + 1, e)
+                logger.error("[workflow:planner] batch score failed batch_index=%d error=%s", i // batch_size + 1, e)
                 # 如果打分失败，给这批文章默认分数 0
                 for article in batch:
                     scored_articles.append(
@@ -189,6 +196,8 @@ class AgentPlanner:
                             reasoning="",
                         )
                     )
+            progress = len(scored_articles) / len(articles)
+            log_step(state, f"审计进度: {progress:.2%}")
         # 按分数降序排序
         scored_articles.sort(key=lambda a: a["score"], reverse=True)
         if len(scored_articles) > self.max_article_count:
@@ -197,10 +206,8 @@ class AgentPlanner:
         scored_articles = [a for a in scored_articles if a["score"] >= 3]
 
         logger.info(
-            "Ranked %d articles: kept %d (score >= 3), discarded %d (score < 3)",
-            len(articles),
-            len(scored_articles),
-            len(articles) - len(scored_articles),
+            "[workflow:planner] _rank_articles done total=%d kept=%d discarded=%d",
+            len(articles), len(scored_articles), len(articles) - len(scored_articles),
         )
 
         return scored_articles

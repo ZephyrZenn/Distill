@@ -124,23 +124,29 @@ class PlanSolveAgent:
         report = self._process_result(final_state)
         return report, final_state
 
-    def get_log_history(self) -> list[str]:
-        """Return the last run's execution trace (workflow-style)."""
-        if not self._last_state:
-            return []
-        return list(self._last_state.get("log_history", []) or [])
-
     async def _invoke(self, focus: str) -> PSAgentState:
         initial_state = create_initial_state(
             focus,
             on_step=self._on_step,
             max_context_items=self.max_context_items,
         )
+        run_id = initial_state.get("run_id", "-")
+        logger.info("[ps_agent] run_id=%s invoke start focus=%s", run_id, focus[:80] if focus else "")
 
         try:
-            return await self.graph.ainvoke(initial_state)
+            final_state = await self.graph.ainvoke(initial_state)
+            logger.info(
+                "[ps_agent] run_id=%s invoke done status=%s iterations=%d tool_calls=%d curations=%d research_items=%d",
+                run_id,
+                final_state.get("status", ""),
+                final_state.get("iteration", 0),
+                final_state.get("tool_call_count", 0),
+                final_state.get("curation_count", 0),
+                len(final_state.get("research_items", [])),
+            )
+            return final_state
         except Exception as exc:  # pragma: no cover - defensive
-            logger.exception("Agent execution failed")
+            logger.exception("[ps_agent] run_id=%s invoke failed error=%s", run_id, exc)
             self._log_step(f"❌ Agent 执行失败: {exc}")
             raise RuntimeError(f"Agent 执行失败: {exc}") from exc
 

@@ -88,10 +88,8 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
         return {}
 
     run_id = state.get("run_id", "-")
-    log_history: list[str] = []
 
     def _emit(message: str) -> None:
-        log_history.append(message)
         callback = state.get("on_step")
         if callback:
             try:
@@ -210,7 +208,6 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
         _emit(f"🔧 tool: after {call.name} research_items={len(research_items)}")
 
     return {
-        "log_history": log_history,
         "messages": messages,
         "research_items": research_items,
         "query_history": query_history,

@@ -66,6 +66,13 @@ class StructureNode:
             ).set_priority(0),
         ]
 
+        run_id = state.get("run_id", "-")
+        plan = state.get("plan")
+        n_chapters = len(plan.get("chapters", [])) if plan else 0
+        logger.info(
+            "[ps_agent] run_id=%s node=structure entry plan_chapters=%d",
+            run_id, n_chapters,
+        )
         msg_start = "📐 structuring: 正在生成写作策略..."
         log_step(state, msg_start)  # 执行前：立即触发 callback，让 UI 先显示
 
@@ -79,11 +86,9 @@ class StructureNode:
                 "[structure] Finish plan. Overview: %s", plan.get("daily_overview", "")
             )
 
-            msg_done = f"📐 structuring: {summary}"
-            log_step(state, msg_done)  # 执行后：触发 callback
+            log_step(state, f"[structure] 完成: {summary}")
 
             return {
-                "log_history": [msg_start, msg_done],
                 "plan": plan,
                 "status": "structuring",
                 "messages": [Message.assistant(summary)],
@@ -91,10 +96,8 @@ class StructureNode:
 
         except Exception as exc:
             logger.exception("[structure] failed")
-            msg_err = f"❌ structuring: 规划失败: {exc}"
-            log_step(state, msg_err)
+            log_step(state, f"[structure] 失败: 规划异常 {exc}")
             return {
-                "log_history": [msg_start, msg_err],
                 "status": "failed",
                 "last_error": str(exc),
             }

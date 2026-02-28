@@ -20,15 +20,19 @@ class SummaryReviewerNode:
 
     async def __call__(self, state: PSAgentState) -> dict:
         run_id = state.get("run_id", "-")
+        sections = state.get("sections", [])
+        logger.info(
+            "[ps_agent] run_id=%s node=reviewing entry sections=%d",
+            run_id, len(sections),
+        )
         if not state.get("sections"):
+            log_step(state, "[reviewing] 失败: sections 为空，无法审稿")
             return {
-                **log_step(state, "❌ reviewing: sections 为空，无法审稿"),
                 "status": "failed",
                 "last_error": "sections 为空",
                 "messages": [Message.assistant("无法审稿：没有章节内容。")],
             }
 
-        sections = state.get("sections", [])
         msg_start = "🧪 reviewing: 开始审稿"
         log_step(state, msg_start)
         for section in sections:
@@ -39,19 +43,15 @@ class SummaryReviewerNode:
             section["review_result"].get("status") == "APPROVED" for section in sections
         ):
             final_report = "\n".join([section["content"] for section in sections])
-            msg_done = "🧪 reviewing: 文章审核通过"
-            log_step(state, msg_done)
+            log_step(state, "[reviewing] 完成: 文章审核通过")
             return {
-                "log_history": [msg_start, msg_done],
                 "final_report": final_report,
                 "sections": sections,
                 "status": "completed",
                 "messages": [Message.assistant("文章审核通过")],
             }
-        msg_done = "🧪 reviewing: 部分段落审核未通过，进入修订阶段"
-        log_step(state, msg_done)
+        log_step(state, "[reviewing] 完成: 部分段落未通过，进入修订阶段")
         return {
-            "log_history": [msg_start, msg_done],
             "sections": sections,
             "status": "refining",
             "messages": [Message.assistant("部分段落审核未通过")],

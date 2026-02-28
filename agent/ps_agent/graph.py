@@ -155,7 +155,13 @@ def summary_review_router(state: PSAgentState) -> Literal["completed", "refining
 
 def finalize_node(state: PSAgentState) -> dict:
     """Finalize the workflow into a stable completed/failed state."""
+    run_id = state.get("run_id", "-")
     status = state.get("status", "")
+    log_step(state, "📌 finalize: 正在完成并生成最终报告...")
+    logger.info(
+        "[ps_agent] run_id=%s node=finalize entry status=%s",
+        run_id, status,
+    )
     final_report = state.get("final_report")
 
     if status == "completed":
@@ -176,8 +182,8 @@ def finalize_node(state: PSAgentState) -> dict:
                         len(final_report),
                     )
 
+    log_step(state, f"[finalize] 完成: status={status or 'N/A'}")
     return {
-        **log_step(state, f"🏁 finalize: completed status={status or 'N/A'}"),
         "status": "completed",
         "final_report": final_report,
         "messages": [Message.assistant(message)],

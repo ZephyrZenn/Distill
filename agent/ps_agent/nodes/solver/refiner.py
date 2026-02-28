@@ -14,16 +14,18 @@ class RefinerNode:
         self.client = client
 
     async def __call__(self, state: PSAgentState) -> dict:
+        run_id = state.get("run_id", "-")
         sections = state.get("sections", [])
         failed_sections = [section for section in sections if section["review_result"].get("status") == "REJECTED"]
-        msg_start = "🧪 refining: 开始修订"
-        log_step(state, msg_start)
+        logger.info(
+            "[ps_agent] run_id=%s node=refiner entry sections=%d failed=%d",
+            run_id, len(sections), len(failed_sections),
+        )
+        log_step(state, "[refiner] 开始修订")
         for section in failed_sections:
             section["content"] = await self._refine(section)
-        msg_done = "🧪 refining: 修订完成"
-        log_step(state, msg_done)
+        log_step(state, "[refiner] 完成: 修订完成")
         return {
-            "log_history": [msg_start, msg_done],
             "sections": sections,
             "status": "writing",
             "refine_count": state.get("refine_count", 0) + 1,

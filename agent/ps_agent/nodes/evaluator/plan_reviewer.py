@@ -36,15 +36,16 @@ class PlanReviewerNode:
 
     async def __call__(self, state: PSAgentState) -> dict:
         run_id = state.get("run_id", "-")
-
-        # Curation says ready, perform global LLM review
         research_items = state.get("research_items", [])
         iteration = state.get("iteration", 0)
 
+        log_step(
+            state,
+            f"📌 plan_review: 正在全局评审 ({len(research_items)} 条素材, iter={iteration})...",
+        )
         logger.info(
-            f"[plan_reviewer] run_id={run_id} ready_for_review=True, "
-            f"performing global LLM review on {len(research_items)} items "
-            f"(iteration={iteration})"
+            "[ps_agent] run_id=%s node=plan_review entry research_items=%d iteration=%d",
+            run_id, len(research_items), iteration,
         )
 
         # Build LLM prompt
@@ -65,9 +66,8 @@ class PlanReviewerNode:
             high_quality_ratio = review_result.get("high_quality_ratio", 0.0)
 
             logger.info(
-                f"[plan_reviewer] run_id={run_id} LLM review: "
-                f"status={status}, coverage={coverage_score:.2f}, "
-                f"quality_ratio={high_quality_ratio:.2f}"
+                "[ps_agent] run_id=%s node=plan_review LLM status=%s coverage=%.2f quality_ratio=%.2f",
+                run_id, status, coverage_score, high_quality_ratio,
             )
 
             # Route based on LLM recommendation
@@ -80,9 +80,7 @@ class PlanReviewerNode:
                 return self._route_to_patch(state, review_result)
 
         except Exception as exc:
-            logger.exception(
-                f"[plan_reviewer] run_id={run_id} LLM review failed: {exc}"
-            )
+            logger.exception("[ps_agent] run_id=%s node=plan_review LLM failed error=%s", run_id, exc)
             raise exc
 
     def _build_review_prompt(
@@ -207,8 +205,8 @@ class PlanReviewerNode:
             f"\n进入结构规划阶段。已筛选 {len(key_research_items)} 条高质量素材。\n"
         )
 
+        log_step(state, f"[plan_review] 完成: {reason}，进入结构规划")
         return {
-            **log_step(state, f"✅ plan_review: {reason}，进入结构规划"),
             "status": "structuring",
             "research_items": key_research_items,
             "audit_memo": audit_memo,
@@ -259,8 +257,8 @@ class PlanReviewerNode:
 
         message += "继续研究。"
 
+        log_step(state, f"[plan_review] 完成: {reason}，执行补丁搜索")
         return {
-            **log_step(state, f"⚠️ plan_review: {reason}，执行补丁搜索"),
             "status": "researching",
             "ready_for_review": False,
             "ready_for_write": False,
@@ -308,8 +306,8 @@ class PlanReviewerNode:
 
         message_parts.append("将重新生成研究维度并清空已有素材。\n")
 
+        log_step(state, f"[plan_review] 完成: {reason}，触发重新规划")
         return {
-            **log_step(state, f"🔄 plan_review: {reason}，触发重新规划"),
             "status": "researching",
             "execution_mode": "REPLAN_MODE",
             "ready_for_review": False,
