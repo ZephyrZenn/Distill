@@ -102,10 +102,11 @@ class SummarizeAgenticWorkflow:
             # 使用工具保存执行记录
             await save_current_execution_records(state)
 
-            # 返回简报内容和外部搜索结果
+            # 返回简报内容、外部搜索结果和日报概览
             ext_info = state.get("ext_info", [])
+            overview = plan.get("daily_overview", "") if plan else ""
             state["status"] = "COMPLETED"
-            return "\n\n".join(result_strings), ext_info
+            return "\n\n".join(result_strings), ext_info, overview
         except Exception as e:
             state["status"] = "FAILED"
             logger.exception(

@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS feed_brief
     group_ids  INTEGER[]      NOT NULL,
     content    TEXT         NOT NULL,
     summary    TEXT         NOT NULL DEFAULT '',
+    overview   TEXT         NOT NULL DEFAULT '',
     ext_info   JSONB        NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP

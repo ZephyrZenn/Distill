@@ -175,14 +175,14 @@ def get_briefs(
     Args:
         start_date: 开始日期
         end_date: 结束日期
-        include_content: 是否包含完整内容（content 和 ext_info），默认 False
+        include_content: 是否包含完整内容（content, ext_info, overview），默认 False
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
             if include_content:
                 # 包含完整内容
                 cur.execute(
-                    """SELECT id, content, created_at, group_ids, summary, ext_info
+                    """SELECT id, content, created_at, group_ids, summary, overview, ext_info
                        FROM feed_brief
                        WHERE created_at::date BETWEEN %s AND %s
                        ORDER BY id DESC""",
@@ -195,7 +195,8 @@ def get_briefs(
                         pub_date=row[2],
                         group_ids=row[3],
                         summary=row[4] or "",
-                        ext_info=row[5] if row[5] else [],
+                        overview=row[5] or "",
+                        ext_info=row[6] if row[6] else [],
                     )
                     for row in cur.fetchall()
                 ]
@@ -215,6 +216,7 @@ def get_briefs(
                         pub_date=row[1],
                         group_ids=row[2],
                         summary=row[3] or "",
+                        overview="",  # 列表页不返回概览
                         ext_info=[],  # 列表页不返回外部信息
                     )
                     for row in cur.fetchall()
@@ -226,7 +228,7 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """SELECT id, content, created_at, group_ids, ext_info
+                """SELECT id, content, created_at, group_ids, summary, overview, ext_info
                    FROM feed_brief
                    WHERE id = %s""",
                 (brief_id,),
@@ -239,7 +241,9 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
                 content=_replace_reference(brief_id, row[1]),
                 pub_date=row[2],
                 group_ids=row[3],
-                ext_info=row[4] if row[4] else [],
+                summary=row[4] or "",
+                overview=row[5] or "",
+                ext_info=row[6] if row[6] else [],
             )
 
 
@@ -263,24 +267,31 @@ async def generate_brief_for_groups_async(
 
     from agent import get_agent
 
-    brief, ext_info = await get_agent().summarize(
+    result = await get_agent().summarize(
         task_id=task_id, hour_gap=24, group_ids=group_ids, focus=focus, on_step=on_step
     )
+    if len(result) == 2:
+        brief, ext_info = result
+        overview = ""
+    else:
+        brief, ext_info, overview = result
+
     if not brief:
         logger.warning("No brief generated for groups %s", group_ids)
         return ""
-    _insert_brief(group_ids, brief, ext_info)
+    _insert_brief(group_ids, brief, ext_info, overview)
     logger.info("Brief generation completed for groups %s", group_ids)
     return brief
 
 
-def _insert_brief(group_ids: list[int], brief: str, ext_info: list = None):
+def _insert_brief(group_ids: list[int], brief: str, ext_info: list = None, overview: str = ""):
     """插入简报到数据库
 
     Args:
         group_ids: 分组ID列表
         brief: 简报内容
         ext_info: 外部搜索结果列表（SearchResult 对象或字典）
+        overview: 日报概览（来自 plan 的 daily_overview）
     """
     # 提取二级标题作为概要
     summary = _extract_h2_headings(brief)
@@ -316,7 +327,7 @@ def _insert_brief(group_ids: list[int], brief: str, ext_info: list = None):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """INSERT INTO feed_brief (group_ids, content, summary, ext_info) 
-                   VALUES (%s::integer[], %s, %s, %s::jsonb)""",
-                (group_ids, brief, summary, json.dumps(ext_info_list)),
+                """INSERT INTO feed_brief (group_ids, content, summary, overview, ext_info)
+                   VALUES (%s::integer[], %s, %s, %s, %s::jsonb)""",
+                (group_ids, brief, summary, overview, json.dumps(ext_info_list)),
             )

@@ -356,12 +356,23 @@ const SummaryPage = () => {
                 </div>
               </div>
             </div>
+
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
               {/* 主内容区域 */}
               <div 
                 className="flex-1 overflow-y-auto px-4 md:px-12 py-6 md:py-10 text-sm md:text-md leading-[2.0] theme-text font-medium custom-scrollbar prose prose-slate max-w-none"
                 id="brief-content"
               >
+                {/* 日报概览（放在正文容器内顶部） */}
+                <div className="mb-6 py-3 px-4 md:px-5 rounded-xl border theme-overview-border theme-overview-bg">
+                  <div className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-1">日报概览</div>
+                  {selectedBrief.overview ? (
+                    <p className="text-sm theme-text leading-relaxed">{selectedBrief.overview}</p>
+                  ) : (
+                    <p className="text-sm theme-text-muted leading-relaxed italic">暂无日报概览</p>
+                  )}
+                </div>
+
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeRaw]}

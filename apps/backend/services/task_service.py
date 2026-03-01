@@ -104,12 +104,16 @@ async def execute_brief_generation_task(task_id: str):
             task.add_log("🔧 使用 PlanSolveAgent 模式执行...")
 
             agent = PlanSolveAgent(lazy_init=True)
-            brief = await agent.run(focus=task.focus, on_step=on_step)
+            brief, final_state = await agent.run_with_state(
+                focus=task.focus, on_step=on_step
+            )
+            plan = final_state.get("plan") or {}
+            overview = plan.get("daily_overview", "") or ""
 
-            # 保存简报到数据库
+            # 保存简报到数据库（含 overview）
             from apps.backend.services.brief_service import _insert_brief
 
-            _insert_brief(task.group_ids or [], brief, ext_info=None)
+            _insert_brief(task.group_ids or [], brief, ext_info=None, overview=overview)
         else:
             # 使用原有的 workflow 方式
             from apps.backend.services.brief_service import generate_brief_for_groups_async

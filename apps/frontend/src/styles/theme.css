@@ -35,6 +35,9 @@
   --theme-status-warning-bg: #FFFBEB;
   --theme-status-warning-border: #FDE68A;
   --theme-status-warning-text: #92400E;
+  /* 日报概览区块（与主内容区分，贴近灰白主色） */
+  --theme-overview-bg: #F3F4F6;
+  --theme-overview-border: #E5E7EB;
 }
 
 /* 2. 黑金曜石 Obsidian Gold —— 极客深邃 */
@@ -69,6 +72,9 @@
   --theme-status-warning-bg: rgba(251, 191, 36, 0.12);
   --theme-status-warning-border: rgba(251, 191, 36, 0.4);
   --theme-status-warning-text: #FCD34D;
+  /* 日报概览区块（与主内容区分，贴近金 accent） */
+  --theme-overview-bg: rgba(255, 213, 79, 0.1);
+  --theme-overview-border: rgba(255, 213, 79, 0.25);
 }
 
 /* 主题相关工具类（供 Layout / 全局使用） */
@@ -104,3 +110,7 @@
   border-color: var(--theme-status-warning-border);
   color: var(--theme-status-warning-text);
 }
+
+/* 日报概览区块（简报详情页：圆角 + 主题配色） */
+.theme-overview-bg { background-color: var(--theme-overview-bg); }
+.theme-overview-border { border-color: var(--theme-overview-border); }

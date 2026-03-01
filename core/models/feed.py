@@ -83,12 +83,13 @@ class FeedGroup:
 
 class FeedBrief:
     def __init__(
-        self, 
-        id: int, 
-        content: str, 
-        pub_date: datetime, 
+        self,
+        id: int,
+        content: str,
+        pub_date: datetime,
         group_ids: list[int] = None,
         summary: str = "",
+        overview: str = "",
         ext_info: list[dict] = None
     ):
         self.id = id
@@ -96,11 +97,12 @@ class FeedBrief:
         self.pub_date = pub_date
         self.group_ids = group_ids if group_ids is not None else []
         self.summary = summary
+        self.overview = overview
         self.ext_info = ext_info if ext_info is not None else []
 
     def to_view_model(self, groups_dict: dict[int, FeedGroup], include_content: bool = True) -> dict:
         """转换为视图模型
-        
+
         Args:
             groups_dict: 分组ID到分组对象的映射
             include_content: 是否包含完整内容（content 和 ext_info），默认 True
@@ -111,6 +113,7 @@ class FeedBrief:
             "pub_date": self.pub_date,
             "groups": groups,
             "summary": self.summary,
+            "overview": self.overview,
         }
         if include_content:
             result["content"] = self.content
