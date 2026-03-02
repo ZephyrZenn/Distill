@@ -1,11 +1,11 @@
 """Task management service for async agent execution."""
 
-import uuid
-import logging
 import asyncio
+import logging
+import uuid
 from datetime import datetime, timedelta
-from typing import Dict, Optional, List
 from enum import Enum
+from typing import Dict, List, Optional
 
 from core.llm_client import APIKeyNotConfiguredError
 
@@ -116,10 +116,15 @@ async def execute_brief_generation_task(task_id: str):
             _insert_brief(task.group_ids or [], brief, ext_info=None, overview=overview)
         else:
             # 使用原有的 workflow 方式
-            from apps.backend.services.brief_service import generate_brief_for_groups_async
+            from apps.backend.services.brief_service import (
+                generate_brief_for_groups_async,
+            )
 
             brief = await generate_brief_for_groups_async(
-                task_id=task_id, group_ids=task.group_ids, focus=task.focus, on_step=on_step
+                task_id=task_id,
+                group_ids=task.group_ids,
+                focus=task.focus,
+                on_step=on_step,
             )
 
         # 再次检查任务是否存在（可能在执行过程中被清理）

@@ -1,25 +1,25 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronRight, X, FileText, List, Copy, Check } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import { api } from '@/api/client';
-import { queryKeys } from '@/api/queryKeys';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { formatDate } from '@/utils/date';
-import { Layout } from '@/components/Layout';
-import { DateFilter } from '@/components/DateFilter';
-import { useToast } from '@/context/ToastContext';
-import type { FeedBrief } from '@/types/api';
+import { api } from "@/api/client";
+import { queryKeys } from "@/api/queryKeys";
+import { DateFilter } from "@/components/DateFilter";
+import { Layout } from "@/components/Layout";
+import { useToast } from "@/context/ToastContext";
+import { useApiQuery } from "@/hooks/useApiQuery";
+import type { FeedBrief } from "@/types/api";
+import { formatDate } from "@/utils/date";
+import { Check, ChevronRight, Copy, FileText, List, X } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { useNavigate, useParams } from "react-router-dom";
+import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 
 // 简单 slug 生成，供标题锚点使用
 const slugify = (text: string) =>
   text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\u4e00-\u9fa5]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^\w\u4e00-\u9fa5]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 // 提取大纲（h1-h3）
 interface Heading {
@@ -30,7 +30,7 @@ interface Heading {
 
 const extractHeadings = (content: string): Heading[] => {
   const headings: Heading[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
   lines.forEach((line) => {
     // 更宽松的匹配：允许标题前有空格，标题后可以有空格
     const trimmedLine = line.trim();
@@ -58,24 +58,26 @@ const extractKeyPoints = (content: string, maxItems = 4): string[] => {
 
   // 若无二级标题，退回原有逻辑
   const cleaned = content
-    .replace(/^#+\s+.+$/gm, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+    .replace(/^#+\s+.+$/gm, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\[(.+?)\]\(.+?\)/g, "$1")
     .trim();
 
   const points: string[] = [];
-  const paragraphs = cleaned.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
+  const paragraphs = cleaned
+    .split(/\n\s*\n/)
+    .filter((p) => p.trim().length > 0);
 
   if (paragraphs.length >= 2) {
     for (const para of paragraphs) {
       const firstSentence = para
         .split(/[。.！!？?]/)[0]
-        .replace(/\s+/g, ' ')
+        .replace(/\s+/g, " ")
         .trim();
       if (firstSentence.length >= 20 && firstSentence.length <= 180) {
         points.push(firstSentence);
       } else if (firstSentence.length > 180) {
-        points.push(firstSentence.slice(0, 177) + '...');
+        points.push(firstSentence.slice(0, 177) + "...");
       }
       if (points.length >= maxItems) break;
     }
@@ -83,7 +85,7 @@ const extractKeyPoints = (content: string, maxItems = 4): string[] => {
 
   if (points.length < maxItems) {
     const sentences = cleaned
-      .replace(/\n/g, ' ')
+      .replace(/\n/g, " ")
       .split(/[。.！!？?]/)
       .map((s) => s.trim())
       .filter((s) => s.length >= 20 && s.length <= 180);
@@ -91,12 +93,12 @@ const extractKeyPoints = (content: string, maxItems = 4): string[] => {
     points.push(...sentences.slice(0, needed));
   }
 
-  return points.length > 0 ? points : ['暂无内容预览'];
+  return points.length > 0 ? points : ["暂无内容预览"];
 };
 
 const getTodayString = () => {
   const today = new Date();
-  return today.toISOString().split('T')[0];
+  return today.toISOString().split("T")[0];
 };
 
 const SummaryPage = () => {
@@ -108,7 +110,7 @@ const SummaryPage = () => {
   const [copied, setCopied] = useState(false);
   // 移动端默认隐藏大纲，桌面端默认显示
   const [showOutline, setShowOutline] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       return window.innerWidth >= 768; // md breakpoint
     }
     return true;
@@ -141,53 +143,65 @@ const SummaryPage = () => {
       const handleFootnotClick = (e: Event) => {
         const target = e.target as HTMLElement;
         // 检查是否是脚注链接（在 sup 标签内的 a 标签，或者有 data-footnote-ref 属性）
-        const link = target.closest('sup a, [data-footnote-ref]') as HTMLAnchorElement;
+        const link = target.closest(
+          "sup a, [data-footnote-ref]",
+        ) as HTMLAnchorElement;
         if (link) {
-          const href = link.getAttribute('href') || link.href;
+          const href = link.getAttribute("href") || link.href;
           // remark-gfm 会将脚注链接转换为 #user-content-fn-{index} 格式
-          if (href && (href.startsWith('#user-content-fn-') || href.startsWith('#ref-') || href.startsWith('#fn'))) {
+          if (
+            href &&
+            (href.startsWith("#user-content-fn-") ||
+              href.startsWith("#ref-") ||
+              href.startsWith("#fn"))
+          ) {
             e.preventDefault();
             e.stopPropagation();
             let targetId = href.substring(1);
             // 如果是 user-content-fn-{index} 格式，直接使用
             // 如果是其他格式，尝试查找对应的参考资料锚点
             let targetElement = document.getElementById(targetId);
-            if (!targetElement && targetId.startsWith('user-content-fn-')) {
+            if (!targetElement && targetId.startsWith("user-content-fn-")) {
               // 已经是对应格式，直接查找
               targetElement = document.getElementById(targetId);
-            } else if (targetId.startsWith('ref-')) {
+            } else if (targetId.startsWith("ref-")) {
               // 如果是 ref- 格式，转换为 user-content-fn- 格式
-              const index = targetId.replace('ref-', '');
+              const index = targetId.replace("ref-", "");
               targetId = `user-content-fn-${index}`;
               targetElement = document.getElementById(targetId);
-            } else if (targetId.startsWith('fn')) {
+            } else if (targetId.startsWith("fn")) {
               // 如果是 fn 格式，转换为 user-content-fn- 格式
-              const index = targetId.replace('fn', '');
+              const index = targetId.replace("fn", "");
               targetId = `user-content-fn-${index}`;
               targetElement = document.getElementById(targetId);
             }
-            
+
             if (targetElement) {
-              targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              targetElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
               // 高亮目标元素
               const originalBg = targetElement.style.backgroundColor;
-              targetElement.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+              targetElement.style.backgroundColor = "rgba(99, 102, 241, 0.1)";
               setTimeout(() => {
                 targetElement.style.backgroundColor = originalBg;
               }, 2000);
             } else {
-              console.warn('找不到目标元素:', targetId, '原始链接:', href);
+              console.warn("找不到目标元素:", targetId, "原始链接:", href);
             }
           }
         }
       };
 
       // 使用事件委托，监听整个内容区域的点击
-      const contentArea = document.querySelector('#brief-content .prose') || document.querySelector('#brief-content');
+      const contentArea =
+        document.querySelector("#brief-content .prose") ||
+        document.querySelector("#brief-content");
       if (contentArea) {
-        contentArea.addEventListener('click', handleFootnotClick);
+        contentArea.addEventListener("click", handleFootnotClick);
         cleanup = () => {
-          contentArea.removeEventListener('click', handleFootnotClick);
+          contentArea.removeEventListener("click", handleFootnotClick);
         };
       }
     }, 100);
@@ -201,7 +215,7 @@ const SummaryPage = () => {
   // 使用新的getBriefs API，默认获取当日
   const { data: briefs, isLoading } = useApiQuery<FeedBrief[]>(
     queryKeys.briefs(startDate, endDate),
-    () => api.getBriefs(startDate, endDate)
+    () => api.getBriefs(startDate, endDate),
   );
 
   // 从路由参数加载简报详情
@@ -210,33 +224,35 @@ const SummaryPage = () => {
       const briefId = parseInt(briefIdParam, 10);
       if (!isNaN(briefId)) {
         setIsLoadingDetail(true);
-        api.getBriefDetail(briefId)
+        api
+          .getBriefDetail(briefId)
           .then((brief) => {
             setSelectedBrief(brief);
             setIsLoadingDetail(false);
           })
           .catch((error: any) => {
-            console.error('Failed to load brief detail:', error);
+            console.error("Failed to load brief detail:", error);
             setIsLoadingDetail(false);
-            
+
             // 提取错误信息
-            const errorMessage = error?.response?.data?.detail || 
-                                error?.response?.data?.message || 
-                                error?.message || 
-                                '加载简报详情失败';
-            
+            const errorMessage =
+              error?.response?.data?.detail ||
+              error?.response?.data?.message ||
+              error?.message ||
+              "加载简报详情失败";
+
             // 显示错误提示
-            showToast(errorMessage, { type: 'error' });
-            
+            showToast(errorMessage, { type: "error" });
+
             // 延迟导航，让用户看到错误提示
             setTimeout(() => {
-              navigate('/', { replace: true });
+              navigate("/", { replace: true });
             }, 1500);
           });
       } else {
         // 无效的 ID
-        showToast('无效的简报ID', { type: 'error' });
-        navigate('/', { replace: true });
+        showToast("无效的简报ID", { type: "error" });
+        navigate("/", { replace: true });
       }
     } else {
       // 没有路由参数时，清空选中的简报（如果是从详情页返回）
@@ -252,38 +268,39 @@ const SummaryPage = () => {
         navigate(`/brief/${brief.id}`);
         return;
       }
-      
+
       // 否则先加载完整内容，再导航
       const fullBrief = await api.getBriefDetail(brief.id);
       setSelectedBrief(fullBrief);
       navigate(`/brief/${brief.id}`);
     } catch (error: any) {
-      console.error('Failed to load brief detail:', error);
-      const errorMessage = error?.response?.data?.detail || 
-                          error?.response?.data?.message || 
-                          error?.message || 
-                          '加载简报详情失败';
-      showToast(errorMessage, { type: 'error' });
+      console.error("Failed to load brief detail:", error);
+      const errorMessage =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "加载简报详情失败";
+      showToast(errorMessage, { type: "error" });
     }
   };
 
   // 处理返回按钮点击
   const handleBackClick = () => {
-    navigate('/');
+    navigate("/");
   };
 
   // 处理复制内容
   const handleCopyContent = async () => {
     if (!selectedBrief?.content) return;
-    
+
     try {
       await navigator.clipboard.writeText(selectedBrief.content);
       setCopied(true);
-      showToast('内容已复制到剪贴板', { type: 'success' });
+      showToast("内容已复制到剪贴板", { type: "success" });
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy content:', error);
-      showToast('复制失败，请重试', { type: 'error' });
+      console.error("Failed to copy content:", error);
+      showToast("复制失败，请重试", { type: "error" });
     }
   };
 
@@ -303,13 +320,16 @@ const SummaryPage = () => {
 
   // Detail view
   if (selectedBrief) {
-    const headings = extractHeadings(selectedBrief.content || '');
-    
+    const headings = extractHeadings(selectedBrief.content || "");
+
     // 调试：检查标题提取
     if (headings.length === 0 && selectedBrief.content) {
-      console.log('未提取到标题，内容预览:', selectedBrief.content.substring(0, 200));
+      console.log(
+        "未提取到标题，内容预览:",
+        selectedBrief.content.substring(0, 200),
+      );
     }
-    
+
     return (
       <Layout showBackButton onBackClick={handleBackClick}>
         <div className="h-full p-2 md:p-4 flex items-center justify-center theme-bg">
@@ -359,17 +379,23 @@ const SummaryPage = () => {
 
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
               {/* 主内容区域 */}
-              <div 
+              <div
                 className="flex-1 overflow-y-auto px-4 md:px-12 py-6 md:py-10 text-sm md:text-md leading-[2.0] theme-text font-medium custom-scrollbar prose prose-slate max-w-none"
                 id="brief-content"
               >
                 {/* 日报概览（放在正文容器内顶部） */}
                 <div className="mb-6 py-3 px-4 md:px-5 rounded-xl border theme-overview-border theme-overview-bg">
-                  <div className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-1">日报概览</div>
+                  <div className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-1">
+                    日报概览
+                  </div>
                   {selectedBrief.overview ? (
-                    <p className="text-sm theme-text leading-relaxed">{selectedBrief.overview}</p>
+                    <p className="text-sm theme-text leading-relaxed">
+                      {selectedBrief.overview}
+                    </p>
                   ) : (
-                    <p className="text-sm theme-text-muted leading-relaxed italic">暂无日报概览</p>
+                    <p className="text-sm theme-text-muted leading-relaxed italic">
+                      暂无日报概览
+                    </p>
                   )}
                 </div>
 
@@ -378,17 +404,17 @@ const SummaryPage = () => {
                   rehypePlugins={[rehypeRaw]}
                   components={{
                     h1: ({ node, ...props }) => {
-                      const text = String(props.children ?? '');
+                      const text = String(props.children ?? "");
                       const id = `h1-${slugify(text)}`;
                       return <h1 id={id} {...props} />;
                     },
                     h2: ({ node, ...props }) => {
-                      const text = String(props.children ?? '');
+                      const text = String(props.children ?? "");
                       const id = `h2-${slugify(text)}`;
                       return <h2 id={id} {...props} />;
                     },
                     h3: ({ node, ...props }) => {
-                      const text = String(props.children ?? '');
+                      const text = String(props.children ?? "");
                       const id = `h3-${slugify(text)}`;
                       return <h3 id={id} {...props} />;
                     },
@@ -399,26 +425,37 @@ const SummaryPage = () => {
                       if (Array.isArray(children) && children.length > 0) {
                         const firstChild = children[0];
                         // 检查是否是脚注链接（指向 #ref- 或 #fn）
-                        if (typeof firstChild === 'object' && firstChild?.props?.href && 
-                            (firstChild.props.href.startsWith('#ref-') || firstChild.props.href.startsWith('#fn'))) {
+                        if (
+                          typeof firstChild === "object" &&
+                          firstChild?.props?.href &&
+                          (firstChild.props.href.startsWith("#ref-") ||
+                            firstChild.props.href.startsWith("#fn"))
+                        ) {
                           // 这是脚注引用，渲染为角标样式，并处理点击事件
                           return (
                             <sup className="theme-accent-text font-semibold text-xs ml-0.5">
                               {React.cloneElement(firstChild, {
-                                onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                                onClick: (
+                                  e: React.MouseEvent<HTMLAnchorElement>,
+                                ) => {
                                   e.preventDefault();
                                   const href = firstChild.props.href;
                                   const targetId = href.substring(1); // 去掉 #
-                                  const targetElement = document.getElementById(targetId);
+                                  const targetElement =
+                                    document.getElementById(targetId);
                                   if (targetElement) {
-                                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    targetElement.scrollIntoView({
+                                      behavior: "smooth",
+                                      block: "center",
+                                    });
                                     // 高亮目标元素
-                                    targetElement.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                                    targetElement.style.backgroundColor =
+                                      "rgba(99, 102, 241, 0.1)";
                                     setTimeout(() => {
-                                      targetElement.style.backgroundColor = '';
+                                      targetElement.style.backgroundColor = "";
                                     }, 2000);
                                   }
-                                }
+                                },
                               })}
                             </sup>
                           );
@@ -430,20 +467,27 @@ const SummaryPage = () => {
                     a: ({ node, ...props }: any) => {
                       const href = props.href;
                       // 如果是参考资料锚点链接，添加平滑滚动
-                      if (href && href.startsWith('#ref-')) {
+                      if (href && href.startsWith("#ref-")) {
                         return (
                           <a
                             {...props}
-                            onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                            onClick={(
+                              e: React.MouseEvent<HTMLAnchorElement>,
+                            ) => {
                               e.preventDefault();
                               const targetId = href.substring(1);
-                              const targetElement = document.getElementById(targetId);
+                              const targetElement =
+                                document.getElementById(targetId);
                               if (targetElement) {
-                                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                targetElement.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "center",
+                                });
                                 // 高亮目标元素
-                                targetElement.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                                targetElement.style.backgroundColor =
+                                  "rgba(99, 102, 241, 0.1)";
                                 setTimeout(() => {
-                                  targetElement.style.backgroundColor = '';
+                                  targetElement.style.backgroundColor = "";
                                 }, 2000);
                               }
                             }}
@@ -454,7 +498,7 @@ const SummaryPage = () => {
                     },
                   }}
                 >
-                  {selectedBrief.content || ''}
+                  {selectedBrief.content || ""}
                 </ReactMarkdown>
               </div>
 
@@ -480,18 +524,23 @@ const SummaryPage = () => {
                           key={index}
                           href={`#${heading.id}`}
                           className={`block py-1.5 px-3 rounded-md text-xs transition-colors theme-surface-hover ${
-                              heading.level === 1
-                              ? 'font-bold theme-text'
+                            heading.level === 1
+                              ? "font-bold theme-text"
                               : heading.level === 2
-                              ? 'font-semibold theme-text ml-2'
-                              : 'theme-text-muted ml-4'
+                                ? "font-semibold theme-text ml-2"
+                                : "theme-text-muted ml-4"
                           }`}
-                          style={{ marginLeft: `${(heading.level - 1) * 0.75}rem` }}
+                          style={{
+                            marginLeft: `${(heading.level - 1) * 0.75}rem`,
+                          }}
                           onClick={(e) => {
                             e.preventDefault();
                             const el = document.getElementById(heading.id);
                             if (el) {
-                              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              el.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
                             }
                           }}
                         >
@@ -503,7 +552,7 @@ const SummaryPage = () => {
                 </div>
               )}
             </div>
-            
+
             {/* 显示按钮 - 移到外层，避免被 overflow-hidden 裁剪 */}
             {headings.length > 0 && !showOutline && (
               <button
@@ -513,7 +562,9 @@ const SummaryPage = () => {
                 aria-label="显示大纲"
               >
                 <List size={18} className="md:w-5 md:h-5" />
-                <span className="text-[10px] font-medium hidden md:inline">显示</span>
+                <span className="text-[10px] font-medium hidden md:inline">
+                  显示
+                </span>
               </button>
             )}
           </div>
@@ -535,13 +586,13 @@ const SummaryPage = () => {
 
   // Empty state
   if (!displayBriefs || displayBriefs.length === 0) {
-    const emptyMessage = startDate || endDate 
-      ? '所选时间段内未找到摘要'
-      : '暂无今日摘要';
-    const emptyDetail = startDate || endDate
-      ? '请调整时间范围或返回查看今日摘要。'
-      : '系统尚未生成今日的 AI 摘要。您可以前往「AI 实时总结」手动生成，或等待定时任务自动执行。';
-    
+    const emptyMessage =
+      startDate || endDate ? "所选时间段内未找到摘要" : "暂无今日摘要";
+    const emptyDetail =
+      startDate || endDate
+        ? "请调整时间范围或返回查看今日摘要。"
+        : "系统尚未生成今日的 AI 摘要。您可以前往「AI 实时总结」手动生成，或等待定时任务自动执行。";
+
     return (
       <Layout>
         <div className="h-full p-4 md:p-12 custom-scrollbar overflow-y-auto">
@@ -555,16 +606,21 @@ const SummaryPage = () => {
                 onEndDateChange={setEndDate}
               />
             </div>
-            
+
             {/* Empty state */}
             <div className="flex flex-col items-center justify-center text-center pt-6 md:pt-12">
               <div className="relative mb-6 md:mb-8">
                 <div className="absolute inset-0 bg-amber-500/20 blur-[40px] rounded-full" />
                 <div className="relative p-6 md:p-8 theme-surface border theme-border rounded-[2.5rem] shadow-xl">
-                  <FileText size={40} className="md:w-12 md:h-12 theme-accent-text" />
+                  <FileText
+                    size={40}
+                    className="md:w-12 md:h-12 theme-accent-text"
+                  />
                 </div>
               </div>
-              <h2 className="text-2xl md:text-3xl font-black theme-text mb-3 px-4">{emptyMessage}</h2>
+              <h2 className="text-2xl md:text-3xl font-black theme-text mb-3 px-4">
+                {emptyMessage}
+              </h2>
               <p className="theme-text-muted max-w-md leading-relaxed px-4 text-sm md:text-base">
                 {emptyDetail}
               </p>
@@ -594,9 +650,12 @@ const SummaryPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {displayBriefs.map((brief) => {
               const keyPoints = brief.summary
-                ? brief.summary.split('\n').filter(line => line.trim()).slice(0, 4)
-                : extractKeyPoints(brief.content || '');
-              const groupTitle = brief.groups?.[0]?.title || '分组';
+                ? brief.summary
+                    .split("\n")
+                    .filter((line) => line.trim())
+                    .slice(0, 4)
+                : extractKeyPoints(brief.content || "");
+              const groupTitle = brief.groups?.[0]?.title || "分组";
 
               return (
                 <button
@@ -608,7 +667,9 @@ const SummaryPage = () => {
                   {/* 标题行：分组 + 日期 */}
                   <div className="flex justify-between items-center mb-3 text-xs font-semibold theme-text-muted">
                     <span className="truncate">{groupTitle}</span>
-                    <span className="text-[11px] shrink-0 ml-2">{formatDate(brief.pubDate)}</span>
+                    <span className="text-[11px] shrink-0 ml-2">
+                      {formatDate(brief.pubDate)}
+                    </span>
                   </div>
 
                   {/* 要点列表 */}

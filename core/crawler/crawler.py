@@ -46,11 +46,11 @@ BASE_HEADERS = {
 
 # 限流配置
 MAX_CONCURRENT_REQUESTS = 5  # 降低并发数，避免触发限流
-DELAY_BETWEEN_REQUESTS = (1.0, 3.0)  # 每个请求之间的随机延迟（秒）
-DELAY_BETWEEN_DOMAINS = (5.0, 10.0)  # 不同域名之间的延迟（秒）
+DELAY_BETWEEN_REQUESTS = (0.5, 1.5)  # 每个请求之间的随机延迟（秒）
+DELAY_BETWEEN_DOMAINS = (2.0, 5.0)  # 不同域名之间的延迟（秒）
 
 # 单个 URL 的总超时时间上限（秒），包括内部重试与退避
-PER_URL_TOTAL_TIMEOUT = 15.0
+PER_URL_TOTAL_TIMEOUT = 10.0
 
 # robots.txt 缓存
 _robots_cache: dict[str, RobotFileParser] = {}
@@ -348,9 +348,9 @@ async def fetch_all_contents(urls: list[str]) -> dict[str, str]:
                 len(domain_urls),
             )
 
-            # 同域名的 URL 并行处理（限制并发数为 2-3，避免触发限流）
+            # 同域名的 URL 并行处理（限制并发数为 4，避免触发限流）
             # 使用 asyncio.Semaphore 控制并发
-            domain_semaphore = asyncio.Semaphore(2)  # 每个域名最多 2 个并发请求
+            domain_semaphore = asyncio.Semaphore(4)  # 每个域名最多 4 个并发请求
 
             async def fetch_with_semaphore(url: str) -> tuple[str, str | None, bool]:
                 """对单个 URL 施加总超时上限，避免单个地址长时间挂起."""
