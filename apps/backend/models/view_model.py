@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from .common import CamelModel, CommonResult
+from core.config.defaults import DEFAULT_AGENT_LIMITS as _AGENT_LIMITS_DEFAULTS
 
 
 class FeedVO(CamelModel):
@@ -65,12 +66,12 @@ class ContextSettingVO(CamelModel):
 class AgentLimitsSettingVO(CamelModel):
     """Agent loop limits (advanced)."""
 
-    max_iterations: int = 10
-    max_tool_calls: int = 50
-    max_curations: int = 8
-    max_plan_reviews: int = 3
-    max_refines: int = 3
-    enable_hard_limits: bool = True
+    max_iterations: int = _AGENT_LIMITS_DEFAULTS.max_iterations
+    max_tool_calls: int = _AGENT_LIMITS_DEFAULTS.max_tool_calls
+    max_curations: int = _AGENT_LIMITS_DEFAULTS.max_curations
+    max_plan_reviews: int = _AGENT_LIMITS_DEFAULTS.max_plan_reviews
+    max_refines: int = _AGENT_LIMITS_DEFAULTS.max_refines
+    enable_hard_limits: bool = _AGENT_LIMITS_DEFAULTS.enable_hard_limits
 
 
 class EmbeddingSettingVO(CamelModel):

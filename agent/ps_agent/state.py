@@ -21,6 +21,7 @@ from uuid import uuid4
 from typing_extensions import NotRequired
 
 from core.models.llm import Message
+from core.config.defaults import DEFAULT_AGENT_LIMITS
 
 StepCallback = Callable[[str], None]
 
@@ -121,11 +122,11 @@ def create_initial_state(
     *,
     on_step: StepCallback | None = None,
     max_context_items: int = 15,
-    max_iterations: int = 10,
-    max_tool_calls: int = 50,
-    max_curations: int = 8,
-    max_plan_reviews: int = 3,
-    max_refines: int = 3,
+    max_iterations: int = DEFAULT_AGENT_LIMITS.max_iterations,
+    max_tool_calls: int = DEFAULT_AGENT_LIMITS.max_tool_calls,
+    max_curations: int = DEFAULT_AGENT_LIMITS.max_curations,
+    max_plan_reviews: int = DEFAULT_AGENT_LIMITS.max_plan_reviews,
+    max_refines: int = DEFAULT_AGENT_LIMITS.max_refines,
 ) -> PSAgentState:
     """Create a bounded initial state for the daily research agent（方案 B 简化版）。"""
     today = datetime.now().strftime("%Y-%m-%d")
@@ -215,11 +216,26 @@ def check_layer1_limits(state: PSAgentState, counter_name: str, counter_value: i
         return False, None
 
     limits = {
-        "iteration": ("max_iterations", state.get("max_iterations", 10)),
-        "tool_call_count": ("max_tool_calls", state.get("max_tool_calls", 50)),
-        "curation_count": ("max_curations", state.get("max_curations", 8)),
-        "plan_review_count": ("max_plan_reviews", state.get("max_plan_reviews", 3)),
-        "refine_count": ("max_refines", state.get("max_refines", 3)),
+        "iteration": (
+            "max_iterations",
+            state.get("max_iterations", DEFAULT_AGENT_LIMITS.max_iterations),
+        ),
+        "tool_call_count": (
+            "max_tool_calls",
+            state.get("max_tool_calls", DEFAULT_AGENT_LIMITS.max_tool_calls),
+        ),
+        "curation_count": (
+            "max_curations",
+            state.get("max_curations", DEFAULT_AGENT_LIMITS.max_curations),
+        ),
+        "plan_review_count": (
+            "max_plan_reviews",
+            state.get("max_plan_reviews", DEFAULT_AGENT_LIMITS.max_plan_reviews),
+        ),
+        "refine_count": (
+            "max_refines",
+            state.get("max_refines", DEFAULT_AGENT_LIMITS.max_refines),
+        ),
     }
 
     if counter_name not in limits:

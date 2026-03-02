@@ -7,11 +7,27 @@ from typing import Literal
 
 from langgraph.graph import END, StateGraph
 
-from agent.ps_agent.nodes.planner import set_planner_client, bootstrap_node, research_planner_node, structure_node
-from agent.ps_agent.nodes.solver import set_solver_client, tool_node, writer_node, refiner_node
-from agent.ps_agent.nodes.evaluator import set_evaluator_client, material_curation_node, plan_reviewer_node, summary_reviewer_node
+from agent.ps_agent.nodes.planner import (
+    set_planner_client,
+    bootstrap_node,
+    research_planner_node,
+    structure_node,
+)
+from agent.ps_agent.nodes.solver import (
+    set_solver_client,
+    tool_node,
+    writer_node,
+    refiner_node,
+)
+from agent.ps_agent.nodes.evaluator import (
+    set_evaluator_client,
+    material_curation_node,
+    plan_reviewer_node,
+    summary_reviewer_node,
+)
 from core.llm_client import LLMClient
 from core.models.llm import Message
+from core.config.defaults import DEFAULT_AGENT_LIMITS
 
 
 from .state import PSAgentState, log_step
@@ -34,11 +50,11 @@ def curation_router(state: PSAgentState) -> Literal["research", "plan_review"]:
 
     # Layer 2: Get limits
     iteration = state.get("iteration", 0)
-    max_iterations = state.get("max_iterations", 10)
+    max_iterations = state.get("max_iterations", DEFAULT_AGENT_LIMITS.max_iterations)
     tool_call_count = state.get("tool_call_count", 0)
-    max_tool_calls = state.get("max_tool_calls", 50)
+    max_tool_calls = state.get("max_tool_calls", DEFAULT_AGENT_LIMITS.max_tool_calls)
     curation_count = state.get("curation_count", 0)
-    max_curations = state.get("max_curations", 8)
+    max_curations = state.get("max_curations", DEFAULT_AGENT_LIMITS.max_curations)
 
     # Priority 1: Ready for review (normal exit)
     if ready_for_review:
@@ -86,11 +102,13 @@ def plan_review_router(state: PSAgentState) -> Literal["research", "bootstrap", 
 
     # Layer 2: Get limits
     plan_review_count = state.get("plan_review_count", 0)
-    max_plan_reviews = state.get("max_plan_reviews", 3)
+    max_plan_reviews = state.get(
+        "max_plan_reviews", DEFAULT_AGENT_LIMITS.max_plan_reviews
+    )
     iteration = state.get("iteration", 0)
-    max_iterations = state.get("max_iterations", 10)
+    max_iterations = state.get("max_iterations", DEFAULT_AGENT_LIMITS.max_iterations)
     tool_call_count = state.get("tool_call_count", 0)
-    max_tool_calls = state.get("max_tool_calls", 50)
+    max_tool_calls = state.get("max_tool_calls", DEFAULT_AGENT_LIMITS.max_tool_calls)
 
     # Priority 1: Ready for write (normal exit)
     if state.get("ready_for_write", False):
@@ -140,7 +158,7 @@ def summary_review_router(state: PSAgentState) -> Literal["completed", "refining
 
     # Layer 2: Circuit breaker - check refine limit
     refine_count = state.get("refine_count", 0)
-    max_refines = state.get("max_refines", 3)
+    max_refines = state.get("max_refines", DEFAULT_AGENT_LIMITS.max_refines)
 
     if refine_count >= max_refines:
         logger.warning(

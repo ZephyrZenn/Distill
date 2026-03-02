@@ -34,15 +34,15 @@ class AgentLimitsConfig:
     """Agent loop limiting configuration dataclass"""
 
     # Research phase limits
-    max_iterations: int = 10
-    max_tool_calls: int = 50
-    max_curations: int = 8
+    max_iterations: int = 5
+    max_tool_calls: int = 30
+    max_curations: int = 3
 
     # Review phase limits
-    max_plan_reviews: int = 3
+    max_plan_reviews: int = 2
 
     # Writing phase limits
-    max_refines: int = 3
+    max_refines: int = 2
 
     # Layer 1 control
     enable_hard_limits: bool = True

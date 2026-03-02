@@ -13,6 +13,7 @@ from core.models.config import (
     ModelConfig,
     RateLimitConfig,
 )
+from core.config.defaults import DEFAULT_AGENT_LIMITS
 from core.models.llm import ModelProvider
 
 from .utils import (
@@ -204,15 +205,27 @@ def _to_agent_limits_config(config: dict) -> AgentLimitsConfig:
     """
     return AgentLimitsConfig(
         # Research phase limits
-        max_iterations=int(config.get("max_iterations", 10)),
-        max_tool_calls=int(config.get("max_tool_calls", 50)),
-        max_curations=int(config.get("max_curations", 8)),
+        max_iterations=int(
+            config.get("max_iterations", DEFAULT_AGENT_LIMITS.max_iterations)
+        ),
+        max_tool_calls=int(
+            config.get("max_tool_calls", DEFAULT_AGENT_LIMITS.max_tool_calls)
+        ),
+        max_curations=int(
+            config.get("max_curations", DEFAULT_AGENT_LIMITS.max_curations)
+        ),
         # Review phase limits
-        max_plan_reviews=int(config.get("max_plan_reviews", 3)),
+        max_plan_reviews=int(
+            config.get("max_plan_reviews", DEFAULT_AGENT_LIMITS.max_plan_reviews)
+        ),
         # Writing phase limits
-        max_refines=int(config.get("max_refines", 3)),
+        max_refines=int(
+            config.get("max_refines", DEFAULT_AGENT_LIMITS.max_refines)
+        ),
         # Layer 1 control
-        enable_hard_limits=config.get("enable_hard_limits", True),
+        enable_hard_limits=config.get(
+            "enable_hard_limits", DEFAULT_AGENT_LIMITS.enable_hard_limits
+        ),
     )
 
 
