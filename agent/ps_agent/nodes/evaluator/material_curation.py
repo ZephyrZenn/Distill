@@ -172,12 +172,49 @@ class MaterialCurationNode:
         """
         logger.info(f"[curation:stage1] Starting snippet audit for {len(items)} items")
 
-        # Apply quick filters before LLM audit
-        filtered_items = await self._quick_filter_items(items, state)
+        # Incremental snippet audit:
+        # - Items with `snippet_audited=True` will be reused directly
+        # - Only new items without this flag go through Stage 1 LLM audit
+        already_audited: list[ResearchItem] = []
+        new_items_raw: list[ResearchItem] = []
+        for item in items:
+            if item.get("snippet_audited"):
+                already_audited.append(item)
+            else:
+                new_items_raw.append(item)
+
         max_keep_items = int(state.get("max_context_items", 15) * 2)
-        # Run LLM snippet audit
+
+        # If there are no new items to audit, reuse previous analysis and just
+        # re-trim existing items by relevance.
+        if not new_items_raw:
+            logger.info(
+                "[curation:stage1] No new items to audit; reusing previous snippet results"
+            )
+            kept_items = sorted(
+                items, key=lambda x: x.get("relevance", 0), reverse=True
+            )[:max_keep_items]
+            previous_analysis = state.get("audit_analysis")
+            return kept_items, [], previous_analysis
+
+        # Apply quick filters before LLM audit for new items only
+        filtered_items = await self._quick_filter_items(new_items_raw, state)
+
+        # If all new items are filtered out, keep the already audited items only.
+        if not filtered_items:
+            logger.info(
+                "[curation:stage1] All new items filtered by quick filter; "
+                "skipping LLM snippet audit for this round"
+            )
+            kept_items = sorted(
+                already_audited, key=lambda x: x.get("relevance", 0), reverse=True
+            )[:max_keep_items]
+            previous_analysis = state.get("audit_analysis")
+            return kept_items, [], previous_analysis
+
+        # Run LLM snippet audit on new items
         try:
-            kept_items, discarded_items, metadata = (
+            kept_new, discarded_new, metadata = (
                 await self.batch_auditor.audit_stage1_snippet(
                     items=filtered_items,
                     focus=state["focus"],
@@ -186,11 +223,18 @@ class MaterialCurationNode:
                 )
             )
 
-            # result_parser stores Stage1 score in `relevance`
-            kept_items.sort(key=lambda x: x.get("relevance", 0), reverse=True)
-            kept_items = kept_items[:max_keep_items]
+            # Mark newly audited items
+            for item in kept_new:
+                item["snippet_audited"] = True
+            for item in discarded_new:
+                item["snippet_audited"] = True
 
-            # Convert discarded items to DiscardedItem format
+            # Merge previously audited items with newly kept ones
+            merged_kept = already_audited + kept_new
+            merged_kept.sort(key=lambda x: x.get("relevance", 0), reverse=True)
+            merged_kept = merged_kept[:max_keep_items]
+
+            # Convert discarded items (only newly audited discards) to DiscardedItem
             discarded = [
                 DiscardedItem(
                     id=item.get("id", ""),
@@ -199,25 +243,29 @@ class MaterialCurationNode:
                     reason=item.get("audit_reason", "LLM snippet audit: discarded"),
                     score=item.get("relevance", 0.0),
                 )
-                for item in discarded_items
+                for item in discarded_new
             ]
 
             logger.info(
-                f"[curation:stage1] Complete: kept={len(kept_items)}, "
-                f"discarded={len(discarded)}, "
-                f"llm_calls={metadata.get('llm_calls', 0)}"
+                "[curation:stage1] Complete: kept_total=%d (existing=%d, new=%d), "
+                "discarded_new=%d, llm_calls=%d",
+                len(merged_kept),
+                len(already_audited),
+                len(kept_new),
+                len(discarded),
+                metadata.get("llm_calls", 0),
             )
 
             audit_analysis = await self.audit_analyzer.analyze_with_spiral_guidance(
-                kept_items=kept_items,
-                discarded_items=discarded_items,
+                kept_items=merged_kept,
+                discarded_items=discarded_new,
                 focus=state["focus"],
                 focus_dimensions=state.get("focus_dimensions", []),
                 query_history=state.get("query_history", []),
                 current_date=state["current_date"],
             )
 
-            return kept_items, discarded_items, audit_analysis
+            return merged_kept, discarded_new, audit_analysis
 
         except Exception as e:
             logger.error(f"[curation:stage1] LLM audit failed: {e}", exc_info=True)
