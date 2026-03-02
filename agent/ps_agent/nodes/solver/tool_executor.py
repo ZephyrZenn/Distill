@@ -41,8 +41,7 @@ class ToolExecutorNode:
         try:
             log_step(
                 state,
-                f"[tooling] 执行 {len(tool_calls)} 个工具: "
-                + ",".join(tc.name for tc in tool_calls),
+                f"[tooling] 正在执行 {len(tool_calls)} 个搜索/检索操作...",
             )
             updates = await execute_tool_calls(state, tool_calls)
             updates.setdefault("status", "research")

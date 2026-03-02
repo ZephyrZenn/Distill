@@ -33,6 +33,119 @@ from .schemas import RegisteredTool, build_tool_schemas
 logger = logging.getLogger(__name__)
 
 
+def _truncate(text: str, max_len: int = 60) -> str:
+    if not text:
+        return ""
+    text = str(text)
+    return text if len(text) <= max_len else text[:max_len] + "..."
+
+
+def _format_tool_message_before(name: str, args: dict) -> str | None:
+    """Human-readable pre-execution message for tool calls (UI-facing)."""
+    if name == "search_feeds":
+        query = _truncate(args.get("query", "") or "")
+        hour_gap = int(args.get("hour_gap", 24) or 24)
+        limit = int(args.get("limit", 30) or 30)
+        if query:
+            return (
+                f"🔍 [订阅源搜索] 正在按关键词「{query}」"
+                f" 从最近 {hour_gap} 小时的订阅源中筛选文章（最多 {limit} 篇）…"
+            )
+        return (
+            f"🔍 [订阅源搜索] 正在从最近 {hour_gap} 小时的订阅源中抓取最新文章"
+            f"（最多 {limit} 篇）…"
+        )
+
+    if name == "search_web":
+        query = _truncate(args.get("query", "") or "")
+        time_range = str(args.get("time_range", "day") or "day")
+        max_results = int(args.get("max_results", 8) or 8)
+        if query:
+            return (
+                f"🌐 [网页搜索] 正在搜索「{query}」"
+                f"（时间范围：{time_range}，最多 {max_results} 条结果）…"
+            )
+        return (
+            f"🌐 [网页搜索] 正在搜索最新网页内容"
+            f"（时间范围：{time_range}，最多 {max_results} 条结果）…"
+        )
+
+    if name == "search_memory":
+        keywords = args.get("keywords") or []
+        if isinstance(keywords, str):
+            keywords = [keywords]
+        keywords = [str(k).strip() for k in keywords if k and str(k).strip()]
+        days_ago = int(args.get("days_ago", 14) or 14)
+        limit = int(args.get("limit", 10) or 10)
+        if keywords:
+            preview = ", ".join(_truncate(k, 20) for k in keywords[:3])
+            if len(keywords) > 3:
+                preview += f" 等 {len(keywords)} 个关键词"
+            return (
+                f"🧠 [记忆搜索] 正在从最近 {days_ago} 天的历史记忆中检索："
+                f"{preview}（最多 {limit} 条）…"
+            )
+        return (
+            f"🧠 [记忆搜索] 正在从最近 {days_ago} 天的历史记忆中检索相关材料"
+            f"（最多 {limit} 条）…"
+        )
+
+    # Fallback for unknown tools
+    return f"🔧 正在执行工具：{name}…"
+
+
+def _format_tool_message_after(
+    name: str, meta: dict | None, research_items_count: int
+) -> str | None:
+    """Human-readable post-execution message for tool calls (UI-facing)."""
+    meta = meta or {}
+
+    if name == "search_feeds":
+        count = int(meta.get("count", 0) or 0)
+        dedup = meta.get("deduped") or {}
+        within_call = int(dedup.get("within_call", 0) or 0)
+        history = int(dedup.get("history", 0) or 0)
+        return (
+            f"✅ [订阅源搜索] 完成，本轮新增 {count} 篇文章"
+            f"（本轮去重 {within_call} 篇，历史去重 {history} 篇），"
+            f"当前素材总数 {research_items_count}。"
+        )
+
+    if name == "search_web":
+        count = int(meta.get("count", 0) or 0)
+        query = _truncate(meta.get("query", "") or "")
+        if query:
+            return (
+                f"✅ [网页搜索] 完成，关于「{query}」本轮获取 {count} 条结果，"
+                f"当前素材总数 {research_items_count}。"
+            )
+        return (
+            f"✅ [网页搜索] 完成，本轮获取 {count} 条网页结果，"
+            f"当前素材总数 {research_items_count}。"
+        )
+
+    if name == "search_memory":
+        count = int(meta.get("count", 0) or 0)
+        keywords = meta.get("keywords") or []
+        if isinstance(keywords, str):
+            keywords = [keywords]
+        keywords = [str(k).strip() for k in keywords if k and str(k).strip()]
+        if keywords:
+            preview = ", ".join(_truncate(k, 20) for k in keywords[:3])
+            if len(keywords) > 3:
+                preview += f" 等 {len(keywords)} 个关键词"
+            return (
+                f"✅ [记忆搜索] 完成，关于 {preview} 本轮找到 {count} 条历史记忆，"
+                f"当前素材总数 {research_items_count}。"
+            )
+        return (
+            f"✅ [记忆搜索] 完成，本轮找到 {count} 条历史记忆，"
+            f"当前素材总数 {research_items_count}。"
+        )
+
+    return f"✅ 工具 {name} 执行完成。"
+
+
 def _parse_arguments(arguments: str) -> dict:
     if not arguments:
         return {}
@@ -125,7 +238,9 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
         ):
             args["is_patch"] = True
 
-        _emit(f"🔧 tool: {call.name} args={json.dumps(args, ensure_ascii=False)[:240]}")
+        before_msg = _format_tool_message_before(call.name, args)
+        if before_msg:
+            _emit(before_msg)
         logger.info(
             "[tool] run_id=%s name=%s call_id=%s args=%s",
             run_id,
@@ -154,11 +269,6 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
             payload_chars,
             json.dumps(meta, ensure_ascii=False)[:400] if meta is not None else "",
         )
-        if isinstance(meta, dict):
-            _emit(
-                f"🔧 tool: {call.name} meta={json.dumps(meta, ensure_ascii=False)[:240]}"
-            )
-
         messages.append(
             Message.tool(
                 content=truncate_for_tool_message(payload),
@@ -205,7 +315,17 @@ async def execute_tool_calls(state: PSAgentState, tool_calls: list[ToolCall]) ->
             call.name,
             len(research_items),
         )
-        _emit(f"🔧 tool: after {call.name} research_items={len(research_items)}")
+
+        if isinstance(meta, dict):
+            after_msg = _format_tool_message_after(
+                call.name, meta, len(research_items)
+            )
+        else:
+            after_msg = _format_tool_message_after(
+                call.name, None, len(research_items)
+            )
+        if after_msg:
+            _emit(after_msg)
 
     return {
         "messages": messages,
