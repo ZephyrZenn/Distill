@@ -7,7 +7,12 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, List, Optional
 
+from apps.backend.services.feed_service import retrieve_new_feeds
+from core.db.pool import get_async_connection
 from core.llm_client import APIKeyNotConfiguredError
+
+# 默认最小文章数阈值：24小时内至少有20篇文章才跳过爬虫
+DEFAULT_MIN_ARTICLE_COUNT = 20
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +22,10 @@ class TaskStatus(str, Enum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class NoArticlesAvailableError(Exception):
+    """Raised when no articles are available to generate a brief."""
 
 
 class TaskInfo:
@@ -115,17 +124,20 @@ async def execute_brief_generation_task(task_id: str):
 
             _insert_brief(task.group_ids or [], brief, ext_info=None, overview=overview)
         else:
-            # 使用原有的 workflow 方式
-            from apps.backend.services.brief_service import (
-                generate_brief_for_groups_async,
-            )
-
-            brief = await generate_brief_for_groups_async(
-                task_id=task_id,
-                group_ids=task.group_ids,
-                focus=task.focus,
-                on_step=on_step,
-            )
+            # 使用原有的 workflow 方式（带素材检查与爬虫兜底）
+            try:
+                brief = await generate_brief_with_material_check(
+                    task_id=task_id,
+                    group_ids=task.group_ids,
+                    focus=task.focus,
+                    on_step=on_step,
+                )
+            except NoArticlesAvailableError as e:
+                logger.warning(f"Task {task_id} failed: {e}")
+                task.status = TaskStatus.FAILED
+                task.error = str(e)
+                task.add_log("❌ 没有文章可用于生成简报: 请检查分组配置")
+                return
 
         # 再次检查任务是否存在（可能在执行过程中被清理）
         if task_id not in _tasks:
@@ -201,3 +213,89 @@ def get_task_count() -> dict:
         "total": len(_tasks),
         "by_status": status_count,
     }
+
+
+async def check_workflow_material_ready(
+    group_ids: list[int], hour_gap: int = 24, min_article_count: int = 20
+) -> bool:
+    """检查指定分组在指定时间内的可用文章数量是否足够"""
+    available_count = await _check_available_articles(group_ids, hour_gap)
+    return available_count >= min_article_count
+
+
+async def _check_available_articles(group_ids: list[int], hour_gap: int = 24) -> int:
+    """检查指定分组在指定时间内的可用文章数量
+
+    Args:
+        group_ids: 分组ID列表
+        hour_gap: 检查过去几小时的文章，默认24小时
+
+    Returns:
+        可用文章数量
+    """
+    async with get_async_connection() as conn:
+        async with conn.cursor() as cur:
+            sql = """
+                SELECT COUNT(DISTINCT fi.id)
+                FROM feed_items fi
+                JOIN feed_group_items fgi ON fi.feed_id = fgi.feed_id
+                WHERE fgi.feed_group_id = ANY(%s)
+                    AND fi.pub_date >= NOW() - INTERVAL '1 hour' * %s
+            """
+            await cur.execute(sql, (group_ids, hour_gap))
+            row = await cur.fetchone()
+            return row[0] if row else 0
+
+
+async def generate_brief_with_material_check(
+    task_id: str,
+    group_ids: list[int],
+    focus: str = "",
+    on_step=None,
+    min_article_count: int = DEFAULT_MIN_ARTICLE_COUNT,
+) -> str:
+    """统一的 workflow 简报生成流程：素材检查 + 爬虫兜底 + 生成简报。
+
+    该函数会：
+    1. 检查最近 hour_gap 小时内是否有足够文章（>= min_article_count）
+    2. 不足则触发爬虫补充
+    3. 如果爬虫失败且仍然没有任何文章可用，抛出 NoArticlesAvailableError
+    4. 最终调用 generate_brief_for_groups_async 生成简报
+    """
+    from apps.backend.services.brief_service import generate_brief_for_groups_async
+
+    ready = await check_workflow_material_ready(
+        group_ids, hour_gap=24, min_article_count=min_article_count
+    )
+    if not ready:
+        logger.info(
+            "Task %s material not ready. Start to retrieve new feeds.", task_id
+        )
+
+        try:
+            await retrieve_new_feeds(group_ids)
+            logger.info(
+                "Task %s material retrieved. Start to generate brief.", task_id
+            )
+        except Exception as e:
+            logger.warning(
+                "Task %s: crawl failed but continuing with brief generation: %s",
+                task_id,
+                e,
+            )
+            new_count = await _check_available_articles(group_ids, hour_gap=24)
+            if new_count == 0:
+                logger.warning(
+                    "Task %s: no articles available after crawl failure", task_id
+                )
+                raise NoArticlesAvailableError(
+                    "No articles available after crawl failure"
+                )
+
+    brief = await generate_brief_for_groups_async(
+        task_id=task_id,
+        group_ids=group_ids,
+        focus=focus,
+        on_step=on_step,
+    )
+    return brief
