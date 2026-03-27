@@ -17,6 +17,13 @@ from .schemas import MATCH_TEXT_MAX_CHARS
 
 logger = logging.getLogger(__name__)
 
+FUZZY_DISABLE_THRESHOLD = 300
+FUZZY_TOPK = 180
+SEMANTIC_TOPK = 120
+SUMMARY_FUZZY_MAX_CHARS = 200
+EXACT_SUBSTRING_BONUS = 0.15
+MATCH_SCORE_MAX = 1.0
+
 _WORD_RE = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]+")
 
 
@@ -167,9 +174,32 @@ async def rank_feed_articles(
         return []
 
     match_texts = [_build_match_text(article) for article in articles]
-    semantic_scores = await _semantic_scores(query, match_texts)
+    lexical_scores = [_lexical_score(query, text) for text in match_texts]
+
+    semantic_scores = [0.0] * len(articles)
+    semantic_indexes = list(range(len(articles)))
+    if len(articles) > SEMANTIC_TOPK:
+        semantic_indexes = sorted(
+            range(len(articles)), key=lambda idx: lexical_scores[idx], reverse=True
+        )[:SEMANTIC_TOPK]
+
+    semantic_inputs = [match_texts[idx] for idx in semantic_indexes]
+    semantic_subset_scores = await _semantic_scores(query, semantic_inputs)
+    for idx, semantic_score in zip(semantic_indexes, semantic_subset_scores):
+        semantic_scores[idx] = semantic_score
+
     use_semantic = any(score > 0 for score in semantic_scores)
     norm_query = _normalize_for_match(query)
+
+    fuzzy_indexes = set(range(len(articles)))
+    if len(articles) > FUZZY_DISABLE_THRESHOLD:
+        fuzzy_indexes = set(
+            sorted(
+                range(len(articles)),
+                key=lambda idx: lexical_scores[idx],
+                reverse=True,
+            )[:FUZZY_TOPK]
+        )
 
     scored: list[tuple[float, dict]] = []
     for idx, article in enumerate(articles):
@@ -177,20 +207,24 @@ async def rank_feed_articles(
         summary = str(article.get("summary", "") or "").strip()
         match_text = match_texts[idx]
 
-        lexical = _lexical_score(query, match_text)
-        fuzzy = max(
-            _fuzzy_ratio(query, title),
-            _fuzzy_ratio(query, summary[:200]),
-        )
-        semantic = semantic_scores[idx] if idx < len(semantic_scores) else 0.0
+        lexical = lexical_scores[idx]
+        if idx in fuzzy_indexes:
+            fuzzy = max(
+                _fuzzy_ratio(query, title),
+                _fuzzy_ratio(query, summary[:SUMMARY_FUZZY_MAX_CHARS]),
+            )
+        else:
+            fuzzy = 0.0
+
+        semantic = semantic_scores[idx]
         score = _combine_match_scores(
             lexical, fuzzy, semantic, use_semantic=use_semantic
         )
 
         if norm_query and norm_query in _normalize_for_match(match_text):
-            score += 0.15
+            score += EXACT_SUBSTRING_BONUS
 
-        score = min(score, 1.0)
+        score = min(score, MATCH_SCORE_MAX)
         scored.append((score, {**article, "match_score": round(score, 4)}))
 
     scored.sort(

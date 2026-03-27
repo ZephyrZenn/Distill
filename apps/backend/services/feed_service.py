@@ -6,6 +6,11 @@ from typing import Optional
 from core.constants import SUMMARY_LENGTH
 from core.crawler import fetch_all_contents
 from core.db.pool import get_async_connection, execute_transaction, get_connection
+from core.embedding import (
+    EmbeddingError,
+    embed_texts,
+    is_embedding_configured,
+)
 from core.models.feed import Feed
 from core.parsers import parse_feed, parse_opml
 
@@ -121,9 +126,30 @@ async def retrieve_new_feeds(group_ids: list[int] = None):
                 logger.info(
                     "Retrieving %d articles for feed %s", len(feed_articles), feed.title
                 )
+
+                title_embeddings = [None] * len(feed_articles)
+                summary_embeddings = [None] * len(feed_articles)
+                if is_embedding_configured() and feed_articles:
+                    try:
+                        title_embeddings = await embed_texts(
+                            [str(a.title or "") for a in feed_articles]
+                        )
+                        summary_embeddings = await embed_texts(
+                            [str(a.summary or "") for a in feed_articles]
+                        )
+                    except EmbeddingError as exc:
+                        logger.warning(
+                            "Failed to generate feed item embeddings for feed=%s: %s",
+                            feed.title,
+                            exc,
+                        )
+
                 item_sql = """
-                           INSERT INTO feed_items (id, feed_id, title, link, pub_date, summary)
-                           VALUES (%s, %s, %s, %s, %s, %s)
+                           INSERT INTO feed_items (
+                               id, feed_id, title, link, pub_date, summary,
+                               title_embedding, summary_embedding
+                           )
+                           VALUES (%s, %s, %s, %s, %s, %s, %s::vector, %s::vector)
                            ON CONFLICT (id) DO NOTHING \
                            """
                 item_content_sql = """
@@ -134,8 +160,17 @@ async def retrieve_new_feeds(group_ids: list[int] = None):
                 await cur.executemany(
                     item_sql,
                     [
-                        (a.id, feed.id, a.title, a.url, a.pub_date, a.summary)
-                        for a in feed_articles
+                        (
+                            a.id,
+                            feed.id,
+                            a.title,
+                            a.url,
+                            a.pub_date,
+                            a.summary,
+                            title_embeddings[idx],
+                            summary_embeddings[idx],
+                        )
+                        for idx, a in enumerate(feed_articles)
                     ],
                 )
                 await cur.executemany(

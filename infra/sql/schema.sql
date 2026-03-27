@@ -109,7 +109,6 @@ CREATE INDEX idx_feed_items_feed_id_pub_date ON feed_items (feed_id, pub_date);
 CREATE UNIQUE INDEX idx_group_items_group_feed_id ON feed_group_items (feed_group_id, feed_id);
 CREATE INDEX idx_feed_brief_group_ids ON feed_brief USING GIN (group_ids);
 CREATE INDEX idx_summary_memories_topic ON summary_memories USING GIN (topic gin_trgm_ops);
-CREATE INDEX idx_summary_memories_embedding ON summary_memories USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 128);
 CREATE INDEX idx_excluded_feed_item_ids_item_id ON excluded_feed_item_ids (item_id);
 CREATE INDEX idx_excluded_feed_item_ids_group_ids ON excluded_feed_item_ids USING GIN (group_ids);
 CREATE INDEX idx_excluded_feed_item_ids_pub_date ON excluded_feed_item_ids (pub_date);
@@ -121,6 +120,23 @@ CREATE INDEX IF NOT EXISTS feed_item_contents_feed_item_id_idx ON feed_item_cont
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+        -- Add embedding columns to feed_items
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'feed_items' AND column_name = 'title_embedding'
+        ) THEN
+            ALTER TABLE feed_items ADD COLUMN title_embedding vector(1536);
+            RAISE NOTICE 'Added feed_items.title_embedding column';
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'feed_items' AND column_name = 'summary_embedding'
+        ) THEN
+            ALTER TABLE feed_items ADD COLUMN summary_embedding vector(1536);
+            RAISE NOTICE 'Added feed_items.summary_embedding column';
+        END IF;
+
         -- Add embedding column to summary_memories
         IF NOT EXISTS (
             SELECT 1 FROM information_schema.columns
@@ -149,6 +165,16 @@ BEGIN
             WITH (m = 16, ef_construction = 128)
             WHERE focus_embedding IS NOT NULL;
 
+        CREATE INDEX IF NOT EXISTS idx_feed_items_title_embedding
+            ON feed_items USING hnsw (title_embedding vector_cosine_ops)
+            WITH (m = 16, ef_construction = 128)
+            WHERE title_embedding IS NOT NULL;
+
+        CREATE INDEX IF NOT EXISTS idx_feed_items_summary_embedding
+            ON feed_items USING hnsw (summary_embedding vector_cosine_ops)
+            WITH (m = 16, ef_construction = 128)
+            WHERE summary_embedding IS NOT NULL;
+
         RAISE NOTICE 'Vector indexes created';
     END IF;
 END $$;
@@ -157,6 +183,8 @@ END $$;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+        COMMENT ON COLUMN feed_items.title_embedding IS 'Vector embedding (1536 dim) for article title semantic prefilter.';
+        COMMENT ON COLUMN feed_items.summary_embedding IS 'Vector embedding (1536 dim) for article summary semantic prefilter.';
         COMMENT ON COLUMN summary_memories.embedding IS 'Vector embedding (1536 dim) for semantic search. Generated using OpenAI text-embedding-3-small.';
         COMMENT ON COLUMN excluded_feed_item_ids.focus_embedding IS 'Vector embedding (1536 dim) for semantic focus matching. Generated using OpenAI text-embedding-3-small. Allows "AI安全" and "人工智能安全" to be treated as the same focus. NULL if embedding service not configured.';
     END IF;

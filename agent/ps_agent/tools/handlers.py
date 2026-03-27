@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 
 from agent.tools import (
     get_all_feeds,
@@ -11,6 +12,24 @@ from agent.tools import (
     is_search_engine_available,
     search_memory as _search_memory,
     search_web as _search_web,
+)
+from agent.tools.constants import (
+    MAX_FEED_CANDIDATE_LIMIT,
+    SEARCH_FEEDS_CACHE_TTL_SECONDS,
+    SEARCH_FEEDS_CANDIDATE_MIN,
+    SEARCH_FEEDS_CANDIDATE_MULTIPLIER,
+    SEARCH_FEEDS_DEFAULT_HOUR_GAP,
+    SEARCH_FEEDS_DEFAULT_LIMIT,
+    SEARCH_FEEDS_FALLBACK_TOPN,
+    SEARCH_FEEDS_SCORE_LOG_TOPN,
+    SEARCH_MEMORY_DEFAULT_DAYS_AGO,
+    SEARCH_MEMORY_DEFAULT_LIMIT,
+    SEARCH_MEMORY_MAX_DAYS_AGO,
+    SEARCH_MEMORY_MAX_LIMIT,
+    SEARCH_MEMORY_MIN_DAYS_AGO,
+    SEARCH_MEMORY_MIN_LIMIT,
+    SEARCH_WEB_DEFAULT_MAX_RESULTS,
+    SEARCH_WEB_PATCH_MAX_RESULTS,
 )
 from core.embedding import is_embedding_configured
 
@@ -25,6 +44,31 @@ from .normalize import (
 from .schemas import MIN_MATCH_SCORE, WEB_RESULT_SNIPPET_MAX_CHARS
 
 logger = logging.getLogger(__name__)
+
+_SEARCH_FEEDS_CACHE: dict[str, tuple[float, list, list]] = {}
+
+
+def _search_feeds_cache_key(feed_ids: list[int], hour_gap: int, query: str) -> str:
+    return f"{','.join(str(fid) for fid in sorted(feed_ids))}|{hour_gap}|{query.lower().strip()}"
+
+
+def _get_cached_feed_search(key: str):
+    cached = _SEARCH_FEEDS_CACHE.get(key)
+    if not cached:
+        return None
+    expires_at, feeds, articles = cached
+    if expires_at < time.time():
+        _SEARCH_FEEDS_CACHE.pop(key, None)
+        return None
+    return feeds, articles
+
+
+def _set_cached_feed_search(key: str, feeds: list, articles: list) -> None:
+    _SEARCH_FEEDS_CACHE[key] = (
+        time.time() + SEARCH_FEEDS_CACHE_TTL_SECONDS,
+        feeds,
+        articles,
+    )
 
 
 def parse_query_exclusions(query: str) -> tuple[str, list[str]]:
@@ -57,13 +101,11 @@ def parse_query_exclusions(query: str) -> tuple[str, list[str]]:
         exclude_keywords.append(single_quote or double_quote)
 
     # Remove exclusions from query
-    clean_query = re.sub(exclude_pattern, '', query).strip()
-    clean_query = re.sub(r'\s+', ' ', clean_query)
+    clean_query = re.sub(exclude_pattern, "", query).strip()
+    clean_query = re.sub(r"\s+", " ", clean_query)
 
     if exclude_keywords:
-        logger.info(
-            "[search_feeds] Parsed exclusions from query: %s", exclude_keywords
-        )
+        logger.info("[search_feeds] Parsed exclusions from query: %s", exclude_keywords)
 
     return clean_query, exclude_keywords
 
@@ -71,8 +113,11 @@ def parse_query_exclusions(query: str) -> tuple[str, list[str]]:
 async def handle_search_feeds(args: dict, state: PSAgentState) -> dict:
     run_id = state.get("run_id", "-")
     query = str(args.get("query", "") or "").strip()
-    hour_gap = int(args.get("hour_gap", 24) or 24)
-    limit = int(args.get("limit", 30) or 30)
+    hour_gap = int(
+        args.get("hour_gap", SEARCH_FEEDS_DEFAULT_HOUR_GAP)
+        or SEARCH_FEEDS_DEFAULT_HOUR_GAP
+    )
+    limit = int(args.get("limit", SEARCH_FEEDS_DEFAULT_LIMIT) or SEARCH_FEEDS_DEFAULT_LIMIT)
     exclude_keywords = args.get("exclude_keywords") or []
     is_patch = bool(args.get("is_patch", False))
 
@@ -89,7 +134,27 @@ async def handle_search_feeds(args: dict, state: PSAgentState) -> dict:
         return {"feeds": [], "articles": []}
 
     feed_ids = [feed.id for feed in feeds]
-    feeds_result, articles = await get_recent_feed_update(hour_gap, feed_ids)
+    candidate_limit = (
+        max(
+            SEARCH_FEEDS_CANDIDATE_MIN,
+            min(MAX_FEED_CANDIDATE_LIMIT, limit * SEARCH_FEEDS_CANDIDATE_MULTIPLIER),
+        )
+        if query
+        else 0
+    )
+    cache_key = _search_feeds_cache_key(feed_ids, hour_gap, query)
+    cached_result = _get_cached_feed_search(cache_key)
+    if cached_result:
+        feeds_result, articles = cached_result
+    else:
+        feeds_result, articles = await get_recent_feed_update(
+            hour_gap,
+            feed_ids,
+            query=query,
+            candidate_limit=candidate_limit,
+            use_vector_prefilter=True,
+        )
+        _set_cached_feed_search(cache_key, feeds_result, articles)
 
     articles, in_call_deduped = dedupe_feed_articles(articles)
 
@@ -122,14 +187,17 @@ async def handle_search_feeds(args: dict, state: PSAgentState) -> dict:
         scored = await rank_feed_articles(articles, query)
         filtered = [article for score, article in scored if score >= MIN_MATCH_SCORE]
         if not filtered:
-            fallback_count = min(8, len(scored))
+            fallback_count = min(SEARCH_FEEDS_FALLBACK_TOPN, len(scored))
             filtered = [article for _, article in scored[:fallback_count]]
         articles = filtered
         logger.info(
             "[tool:search_feeds] run_id=%s kept=%d top_scores=%s",
             run_id,
             len(articles),
-            ",".join(str(a.get("match_score", 0.0)) for a in articles[:5]),
+            ",".join(
+                str(a.get("match_score", 0.0))
+                for a in articles[:SEARCH_FEEDS_SCORE_LOG_TOPN]
+            ),
         )
 
     history_deduped = 0
@@ -166,7 +234,10 @@ async def handle_search_web(args: dict, _state: PSAgentState) -> dict:
         raise ValueError("search_web 的 query 不能为空")
 
     time_range = str(args.get("time_range", "day") or "day")
-    max_results = int(args.get("max_results", 8) or 8)
+    max_results = int(
+        args.get("max_results", SEARCH_WEB_DEFAULT_MAX_RESULTS)
+        or SEARCH_WEB_DEFAULT_MAX_RESULTS
+    )
     topic = str(args.get("topic", "news") or "news")
     exclude_keywords = args.get("exclude_keywords") or []
     is_patch = bool(args.get("is_patch", False))
@@ -175,7 +246,11 @@ async def handle_search_web(args: dict, _state: PSAgentState) -> dict:
         exclude_keywords = [exclude_keywords]
 
     include_raw_content = is_patch
-    actual_max_results = min(max_results, 5) if is_patch else max_results + len(exclude_keywords)
+    actual_max_results = (
+        min(max_results, SEARCH_WEB_PATCH_MAX_RESULTS)
+        if is_patch
+        else max_results + len(exclude_keywords)
+    )
 
     results = await _search_web(
         query,
@@ -238,10 +313,13 @@ async def handle_search_memory(args: dict, _state: PSAgentState) -> dict:
             },
         }
 
-    days_ago = int(args.get("days_ago", 14) or 14)
-    days_ago = max(1, min(365, days_ago))
-    limit = int(args.get("limit", 10) or 10)
-    limit = max(1, min(50, limit))
+    days_ago = int(
+        args.get("days_ago", SEARCH_MEMORY_DEFAULT_DAYS_AGO)
+        or SEARCH_MEMORY_DEFAULT_DAYS_AGO
+    )
+    days_ago = max(SEARCH_MEMORY_MIN_DAYS_AGO, min(SEARCH_MEMORY_MAX_DAYS_AGO, days_ago))
+    limit = int(args.get("limit", SEARCH_MEMORY_DEFAULT_LIMIT) or SEARCH_MEMORY_DEFAULT_LIMIT)
+    limit = max(SEARCH_MEMORY_MIN_LIMIT, min(SEARCH_MEMORY_MAX_LIMIT, limit))
 
     try:
         result = await _search_memory(

@@ -15,6 +15,7 @@ HEADERS = {
     "Referer": "https://www.google.com/",
 }
 
+
 def parse_opml(file_text: str) -> list[Feed]:
     """
     Parses OPML file text and returns a list of dictionaries with feed information.
@@ -58,7 +59,9 @@ def parse_feed(feeds: list[Feed]) -> dict[str, list[FeedArticle]]:
             continue
         for entry in data.entries:
             # TODO: deal with other article metadata
-            published_struct = getattr(entry, "published_parsed", None) or getattr(entry, "updated_parsed", None)
+            published_struct = getattr(entry, "published_parsed", None) or getattr(
+                entry, "updated_parsed", None
+            )
             if not published_struct:
                 continue
             pub_date = _convert_to_datetime(published_struct)
