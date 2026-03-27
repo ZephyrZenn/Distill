@@ -118,11 +118,38 @@ async def execute_brief_generation_task(task_id: str):
             )
             plan = final_state.get("plan") or {}
             overview = plan.get("daily_overview", "") or ""
+            research_items = final_state.get("research_items") or []
+
+            # 从 PS Agent 的 research_items 中提取 web 来源素材，作为 ext_info 落库
+            ext_info = []
+            seen_ext_keys = set()
+            for item in research_items:
+                if item.get("source") != "web":
+                    continue
+                title = str(item.get("title") or "").strip()
+                url = str(item.get("url") or "").strip()
+                content = str(item.get("content") or item.get("summary") or "").strip()
+                score = float(item.get("score", 0.0) or 0.0)
+
+                # 去重：优先按 URL，其次按标题
+                dedupe_key = (url or f"title::{title}").lower()
+                if not dedupe_key or dedupe_key in seen_ext_keys:
+                    continue
+                seen_ext_keys.add(dedupe_key)
+
+                ext_info.append(
+                    {
+                        "title": title,
+                        "url": url,
+                        "content": content,
+                        "score": score,
+                    }
+                )
 
             # 保存简报到数据库（含 overview）
             from apps.backend.services.brief_service import _insert_brief
 
-            _insert_brief(task.group_ids or [], brief, ext_info=None, overview=overview)
+            _insert_brief(task.group_ids or [], brief, ext_info=ext_info, overview=overview)
         else:
             # 使用原有的 workflow 方式（带素材检查与爬虫兜底）
             try:
