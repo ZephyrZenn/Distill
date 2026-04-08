@@ -177,16 +177,17 @@ const SourcesPage = () => {
         </div>
         {/* Grid layout matching t.tsx sources exactly */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-x-4 md:gap-y-4 content-start">
-        {allSourcesWithGroupInfo.map((source) => (
+        {allSourcesWithGroupInfo.map((source, index) => (
           <div
             key={source.id}
-            className="theme-surface border theme-border rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all relative group flex flex-col justify-between min-h-[120px] md:h-[130px] cursor-pointer"
+            className={`theme-surface border theme-border rounded-2xl p-5 md:p-6 theme-shadow-ambient card-hover-subtle theme-transition relative group flex flex-col justify-between min-h-[130px] md:h-[140px] cursor-pointer animate-entrance`}
+            style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
             onClick={() => handleOpenModal(source)}
           >
             {/* Status indicator - top right corner */}
             {source.status && (
               <div
-                className="absolute top-3 right-3 z-10"
+                className="absolute top-4 right-4 z-10"
                 title={source.status === 'active' ? '正常' : '不可访问'}
               >
                 <div className="relative w-3 h-3">
@@ -213,15 +214,15 @@ const SourcesPage = () => {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h4 className="font-bold theme-text text-xs md:text-sm truncate mb-1">
+              <h4 className="font-display font-semibold theme-text text-sm md:text-base truncate mb-2">
                 {source.title}
               </h4>
-              <p className="text-[10px] md:text-xs theme-text-muted line-clamp-2 leading-snug">
+              <p className="text-[10px] md:text-xs theme-text-muted line-clamp-2 leading-relaxed font-body">
                 {source.desc || '暂无描述信息'}
               </p>
             </div>
-            <div className="mt-2 flex items-center justify-between shrink-0">
-              <span className="text-[9px] font-black theme-text-muted uppercase theme-accent-bg theme-on-accent px-1.5 py-0.5 rounded truncate max-w-[80px]">
+            <div className="mt-3 flex items-center justify-between shrink-0">
+              <span className="text-[9px] font-black theme-accent-text uppercase tracking-wider theme-accent-subtle px-2 py-1 rounded-md truncate max-w-[90px]">
                 {source.groupName}
               </span>
               <div className="flex items-center gap-2">
@@ -229,21 +230,21 @@ const SourcesPage = () => {
                   href={source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="theme-text-muted theme-accent-text-hover transition-colors shrink-0"
+                  className="theme-text-muted theme-accent-text-hover transition-colors shrink-0 p-1"
                   title="打开订阅源链接"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <ExternalLink size={12} />
+                  <ExternalLink size={14} />
                 </a>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteSource(source.id);
                   }}
-                  className="text-rose-500 hover:text-rose-600 transition-colors flex-shrink-0"
+                  className="text-rose-400 hover:text-rose-500 transition-colors flex-shrink-0 p-1"
                   title="删除订阅源"
                 >
-                  <Trash2 size={12} />
+                  <Trash2 size={14} />
                 </button>
               </div>
             </div>
@@ -253,10 +254,10 @@ const SourcesPage = () => {
         {/* Add new button */}
         <button
           onClick={() => handleOpenModal()}
-          className="border-2 border-dashed theme-border rounded-2xl flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover min-h-[120px] md:h-[130px] transition-all min-w-[44px] min-h-[44px]"
+          className="border-2 border-dashed theme-border-subtle rounded-2xl flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover min-h-[130px] md:h-[140px] theme-transition card-hover-subtle animate-entrance"
         >
-          <Plus size={24} />
-          <span className="text-[10px] font-bold mt-2 uppercase">添加源</span>
+          <Plus size={24} className="mb-2" />
+          <span className="text-[10px] font-black uppercase tracking-wider">添加源</span>
         </button>
         </div>
       </div>

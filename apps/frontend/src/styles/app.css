@@ -2,6 +2,99 @@
 @import './index.css';
 @import './day-picker-custom.css';
 
+/* ============================================
+   Typography Scale - Editorial Intelligence
+   ============================================ */
+
+/* Display Typography - Headlines & Titles */
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.font-display-italic {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+
+/* Body Typography - UI Elements */
+.font-body {
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+.font-body-medium {
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+
+.font-body-semibold {
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+/* Mono Typography - Tech & Code */
+.font-mono-custom {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* Editorial Typography Scale */
+.text-editorial-2xl {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.text-editorial-3xl {
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.text-editorial-4xl {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+/* Responsive typography */
+@media (min-width: 768px) {
+  .md\:text-editorial-3xl {
+    font-family: var(--font-display);
+    font-size: 1.875rem;
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .md\:text-editorial-4xl {
+    font-family: var(--font-display);
+    font-size: 2.25rem;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  .md\:text-editorial-5xl {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+}
+
 /* Custom scrollbar - matching t.tsx exactly */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
@@ -55,6 +148,82 @@
 .slide-in-from-bottom-4 {
   animation-name: slideInFromBottom;
   animation-duration: 500ms;
+}
+
+/* ============================================
+   Page Load Animations - Staggered Reveals
+   ============================================ */
+
+/* Staggered entrance animations */
+.animate-entrance {
+  opacity: 0;
+  animation-fill-mode: both;
+  animation-name: entranceSlideUp;
+  animation-duration: 600ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Stagger delays - expanded set for more elements */
+.animate-entrance-delay-1 { animation-delay: 100ms; }
+.animate-entrance-delay-2 { animation-delay: 200ms; }
+.animate-entrance-delay-3 { animation-delay: 300ms; }
+.animate-entrance-delay-4 { animation-delay: 400ms; }
+.animate-entrance-delay-5 { animation-delay: 500ms; }
+.animate-entrance-delay-6 { animation-delay: 600ms; }
+.animate-entrance-delay-7 { animation-delay: 700ms; }
+.animate-entrance-delay-8 { animation-delay: 800ms; }
+.animate-entrance-delay-9 { animation-delay: 900ms; }
+.animate-entrance-delay-10 { animation-delay: 1000ms; }
+
+@keyframes entranceSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade in from left (for sidebar items) */
+@keyframes entranceSlideLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-left {
+  opacity: 0;
+  animation-fill-mode: both;
+  animation-name: entranceSlideLeft;
+  animation-duration: 400ms;
+  animation-timing-function: ease-out;
+}
+
+/* Scale in (for cards) */
+@keyframes entranceScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale {
+  opacity: 0;
+  animation-fill-mode: both;
+  animation-name: entranceScale;
+  animation-duration: 500ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @keyframes fadeIn {
@@ -136,63 +305,158 @@
 
 /* Heading styles - 使用主题变量（与 demo 浅色一致） */
 .prose h1 {
+  font-family: var(--font-display) !important;
   font-size: 2.25em !important;
-  font-weight: 800 !important;
-  line-height: 1.2 !important;
-  margin-top: 1.5em !important;
-  margin-bottom: 0.8em !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  margin-top: 1.8em !important;
+  margin-bottom: 1em !important;
   color: var(--theme-text) !important;
   border-bottom: 2px solid var(--theme-border) !important;
-  padding-bottom: 0.5em !important;
+  padding-bottom: 0.6em !important;
+  letter-spacing: -0.02em !important;
 }
 
 .prose h2 {
+  font-family: var(--font-display) !important;
   font-size: 1.75em !important;
-  font-weight: 700 !important;
-  line-height: 1.3 !important;
-  margin-top: 1.4em !important;
-  margin-bottom: 0.7em !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  margin-top: 1.6em !important;
+  margin-bottom: 0.8em !important;
   color: var(--theme-text) !important;
-  border-bottom: 1px solid var(--theme-border) !important;
-  padding-bottom: 0.4em !important;
+  border-bottom: 1px solid var(--theme-border-subtle) !important;
+  padding-bottom: 0.5em !important;
+  letter-spacing: -0.015em !important;
 }
 
 .prose h3 {
-  font-size: 1.375em !important;
-  font-weight: 700 !important;
-  line-height: 1.35 !important;
+  font-family: var(--font-display) !important;
+  font-size: 1.4em !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  margin-top: 1.4em !important;
+  margin-bottom: 0.7em !important;
+  color: var(--theme-text) !important;
+  letter-spacing: -0.01em !important;
+}
+
+.prose h4, .prose h5, .prose h6 {
+  font-family: var(--font-display) !important;
+  font-size: 1.15em !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
   margin-top: 1.2em !important;
   margin-bottom: 0.6em !important;
   color: var(--theme-text) !important;
 }
 
-.prose h4, .prose h5, .prose h6 {
-  font-size: 1.125em !important;
-  font-weight: 600 !important;
-  line-height: 1.4 !important;
-  margin-top: 1em !important;
-  margin-bottom: 0.5em !important;
-  color: var(--theme-text-muted) !important;
-}
-
-.prose h5 { font-size: 1.05em !important; }
-.prose h6 { font-size: 0.95em !important; }
+.prose h5 { font-size: 1.05em !important; font-weight: 500 !important; }
+.prose h6 { font-size: 0.95em !important; font-weight: 500 !important; }
 
 /* 正文与链接 - 浅色与 demo 一致（主色 #111827），深色由下方 obsidian 块覆盖 */
 .prose {
   color: var(--theme-text);
+  font-family: var(--font-body) !important;
+  font-size: 1rem !important;
+  line-height: 1.8 !important;
+}
+
+.prose p {
+  margin-bottom: 1.2em !important;
+  max-width: 75ch !important;
+}
+
+.prose ul, .prose ol {
+  margin-bottom: 1.2em !important;
+  padding-left: 1.5em !important;
+}
+
+.prose li {
+  margin-bottom: 0.5em !important;
+  line-height: 1.7 !important;
+}
+
+.prose ul li {
+  list-style-type: disc !important;
+}
+
+.prose ol li {
+  list-style-type: decimal !important;
+}
+
+.prose code {
+  font-family: var(--font-mono) !important;
+  font-size: 0.9em !important;
+  background-color: var(--theme-primary-subtle) !important;
+  color: var(--theme-primary) !important;
+  padding: 0.2em 0.4em !important;
+  border-radius: 0.3em !important;
+  font-weight: 500 !important;
+}
+
+.prose pre {
+  font-family: var(--font-mono) !important;
+  font-size: 0.875em !important;
+  background-color: var(--theme-surface-hover) !important;
+  border: 1px solid var(--theme-border) !important;
+  border-radius: 0.5em !important;
+  padding: 1em !important;
+  overflow-x: auto !important;
+  line-height: 1.6 !important;
+}
+
+.prose blockquote {
+  border-left: 4px solid var(--theme-accent) !important;
+  padding-left: 1em !important;
+  margin-left: 0 !important;
+  margin-bottom: 1.2em !important;
+  font-style: italic !important;
+  color: var(--theme-text-muted) !important;
+}
+
+.prose strong, .prose b {
+  font-weight: 600 !important;
+  color: var(--theme-text) !important;
+}
+
+.prose em, .prose i {
+  font-style: italic !important;
+}
+
+.prose hr {
+  border-color: var(--theme-border-subtle) !important;
+  margin: 2em 0 !important;
+}
+
+.prose table {
+  border-collapse: collapse !important;
+  margin: 1.5em 0 !important;
+  width: 100% !important;
+}
+
+.prose th, .prose td {
+  border: 1px solid var(--theme-border) !important;
+  padding: 0.75em 1em !important;
+  text-align: left !important;
+}
+
+.prose th {
+  background-color: var(--theme-surface-hover) !important;
+  font-weight: 600 !important;
 }
 
 .prose a {
   color: var(--theme-interactive) !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   text-decoration: none !important;
-  transition: all 0.2s ease;
+  border-bottom: 1px solid transparent !important;
+  transition: all 0.2s ease !important;
 }
 
 .prose a:hover {
   color: var(--theme-interactive-hover) !important;
-  text-decoration: underline !important;
+  border-bottom-color: var(--theme-interactive-hover) !important;
 }
 
 .prose a:visited {
@@ -225,9 +489,20 @@
 }
 [data-theme="obsidian"] .prose a:hover {
   color: var(--theme-accent-hover) !important;
+  border-bottom-color: var(--theme-accent-hover) !important;
 }
 [data-theme="obsidian"] .prose a:focus {
   outline-color: var(--theme-accent);
+}
+
+[data-theme="obsidian"] .prose code {
+  background-color: rgba(229, 192, 123, 0.15) !important;
+  color: var(--theme-accent) !important;
+}
+
+[data-theme="obsidian"] .prose pre {
+  background-color: var(--theme-surface-hover) !important;
+  border-color: var(--theme-border) !important;
 }
 
 /* Date input custom styles */
@@ -258,4 +533,143 @@
 .date-input:hover::-moz-calendar-picker-indicator,
 .date-input:focus::-moz-calendar-picker-indicator {
   opacity: 1;
+}
+
+/* ============================================
+   Micro-Interactions & Hover Effects
+   ============================================ */
+
+/* Card hover lift effect */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px var(--theme-shadow-elevated);
+}
+
+/* Subtle card hover */
+.card-hover-subtle {
+  transition: all 0.2s ease;
+}
+
+.card-hover-subtle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px var(--theme-shadow-ambient);
+}
+
+/* Button press effect */
+.button-press:active {
+  transform: scale(0.98);
+}
+
+/* Icon rotation on hover */
+.icon-rotate-hover:hover {
+  transform: rotate(90deg);
+  transition: transform 0.3s ease;
+}
+
+/* Smooth color transitions */
+.theme-transition {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ============================================
+   Atmospheric Backgrounds & Visual Effects
+   ============================================ */
+
+/* Subtle noise texture for depth */
+.bg-noise {
+  position: relative;
+}
+
+.bg-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Geometric pattern overlay */
+.bg-pattern {
+  position: relative;
+  background-image:
+    linear-gradient(var(--theme-border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--theme-border-subtle) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: -1px -1px;
+}
+
+.bg-pattern::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--theme-bg);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+/* Radial gradient vignette */
+.bg-vignette {
+  position: relative;
+}
+
+.bg-vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.03) 100%);
+  pointer-events: none;
+}
+
+/* Subtle glow effect */
+.bg-glow {
+  position: relative;
+}
+
+.bg-glow::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  background: radial-gradient(circle, var(--theme-accent-subtle) 0%, transparent 70%);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Animated gradient background */
+.bg-animated-gradient {
+  background: linear-gradient(
+    -45deg,
+    var(--theme-bg),
+    var(--theme-surface-hover),
+    var(--theme-bg),
+    var(--theme-primary-subtle)
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Glass morphism effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme="obsidian"] .glass-effect {
+  background: rgba(0, 0, 0, 0.2);
 }

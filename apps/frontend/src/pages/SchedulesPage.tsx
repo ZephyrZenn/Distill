@@ -163,17 +163,18 @@ const SchedulesPage = () => {
     <Layout onNewClick={() => handleOpenModal()}>
       <div className="h-full overflow-y-auto p-4 md:p-12 custom-scrollbar">
         <div className="max-w-5xl mx-auto space-y-4 md:space-y-6">
-          {allSchedules.map((task) => {
+          {allSchedules.map((task, index) => {
             const isActive = task.enabled;
-            
+
             return (
               <div
                 key={task.id}
-                className={`theme-surface rounded-2xl md:rounded-[2.5rem] border transition-all duration-500 flex flex-col md:flex-row items-stretch md:items-center p-4 md:p-8 gap-4 md:gap-8 shadow-sm group relative theme-border ${
+                className={`theme-surface rounded-2xl md:rounded-[2.5rem] border theme-transition theme-shadow-ambient card-hover-subtle flex flex-col md:flex-row items-stretch md:items-center p-4 md:p-8 gap-4 md:gap-8 shadow-sm group relative theme-border animate-entrance ${
                   isActive
                     ? ''
                     : 'opacity-60 theme-surface-hover'
                 }`}
+                style={{ animationDelay: `${Math.min(index * 100, 800)}ms` }}
               >
                 {/* Time display */}
                 <div className="flex flex-row md:flex-col items-center md:items-center shrink-0 w-auto md:w-24 gap-4 md:gap-0">
@@ -280,10 +281,10 @@ const SchedulesPage = () => {
           {/* Add new button */}
           <button
             onClick={() => handleOpenModal()}
-            className="w-full py-8 md:py-12 border-2 border-dashed theme-border rounded-2xl md:rounded-[3rem] flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover transition-all gap-2 md:gap-3 min-h-[120px] md:min-h-0"
+            className="w-full py-8 md:py-12 border-2 border-dashed theme-border-subtle rounded-2xl md:rounded-[3rem] flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover theme-transition card-hover-subtle animate-entrance gap-2 md:gap-3 min-h-[120px] md:min-h-0"
           >
             <Plus size={32} className="md:w-9 md:h-9" />
-            <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em]">
+            <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em] font-display">
               新建自动化方案
             </span>
           </button>

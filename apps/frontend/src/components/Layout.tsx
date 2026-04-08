@@ -96,7 +96,7 @@ export const Layout = ({
   const shouldShowNewButton = ['/groups', '/sources', '/schedules'].includes(activeTab);
 
   return (
-    <div className="h-screen w-full theme-bg theme-text flex overflow-hidden font-sans transition-colors duration-200">
+    <div className="h-screen w-full theme-bg theme-text flex overflow-hidden font-body transition-colors duration-200 bg-noise">
       {/* 移动端遮罩层 */}
       {isMobileMenuOpen && (
         <div
@@ -108,17 +108,20 @@ export const Layout = ({
 
       {/* 侧边栏 - 桌面端固定，移动端抽屉 */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 w-64 theme-surface border-r theme-border flex flex-col shrink-0 shadow-sm z-50 md:z-auto transform transition-transform duration-300 ease-in-out transition-colors duration-200 ${
+        className={`fixed md:static inset-y-0 left-0 w-64 theme-surface border-r theme-border flex flex-col shrink-0 theme-shadow-elevated z-50 md:z-auto transform transition-transform duration-300 ease-in-out transition-colors duration-200 ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div className="p-8 flex items-center gap-3">
-          <img src="/favicon.svg" alt="" className="w-12 h-12 shrink-0" />
-          <h1 className="font-bold text-lg tracking-tight theme-text">Distill</h1>
+        <div className="p-8 flex items-center gap-4 border-b theme-border-subtle">
+          <div className="relative">
+            <div className="absolute inset-0 theme-accent-subtle rounded-full blur-lg opacity-50" />
+            <img src="/favicon.svg" alt="" className="w-12 h-12 shrink-0 relative" />
+          </div>
+          <h1 className="font-display text-xl font-bold theme-text tracking-tight">Distill</h1>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
-          <div className="px-4 text-[10px] font-bold theme-text-muted uppercase tracking-widest mb-2">
+        <nav className="flex-1 px-5 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+          <div className="px-3 text-[10px] font-black theme-text-muted uppercase tracking-widest mb-3 font-body">
             阅读视图
           </div>
           {readViewItems.map((item) => {
@@ -129,18 +132,18 @@ export const Layout = ({
                 key={item.to}
                 to={item.to}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all min-h-[44px] ${
-                  isActive ? 'nav-active font-bold' : 'nav-inactive'
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl theme-transition min-h-[44px] ${
+                  isActive ? 'nav-active font-semibold' : 'nav-inactive'
                 }`}
               >
-                <Icon size={18} />
-                <span className="text-sm">{item.label}</span>
+                <Icon size={18} className="shrink-0" />
+                <span className="text-sm font-body-medium">{item.label}</span>
               </NavLink>
             );
           })}
 
-          <div className="h-4" />
-          <div className="px-4 text-[10px] font-bold theme-text-muted uppercase tracking-widest mb-2">
+          <div className="h-6 border-t theme-border-subtle my-4" />
+          <div className="px-3 text-[10px] font-black theme-text-muted uppercase tracking-widest mb-3 font-body">
             系统管理
           </div>
           {systemItems.map((item) => {
@@ -151,22 +154,22 @@ export const Layout = ({
                 key={item.to}
                 to={item.to}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all min-h-[44px] ${
-                  isActive ? 'nav-active font-bold' : 'nav-inactive'
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl theme-transition min-h-[44px] ${
+                  isActive ? 'nav-active font-semibold' : 'nav-inactive'
                 }`}
               >
-                <Icon size={18} />
-                <span className="text-sm">{item.label}</span>
+                <Icon size={18} className="shrink-0" />
+                <span className="text-sm font-body-medium">{item.label}</span>
               </NavLink>
             );
           })}
         </nav>
 
-        <div className="p-6 border-t theme-border">
+        <div className="p-6 border-t theme-border-subtle">
           <NavLink
             to="/settings"
             onClick={() => setIsMobileMenuOpen(false)}
-            className={`w-full flex items-center justify-center gap-2 p-3 rounded-2xl transition-all text-xs font-bold relative min-h-[44px] ${
+            className={`w-full flex items-center justify-center gap-2 p-3 rounded-2xl theme-transition text-xs font-bold relative min-h-[44px] ${
               activeTab === '/settings'
                 ? 'nav-active'
                 : showApiKeyWarning
@@ -179,7 +182,7 @@ export const Layout = ({
             ) : (
               <Settings size={16} />
             )}
-            <span>{showApiKeyWarning ? '需要配置' : '系统设置'}</span>
+            <span className="font-body-medium">{showApiKeyWarning ? '需要配置' : '系统设置'}</span>
             {showApiKeyWarning && (
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
             )}
@@ -219,14 +222,14 @@ export const Layout = ({
         )}
 
         <header
-          className="h-20 backdrop-blur-md border-b theme-border flex items-center justify-between px-4 md:px-8 shrink-0 z-20 transition-colors duration-200"
+          className="h-20 backdrop-blur-md border-b theme-border flex items-center justify-between px-4 md:px-8 shrink-0 z-20 theme-transition"
           style={{ backgroundColor: 'var(--theme-header-bg)' }}
         >
-          <div className="text-lg md:text-xl font-black theme-text flex items-center gap-2 md:gap-3">
+          <div className="text-lg md:text-xl font-display font-bold theme-text flex items-center gap-2 md:gap-3">
             {/* 移动端汉堡菜单按钮 */}
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden p-2 theme-surface-hover rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="md:hidden p-2 theme-surface-hover rounded-full theme-transition min-w-[44px] min-h-[44px] flex items-center justify-center button-press"
               aria-label="打开菜单"
             >
               <Menu size={20} />
@@ -234,7 +237,7 @@ export const Layout = ({
             {showBackButton && onBackClick && (
               <button
                 onClick={onBackClick}
-                className="p-2 theme-surface-hover rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="p-2 theme-surface-hover rounded-full theme-transition min-w-[44px] min-h-[44px] flex items-center justify-center button-press"
               >
                 <ArrowLeft size={20} />
               </button>
@@ -245,16 +248,16 @@ export const Layout = ({
             {shouldShowNewButton && onNewClick && (
               <button
                 onClick={onNewClick}
-                className="flex items-center gap-1 md:gap-2 theme-btn-primary theme-on-primary px-3 md:px-5 py-2 md:py-2.5 rounded-2xl text-xs md:text-sm font-bold shadow-lg transition-all min-h-[44px]"
+                className="flex items-center gap-1 md:gap-2 theme-btn-primary theme-on-primary px-4 md:px-6 py-2.5 md:py-3 rounded-2xl text-xs md:text-sm font-bold theme-shadow-ambient theme-transition button-press min-h-[44px]"
               >
                 <Plus size={16} className="md:w-[18px] md:h-[18px]" />
-                <span className="hidden sm:inline">新建</span>
+                <span className="hidden sm:inline font-body-medium">新建</span>
               </button>
             )}
-            <div className="h-8 w-[1px] mx-1 md:mx-2 hidden sm:block rounded-full" style={{ backgroundColor: 'var(--theme-border)' }} />
+            <div className="h-8 w-[1px] mx-1 md:mx-2 hidden sm:block rounded-full theme-border-subtle" />
             <button
               onClick={toggleTheme}
-              className="p-2 md:p-2.5 theme-text-muted theme-accent-text-hover theme-surface-hover rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
+              className="p-2.5 theme-text-muted theme-accent-text-hover theme-surface-hover rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center theme-transition button-press"
               title={theme === 'paper' ? '切换为黑金曜石' : '切换为 Paper Studio'}
               aria-label="切换主题"
             >

@@ -8,87 +8,157 @@
   --theme-bg: #F9FAFB;
   --theme-surface: #FFFFFF;
   --theme-surface-hover: #F3F4F6;
+  --theme-surface-elevated: #FFFFFF;
   --theme-border: #E5E7EB;
+  --theme-border-subtle: #F3F4F6;
+
+  /* Typography - Deep charcoal instead of pure black */
   --theme-text: #111827;
   --theme-text-muted: #6B7280;
+  --theme-text-subtle: #9CA3AF;
+
+  /* Primary - Rich navy */
   --theme-primary: #111827;
   --theme-primary-hover: #374151;
+  --theme-primary-subtle: rgba(17, 24, 39, 0.08);
+
+  /* Accent - Warm gold for editorial feel */
   --theme-accent: #F3F4F6;
   --theme-accent-hover: #E5E7EB;
+  --theme-accent-subtle: rgba(243, 244, 246, 0.15);
+
+  /* Navigation */
   --theme-nav-active-bg: #F3F4F6;
   --theme-nav-active-text: #111827;
   --theme-nav-hover-bg: #F3F4F6;
   --theme-nav-inactive: #6B7280;
-  --theme-selection: rgba(17, 24, 39, 0.12);
-  --theme-scrollbar-track: #F3F4F6;
-  --theme-scrollbar-thumb: #E5E7EB;
-  --theme-header-bg: rgba(255, 255, 255, 0.8);
-  --theme-overlay: rgba(0, 0, 0, 0.4);
-  --theme-on-primary: #FFFFFF;
-  --theme-on-accent: #111827;
+
+  /* Interactive Elements */
   --theme-interactive: #111827;
   --theme-interactive-hover: #374151;
-  /* 状态：已配置 / 未配置（适配浅色主题） */
+  --theme-selection: rgba(17, 24, 39, 0.12);
+
+  /* Scrollbar */
+  --theme-scrollbar-track: #F3F4F6;
+  --theme-scrollbar-thumb: #E5E7EB;
+
+  /* Overlays */
+  --theme-header-bg: rgba(255, 255, 255, 0.8);
+  --theme-overlay: rgba(0, 0, 0, 0.4);
+
+  /* Button Colors */
+  --theme-on-primary: #FFFFFF;
+  --theme-on-accent: #111827;
+
+  /* Status Colors */
   --theme-status-success-bg: #ECFDF5;
   --theme-status-success-border: #A7F3D0;
   --theme-status-success-text: #065F46;
   --theme-status-warning-bg: #FFFBEB;
   --theme-status-warning-border: #FDE68A;
   --theme-status-warning-text: #92400E;
-  /* 日报概览区块（与主内容区分，贴近灰白主色） */
+
+  /* Overview Section */
   --theme-overview-bg: #F3F4F6;
   --theme-overview-border: #E5E7EB;
+
+  /* Atmospheric Effects */
+  --theme-shadow-ambient: rgba(0, 0, 0, 0.04);
+  --theme-shadow-elevated: rgba(0, 0, 0, 0.08);
+  --theme-shadow-modal: rgba(0, 0, 0, 0.12);
+
+  /* Gradient Overlays */
+  --theme-gradient-subtle: linear-gradient(135deg, rgba(243, 244, 246, 0.08) 0%, rgba(17, 24, 39, 0.04) 100%);
+  --theme-gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.95) 100%);
 }
 
 /* 2. 黑金曜石 Obsidian Gold —— 极客深邃 */
 [data-theme="obsidian"] {
+  /* Core Colors - Deep obsidian with refined gold */
   --theme-bg: #0B0F1A;
   --theme-surface: #161B28;
   --theme-surface-hover: #1E2433;
+  --theme-surface-elevated: #1A1E26;
   --theme-border: #2D3748;
+  --theme-border-subtle: #1F2937;
+
+  /* Typography - Warm off-white */
   --theme-text: #F8FAFC;
   --theme-text-muted: #94A3B8;
+  --theme-text-subtle: #64748B;
+
+  /* Primary - Refined gold */
   --theme-primary: #FFD54F;
   --theme-primary-hover: #FFE082;
+  --theme-primary-subtle: rgba(255, 213, 79, 0.12);
+
+  /* Accent - Rich amber */
   --theme-accent: #FFD54F;
   --theme-accent-hover: #FFE082;
+  --theme-accent-subtle: rgba(255, 213, 79, 0.15);
+
+  /* Navigation */
   --theme-nav-active-bg: rgba(255, 213, 79, 0.15);
   --theme-nav-active-text: #FFD54F;
   --theme-nav-hover-bg: rgba(255, 255, 255, 0.06);
   --theme-nav-inactive: #94A3B8;
-  --theme-selection: rgba(255, 213, 79, 0.25);
-  --theme-scrollbar-track: #0F1420;
-  --theme-scrollbar-thumb: #334155;
-  --theme-header-bg: rgba(22, 27, 40, 0.9);
-  --theme-overlay: rgba(0, 0, 0, 0.6);
-  --theme-on-primary: #0B0F1A;
-  --theme-on-accent: #0B0F1A;
+
+  /* Interactive Elements */
   --theme-interactive: #FFD54F;
   --theme-interactive-hover: #FFE082;
-  /* 状态：已配置 / 未配置（适配深色主题） */
+  --theme-selection: rgba(255, 213, 79, 0.25);
+
+  /* Scrollbar */
+  --theme-scrollbar-track: #0F1420;
+  --theme-scrollbar-thumb: #334155;
+
+  /* Overlays */
+  --theme-header-bg: rgba(22, 27, 40, 0.9);
+  --theme-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Button Colors */
+  --theme-on-primary: #0B0F1A;
+  --theme-on-accent: #0B0F1A;
+
+  /* Status Colors */
   --theme-status-success-bg: rgba(16, 185, 129, 0.15);
   --theme-status-success-border: rgba(16, 185, 129, 0.5);
   --theme-status-success-text: #6EE7B7;
   --theme-status-warning-bg: rgba(251, 191, 36, 0.12);
   --theme-status-warning-border: rgba(251, 191, 36, 0.4);
   --theme-status-warning-text: #FCD34D;
-  /* 日报概览区块（与主内容区分，贴近金 accent） */
+
+  /* Overview Section */
   --theme-overview-bg: rgba(255, 213, 79, 0.1);
   --theme-overview-border: rgba(255, 213, 79, 0.25);
+
+  /* Atmospheric Effects */
+  --theme-shadow-ambient: rgba(0, 0, 0, 0.3);
+  --theme-shadow-elevated: rgba(0, 0, 0, 0.5);
+  --theme-shadow-modal: rgba(0, 0, 0, 0.7);
+
+  /* Gradient Overlays */
+  --theme-gradient-subtle: linear-gradient(135deg, rgba(255, 213, 79, 0.06) 0%, rgba(148, 163, 184, 0.04) 100%);
+  --theme-gradient-card: linear-gradient(135deg, rgba(22, 27, 40, 0.9) 0%, rgba(11, 15, 26, 0.95) 100%);
 }
 
 /* 主题相关工具类（供 Layout / 全局使用） */
 .theme-bg { background-color: var(--theme-bg); }
 .theme-surface { background-color: var(--theme-surface); }
 .theme-surface-hover:hover { background-color: var(--theme-surface-hover); }
+.theme-surface-elevated { background-color: var(--theme-surface-elevated); }
 .theme-border { border-color: var(--theme-border); }
+.theme-border-subtle { border-color: var(--theme-border-subtle); }
 .theme-text { color: var(--theme-text); }
 .theme-text-muted { color: var(--theme-text-muted); }
+.theme-text-subtle { color: var(--theme-text-subtle); }
 .theme-primary-bg { background-color: var(--theme-primary); }
 .theme-primary-bg-hover:hover { background-color: var(--theme-primary-hover); }
+.theme-primary-subtle { background-color: var(--theme-primary-subtle); }
 .theme-accent-bg { background-color: var(--theme-accent); }
 .theme-accent-text { color: var(--theme-interactive); }
 .theme-accent-text-hover:hover { color: var(--theme-interactive-hover); }
+.theme-accent-subtle { background-color: var(--theme-accent-subtle); }
 .theme-on-primary { color: var(--theme-on-primary); }
 .theme-on-accent { color: var(--theme-on-accent); }
 
@@ -114,3 +184,12 @@
 /* 日报概览区块（简报详情页：圆角 + 主题配色） */
 .theme-overview-bg { background-color: var(--theme-overview-bg); }
 .theme-overview-border { border-color: var(--theme-overview-border); }
+
+/* Atmospheric Effects */
+.theme-shadow-ambient { box-shadow: 0 2px 8px var(--theme-shadow-ambient); }
+.theme-shadow-elevated { box-shadow: 0 8px 24px var(--theme-shadow-elevated); }
+.theme-shadow-modal { box-shadow: 0 16px 48px var(--theme-shadow-modal); }
+
+/* Gradient Backgrounds */
+.theme-gradient-subtle { background: var(--theme-gradient-subtle); }
+.theme-gradient-card { background: var(--theme-gradient-card); }

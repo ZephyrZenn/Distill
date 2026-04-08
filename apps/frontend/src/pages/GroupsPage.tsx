@@ -148,35 +148,39 @@ const GroupsPage = () => {
   return (
     <Layout onNewClick={() => handleOpenModal()}>
       <div className="h-full overflow-y-auto p-4 md:p-10 custom-scrollbar grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 content-start">
-        {allGroups.map((group) => (
+        {allGroups.map((group, index) => (
           <div
             key={group.id}
-            className="theme-surface border theme-border rounded-[2.5rem] p-6 md:p-8 shadow-sm hover:shadow-md transition-all relative group/card flex flex-col min-h-[200px] md:min-h-[220px]"
+            className={`theme-surface border theme-border rounded-[2.5rem] p-6 md:p-8 theme-shadow-ambient card-hover theme-transition relative group/card flex flex-col min-h-[210px] md:min-h-[230px] overflow-hidden animate-entrance`}
+            style={{ animationDelay: `${Math.min(index * 80, 600)}ms` }}
           >
+            {/* Subtle background decoration */}
+            <div className="absolute top-0 right-0 w-32 h-32 theme-gradient-subtle opacity-30 rounded-bl-full" />
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleDeleteGroup(group.id);
               }}
-              className="absolute top-4 md:top-6 right-4 md:right-6 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 p-2 md:p-2.5 text-rose-300 hover:text-rose-500 transition-all hover:bg-rose-50 rounded-2xl z-10 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="absolute top-5 md:top-7 right-5 md:right-7 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 p-2 md:p-2.5 text-rose-400 hover:text-rose-500 transition-all hover:bg-rose-50 rounded-2xl z-10 min-w-[44px] min-h-[44px] flex items-center justify-center theme-transition"
             >
               <Trash2 size={18} />
             </button>
-            <div className="flex-1 min-w-0 pr-4 md:pr-6">
-              <h3 className="text-lg md:text-xl font-black theme-text mb-2 truncate">
+            <div className="flex-1 min-w-0 pr-4 md:pr-6 relative z-10">
+              <h3 className="text-lg md:text-xl font-display font-bold theme-text mb-3 truncate leading-tight">
                 {group.title}
               </h3>
-              <p className="text-xs theme-text-muted leading-relaxed line-clamp-3 mb-4">
+              <p className="text-xs theme-text-muted leading-relaxed line-clamp-3 mb-4 font-body">
                 {group.desc || '暂无描述信息'}
               </p>
             </div>
-            <div className="mt-auto pt-4 border-t theme-border flex items-center justify-between shrink-0">
-              <span className="text-[10px] font-black theme-accent-text uppercase tracking-widest italic">
+            <div className="mt-auto pt-5 border-t theme-border-subtle flex items-center justify-between shrink-0 relative z-10">
+              <span className="text-[10px] font-black theme-accent-text uppercase tracking-widest italic font-display">
                 {group.feeds?.length || 0} 个订阅源
               </span>
               <button
                 onClick={() => handleOpenModal(group)}
-                className="theme-text-muted theme-accent-text-hover p-2 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="theme-text-muted theme-accent-text-hover p-2 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl theme-surface-hover"
               >
                 <Edit3 size={18} />
               </button>
@@ -187,10 +191,13 @@ const GroupsPage = () => {
         {/* Add new button */}
         <button
           onClick={() => handleOpenModal()}
-          className="border-2 border-dashed theme-border rounded-[2.5rem] p-6 flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover transition-all min-h-[200px] md:min-h-[220px]"
+          className="border-2 border-dashed theme-border-subtle rounded-[2.5rem] p-6 flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover theme-transition card-hover-subtle min-h-[210px] md:min-h-[230px] animate-entrance"
         >
-          <FolderPlus size={32} className="md:w-9 md:h-9 mb-2" strokeWidth={1.5} />
-          <span className="text-xs md:text-sm font-black uppercase">新建分组</span>
+          <div className="relative">
+            <div className="absolute inset-0 theme-accent-subtle rounded-full blur-xl opacity-50" />
+            <FolderPlus size={32} className="md:w-9 md:h-9 mb-3 relative" strokeWidth={1.5} />
+          </div>
+          <span className="text-xs md:text-sm font-black uppercase tracking-wider font-display">新建分组</span>
         </button>
       </div>
 

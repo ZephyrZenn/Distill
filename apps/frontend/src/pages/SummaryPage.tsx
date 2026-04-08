@@ -648,7 +648,7 @@ const SummaryPage = () => {
 
           {/* 近期摘要列表 - 主题一致卡片 */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {displayBriefs.map((brief) => {
+            {displayBriefs.map((brief, index) => {
               const keyPoints = brief.summary
                 ? brief.summary
                     .split("\n")
@@ -662,30 +662,37 @@ const SummaryPage = () => {
                   type="button"
                   key={brief.id}
                   onClick={() => handleBriefClick(brief)}
-                  className="group w-full text-left p-5 md:p-6 rounded-xl theme-surface border theme-border shadow-sm hover:shadow-md theme-surface-hover transition-all duration-200 min-h-[240px] md:min-h-[260px] flex flex-col"
+                  className={`group w-full text-left p-6 md:p-7 rounded-2xl theme-surface border theme-border theme-shadow-ambient card-hover theme-transition animate-entrance min-h-[260px] md:min-h-[280px] flex flex-col relative overflow-hidden`}
+                  style={{ animationDelay: `${(index % 3) * 100 + 100}ms` }}
                 >
-                  {/* 标题行：分组 + 日期 */}
-                  <div className="flex justify-between items-center mb-3 text-xs font-semibold theme-text-muted">
-                    <span className="truncate">{groupTitle}</span>
-                    <span className="text-[11px] shrink-0 ml-2">
-                      {formatDate(brief.pubDate)}
-                    </span>
-                  </div>
+                  {/* Subtle gradient overlay */}
+                  <div className="absolute inset-0 theme-gradient-subtle opacity-50 pointer-events-none" />
 
-                  {/* 要点列表 */}
-                  <ul className="space-y-2.5 flex-1 text-sm leading-relaxed theme-text">
-                    {keyPoints.map((point, i) => (
-                      <li key={i} className="flex gap-2.5">
-                        <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full theme-accent-bg opacity-80" />
-                        <span className="line-clamp-2">{point}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Content */}
+                  <div className="relative z-10 flex flex-col h-full">
+                    {/* 标题行：分组 + 日期 */}
+                    <div className="flex justify-between items-center mb-4 text-xs font-semibold theme-text-muted">
+                      <span className="truncate font-display tracking-wide uppercase">{groupTitle}</span>
+                      <span className="text-[11px] shrink-0 ml-2 font-mono-custom">
+                        {formatDate(brief.pubDate)}
+                      </span>
+                    </div>
 
-                  {/* 进入箭头 */}
-                  <div className="mt-4 pt-3 border-t theme-border flex justify-end items-center theme-text-muted group-hover:theme-accent-text transition-colors">
-                    <span className="text-xs font-medium mr-1">查看</span>
-                    <ChevronRight size={16} />
+                    {/* 要点列表 */}
+                    <ul className="space-y-3 flex-1 text-sm leading-relaxed theme-text font-body">
+                      {keyPoints.map((point, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full theme-accent-bg opacity-80" />
+                          <span className="line-clamp-2">{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* 进入箭头 */}
+                    <div className="mt-5 pt-4 border-t theme-border-subtle flex justify-end items-center theme-text-muted group-hover:theme-accent-text transition-colors">
+                      <span className="text-xs font-medium mr-2 font-body-medium">查看全文</span>
+                      <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </div>
                 </button>
               );

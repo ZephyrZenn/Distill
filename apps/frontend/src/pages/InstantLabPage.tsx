@@ -364,7 +364,7 @@ const InstantLabPage = () => {
   // 历史记录侧边栏组件
   const HistorySidebar = () => (
     <div
-      className={`fixed right-0 top-0 h-full w-80 theme-surface border-l theme-border shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+      className={`fixed right-0 top-0 h-full w-80 theme-surface border-l theme-border theme-shadow-modal z-50 transform transition-transform duration-300 ease-in-out ${
         isHistoryOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
     >
@@ -391,7 +391,7 @@ const InstantLabPage = () => {
             </div>
           ) : (
             <div className="p-2">
-              {historyTasks.map((task) => {
+              {historyTasks.map((task, index) => {
                 const date = new Date(task.createdAt);
                 const StatusIcon = 
                   task.status === 'completed' ? CheckCircle :
@@ -411,11 +411,12 @@ const InstantLabPage = () => {
                       key={task.taskId}
                       onClick={() => loadHistoryTaskDetail(task)}
                       disabled={loadingHistoryTask}
-                      className={`w-full p-3 mb-2 rounded-lg border transition-all text-left theme-text ${
+                      className={`w-full p-3 mb-2 rounded-lg border theme-transition text-left theme-text card-hover-subtle ${
                         selectedHistoryTask?.taskId === task.taskId
                           ? 'nav-active theme-border'
                           : 'theme-surface theme-border theme-surface-hover theme-accent-text-hover'
-                      } ${loadingHistoryTask ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
+                      } ${loadingHistoryTask ? 'opacity-50 cursor-wait' : 'cursor-pointer'} animate-entrance`}
+                      style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
                     >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -467,10 +468,11 @@ const InstantLabPage = () => {
           {/* History button */}
           <button
             onClick={() => setIsHistoryOpen(true)}
-            className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl shadow-lg theme-surface-hover transition-all flex items-center gap-2 theme-text theme-accent-text-hover"
+            className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl theme-shadow-ambient theme-surface-hover theme-transition flex items-center gap-2 theme-text theme-accent-text-hover animate-entrance"
+            style={{ animationDelay: '100ms' }}
           >
             <History size={18} className="theme-accent-text" />
-            <span className="text-xs font-bold hidden sm:inline">历史</span>
+            <span className="text-xs font-bold hidden sm:inline font-body-medium">历史</span>
           </button>
 
           {/* History Sidebar */}
@@ -479,13 +481,13 @@ const InstantLabPage = () => {
           {/* Overlay when sidebar is open */}
           {isHistoryOpen && (
             <div
-              className="fixed inset-0 backdrop-blur-sm z-40"
+              className="fixed inset-0 backdrop-blur-sm z-40 animate-in fade-in duration-300"
               style={{ backgroundColor: 'var(--theme-overlay)' }}
               onClick={() => setIsHistoryOpen(false)}
             />
           )}
 
-          <div className="w-full max-w-4xl flex flex-col h-full animate-in zoom-in-95 duration-300">
+          <div className="w-full max-w-4xl flex flex-col h-full animate-entrance" style={{ animationDelay: '200ms' }}>
             {/* Console header */}
             <div className="bg-slate-900 rounded-t-2xl md:rounded-t-[3rem] p-4 md:p-8 text-white flex items-center justify-between shadow-2xl border-b border-white/5">
               <div className="flex items-center gap-4">
@@ -516,7 +518,8 @@ const InstantLabPage = () => {
                 {agentLogs.map((log, i) => (
                   <div
                     key={i}
-                    className="flex gap-4 animate-in fade-in duration-700"
+                    className="flex gap-4 animate-entrance"
+                    style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
                   >
                     <span className="text-amber-500/60 shrink-0">
                       [{log.time}]
@@ -548,10 +551,11 @@ const InstantLabPage = () => {
         {/* History button */}
         <button
           onClick={() => setIsHistoryOpen(true)}
-          className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl shadow-lg theme-surface-hover transition-all flex items-center gap-2 theme-text theme-accent-text-hover"
+          className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl theme-shadow-ambient theme-surface-hover theme-transition flex items-center gap-2 theme-text theme-accent-text-hover animate-entrance"
+          style={{ animationDelay: '100ms' }}
         >
           <History size={18} className="theme-accent-text" />
-          <span className="text-xs font-bold hidden sm:inline">历史</span>
+          <span className="text-xs font-bold hidden sm:inline font-body-medium">历史</span>
         </button>
 
         {/* History Sidebar */}
@@ -560,7 +564,7 @@ const InstantLabPage = () => {
         {/* Overlay when sidebar is open */}
         {isHistoryOpen && (
           <div
-            className="fixed inset-0 backdrop-blur-sm z-40"
+            className="fixed inset-0 backdrop-blur-sm z-40 animate-in fade-in duration-300"
             style={{ backgroundColor: 'var(--theme-overlay)' }}
             onClick={() => setIsHistoryOpen(false)}
           />
@@ -569,22 +573,25 @@ const InstantLabPage = () => {
         <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
           <div className="w-full max-w-3xl flex flex-col h-full max-h-[800px]">
             {/* Header */}
-            <div className="mb-6 md:mb-8 flex items-center gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 theme-primary-bg theme-on-primary rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg">
-                <Zap size={20} className="md:w-6 md:h-6" />
+            <div className="mb-6 md:mb-8 flex items-center gap-3 md:gap-4 animate-entrance">
+              <div className="relative">
+                <div className="absolute inset-0 theme-accent-subtle rounded-xl blur-lg opacity-50" />
+                <div className="relative w-10 h-10 md:w-12 md:h-12 theme-primary-bg theme-on-primary rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg">
+                  <Zap size={20} className="md:w-6 md:h-6" />
+                </div>
               </div>
               <div>
-                <h3 className="text-lg md:text-xl font-black theme-text">
+                <h3 className="text-lg md:text-xl font-display font-bold theme-text">
                   实时 Agent 总结
                 </h3>
-                <p className="theme-text-muted text-xs md:text-sm font-medium">
+                <p className="theme-text-muted text-xs md:text-sm font-body-medium">
                   配置偏好并启动即时分析
                 </p>
               </div>
             </div>
 
             {/* Mode container: both modes shown, click to select */}
-            <div className="mb-3 md:mb-4 rounded-xl theme-surface p-3 md:p-4 theme-border border">
+            <div className="mb-3 md:mb-4 rounded-xl theme-surface p-3 md:p-4 theme-border border theme-shadow-ambient animate-entrance" style={{ animationDelay: '200ms' }}>
               <div className="flex flex-col sm:flex-row items-stretch gap-2 md:gap-3">
                 {/* Workflow 模式 - card */}
                 <button
@@ -643,7 +650,7 @@ const InstantLabPage = () => {
             </div>
 
             {/* Main content area - height follows content */}
-            <div className="flex flex-col theme-surface rounded-2xl md:rounded-3xl border theme-border shadow-sm overflow-hidden w-full">
+            <div className="flex flex-col theme-surface rounded-2xl md:rounded-3xl border theme-border theme-shadow-ambient overflow-hidden w-full animate-entrance" style={{ animationDelay: '300ms' }}>
               {/* Top section - Group selection (standard mode only) */}
               {!agentMode && (
                 <div className="border-b theme-border theme-surface-hover p-3 md:p-4">
