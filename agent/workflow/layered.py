@@ -59,13 +59,14 @@ def normalize_plan_layers(plan: AgentPlanResult) -> AgentPlanResult:
 
     auto_deep_count = 0
     for point in focal_points:
-        point["brief_summary"] = point.get("brief_summary") or point["topic"]
+        point["brief_summary"] = _optional_text(point, "brief_summary") or point["topic"]
         generation_mode = _normalize_generation_mode(point)
         point["generation_mode"] = generation_mode
 
         if generation_mode == AUTO_DEEP:
             point["deep_analysis_reason"] = (
-                point.get("deep_analysis_reason") or point.get("reasoning", "")
+                _optional_text(point, "deep_analysis_reason")
+                or _optional_text(point, "reasoning")
             )
             if auto_deep_count == 0 or (
                 auto_deep_count == 1 and _allows_second_auto_deep(point)
@@ -81,7 +82,7 @@ def normalize_plan_layers(plan: AgentPlanResult) -> AgentPlanResult:
                     point["why_expand"] = ""
 
         if point["generation_mode"] == OPTIONAL_DEEP:
-            if not _is_concrete_why_expand(point.get("why_expand", "")):
+            if not _is_concrete_why_expand(_optional_text(point, "why_expand")):
                 point["generation_mode"] = BRIEF_ONLY
                 point["why_expand"] = ""
 
@@ -110,8 +111,8 @@ def build_optional_analysis_section(points: list[FocalPoint]) -> str:
 
     lines = ["## Optional Analysis"]
     for point in points:
-        brief_summary = point.get("brief_summary") or point["topic"]
-        why_expand = point.get("why_expand", "")
+        brief_summary = _optional_text(point, "brief_summary") or point["topic"]
+        why_expand = _optional_text(point, "why_expand")
         lines.append(f"- {brief_summary} Why expand: {why_expand}")
     return "\n".join(lines)
 
@@ -135,7 +136,7 @@ def assemble_layered_report(
 
 
 def _normalize_generation_mode(point: FocalPoint) -> GenerationMode:
-    generation_mode = point.get("generation_mode")
+    generation_mode = _optional_text(point, "generation_mode")
     if generation_mode in _VALID_GENERATION_MODES:
         return generation_mode
     if point.get("strategy") == "FLASH_NEWS":
@@ -144,7 +145,7 @@ def _normalize_generation_mode(point: FocalPoint) -> GenerationMode:
 
 
 def _allows_second_auto_deep(point: FocalPoint) -> bool:
-    exception = point.get("auto_deep_exception", "")
+    exception = _optional_text(point, "auto_deep_exception")
     lowered = exception.lower()
     return (
         len(exception) >= 40
@@ -176,13 +177,26 @@ def _validate_priority(priority: object, index: int) -> int:
 
 
 def _concrete_auto_demotion_reason(point: FocalPoint) -> str:
-    for reason in (point.get("deep_analysis_reason", ""), point.get("reasoning", "")):
+    for reason in (
+        _optional_text(point, "deep_analysis_reason"),
+        _optional_text(point, "reasoning"),
+    ):
         if _is_concrete_why_expand(reason):
             return reason
     return ""
 
 
-def _is_concrete_why_expand(reason: str) -> bool:
+def _optional_text(point: FocalPoint, field: str) -> str:
+    value = point.get(field, "")
+    if isinstance(value, str):
+        return value
+    return ""
+
+
+def _is_concrete_why_expand(reason: object) -> bool:
+    if not isinstance(reason, str):
+        return False
+
     text = reason.strip()
     if not text or len(text) < 20:
         return False

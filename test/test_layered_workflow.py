@@ -353,6 +353,103 @@ class LayeredWorkflowTest(unittest.TestCase):
             [BRIEF_ONLY, OPTIONAL_DEEP, BRIEF_ONLY],
         )
 
+    def test_non_string_generation_mode_with_flash_news_becomes_brief_only(self):
+        point = _point("Flash", 1, "INVALID")
+        point["generation_mode"] = []
+        point["strategy"] = "FLASH_NEWS"
+        plan = {
+            "daily_overview": "Market day.",
+            "today_pattern": "Markets favored infrastructure over demos.",
+            "daily_brief_items": [],
+            "focal_points": [point],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
+
+    def test_non_string_generation_mode_without_concrete_reason_becomes_brief_only(self):
+        point = _point("Summary", 1, "INVALID")
+        point["generation_mode"] = []
+        plan = {
+            "daily_overview": "Market day.",
+            "today_pattern": "Markets favored infrastructure over demos.",
+            "daily_brief_items": [],
+            "focal_points": [point],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
+        self.assertEqual(normalized["focal_points"][0]["why_expand"], "")
+
+    def test_optional_with_non_string_reason_downgrades_to_brief_only(self):
+        point = _point("Malformed Optional", 1, OPTIONAL_DEEP)
+        point["why_expand"] = []
+        plan = {
+            "daily_overview": "Quiet day.",
+            "today_pattern": "Small updates dominated.",
+            "daily_brief_items": [],
+            "focal_points": [point],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
+        self.assertEqual(normalized["focal_points"][0]["why_expand"], "")
+
+    def test_non_string_auto_deep_exception_does_not_allow_second_auto(self):
+        second_point = _point(
+            "Topic B",
+            2,
+            AUTO_DEEP,
+            deep_analysis_reason="Major strategic impact.",
+        )
+        second_point["auto_deep_exception"] = []
+        plan = {
+            "daily_overview": "Market day.",
+            "today_pattern": "Markets favored infrastructure over demos.",
+            "daily_brief_items": [],
+            "focal_points": [
+                _point("Topic A", 1, AUTO_DEEP, deep_analysis_reason="Major strategic impact."),
+                second_point,
+            ],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(
+            [p["generation_mode"] for p in normalized["focal_points"]],
+            [AUTO_DEEP, OPTIONAL_DEEP],
+        )
+
+    def test_extra_auto_with_non_string_reasons_downgrades_to_brief_only(self):
+        second_point = _point("Topic B", 2, AUTO_DEEP)
+        second_point["deep_analysis_reason"] = []
+        second_point["reasoning"] = []
+        plan = {
+            "daily_overview": "Market day.",
+            "today_pattern": "Markets favored infrastructure over demos.",
+            "daily_brief_items": [],
+            "focal_points": [
+                _point("Topic A", 1, AUTO_DEEP, deep_analysis_reason="Major strategic impact."),
+                second_point,
+            ],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(
+            [p["generation_mode"] for p in normalized["focal_points"]],
+            [AUTO_DEEP, BRIEF_ONLY],
+        )
+        self.assertEqual(normalized["focal_points"][1]["why_expand"], "")
+
     def test_optional_section_uses_specific_reason(self):
         point = _point(
             "Chip Supply",
