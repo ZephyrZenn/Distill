@@ -485,6 +485,9 @@ class PlannerLayerContractTest(unittest.TestCase):
         self.assertIn("AUTO_DEEP", PLANNER_SYSTEM_PROMPT)
         self.assertIn("最多 1 个", PLANNER_SYSTEM_PROMPT)
         self.assertIn("不能偷偷生成", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("daily_brief_items", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("today_pattern", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("auto_deep_exception", PLANNER_SYSTEM_PROMPT)
 
 
 class AgentPlannerNormalizationTest(unittest.TestCase):
@@ -498,7 +501,14 @@ class AgentPlannerNormalizationTest(unittest.TestCase):
                 {
                   "daily_overview": "Two big stories.",
                   "today_pattern": "The day split between policy and platforms.",
-                  "daily_brief_items": [],
+                  "daily_brief_items": [
+                    {
+                      "title": "Policy changed",
+                      "summary": "Policy shifted.",
+                      "importance": "It affects deployment.",
+                      "article_ids": [1, 2]
+                    }
+                  ],
                   "focal_points": [
                     {
                       "priority": 1,
@@ -556,6 +566,7 @@ class AgentPlannerNormalizationTest(unittest.TestCase):
 
             self.assertEqual(result["focal_points"][0]["generation_mode"], "AUTO_DEEP")
             self.assertEqual(result["focal_points"][1]["generation_mode"], "OPTIONAL_DEEP")
+            self.assertEqual(result["daily_brief_items"][0]["article_ids"], ["1", "2"])
             self.assertEqual(state["plan"], result)
 
         import asyncio

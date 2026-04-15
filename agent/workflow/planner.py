@@ -54,6 +54,8 @@ class AgentPlanner:
             logger.info("[workflow:planner] plan() done focal_points=%d discarded=%d", n_focal, len(result.get("discarded_items", [])))
             for point in result["focal_points"]:
                 point["article_ids"] = [str(aid) for aid in point["article_ids"]]
+            for item in result.get("daily_brief_items", []):
+                item["article_ids"] = [str(aid) for aid in item.get("article_ids", [])]
             state["plan"] = result
             focal_points = result.get("focal_points", [])
             discarded = result.get("discarded_items", [])
