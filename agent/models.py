@@ -40,7 +40,7 @@ class DailyBriefItem(TypedDict):
 
 
 class FocalPoint(TypedDict):
-    """规划阶段产出的单个焦点主题结构，需与 PLANNER_PROMPT_TEMPLATE 中的 JSON 格式严格对齐。"""
+    """规划阶段产出的焦点主题结构，可附加分层工作流的可选后处理元数据。"""
 
     priority: int
     topic: str

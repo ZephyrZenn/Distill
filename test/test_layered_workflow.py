@@ -6,6 +6,7 @@ from agent.workflow.layered import (
     OPTIONAL_DEEP,
     build_optional_analysis_section,
     get_auto_deep_points,
+    get_optional_deep_points,
     normalize_plan_layers,
     assemble_layered_report,
 )
@@ -100,6 +101,22 @@ class LayeredWorkflowTest(unittest.TestCase):
         self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
         self.assertEqual(normalized["focal_points"][0]["why_expand"], "")
 
+    def test_optional_with_missing_reason_downgrades_to_brief_only(self):
+        plan = {
+            "daily_overview": "Quiet day.",
+            "today_pattern": "Small updates dominated.",
+            "daily_brief_items": [],
+            "focal_points": [
+                _point("Minor Update", 1, OPTIONAL_DEEP),
+            ],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
+        self.assertEqual(normalized["focal_points"][0]["why_expand"], "")
+
     def test_optional_with_concrete_reason_survives(self):
         plan = {
             "daily_overview": "Mixed signals.",
@@ -120,6 +137,33 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         self.assertEqual(normalized["focal_points"][0]["generation_mode"], OPTIONAL_DEEP)
 
+    def test_extra_auto_deep_with_vague_reason_downgrades_to_brief_only(self):
+        second_point = _point(
+            "Topic B",
+            2,
+            AUTO_DEEP,
+            deep_analysis_reason="Worth watching.",
+        )
+        second_point["reasoning"] = "Important topic."
+        plan = {
+            "daily_overview": "Market day.",
+            "today_pattern": "Markets favored infrastructure over demos.",
+            "daily_brief_items": [],
+            "focal_points": [
+                _point("Topic A", 1, AUTO_DEEP, deep_analysis_reason="Major strategic impact."),
+                second_point,
+            ],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(
+            [p["generation_mode"] for p in normalized["focal_points"]],
+            [AUTO_DEEP, BRIEF_ONLY],
+        )
+        self.assertEqual(normalized["focal_points"][1]["why_expand"], "")
+
     def test_get_auto_deep_points_filters_strictly(self):
         plan = {
             "focal_points": [
@@ -130,6 +174,162 @@ class LayeredWorkflowTest(unittest.TestCase):
         }
 
         self.assertEqual([p["topic"] for p in get_auto_deep_points(plan)], ["Auto"])
+
+    def test_get_optional_deep_points_filters_strictly(self):
+        plan = {
+            "focal_points": [
+                _point("Auto", 1, AUTO_DEEP),
+                _point(
+                    "Optional",
+                    2,
+                    OPTIONAL_DEEP,
+                    why_expand="Unresolved question affects roadmap decisions.",
+                ),
+                _point("Brief", 3, BRIEF_ONLY),
+            ]
+        }
+
+        self.assertEqual([p["topic"] for p in get_optional_deep_points(plan)], ["Optional"])
+
+    def test_missing_today_pattern_copies_daily_overview(self):
+        plan = {
+            "daily_overview": "Market day.",
+            "daily_brief_items": [],
+            "focal_points": [
+                _point("Topic A", 1, BRIEF_ONLY),
+            ],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(normalized["today_pattern"], "Market day.")
+
+    def test_normalize_deep_copies_input_without_mutating_original_plan(self):
+        plan = {
+            "daily_overview": "Market day.",
+            "daily_brief_items": [],
+            "focal_points": [
+                _point("Topic B", 2, BRIEF_ONLY),
+                _point("Topic A", 1, BRIEF_ONLY),
+            ],
+            "discarded_items": [],
+        }
+        original = {
+            "daily_overview": "Market day.",
+            "daily_brief_items": [],
+            "focal_points": [
+                _point("Topic B", 2, BRIEF_ONLY),
+                _point("Topic A", 1, BRIEF_ONLY),
+            ],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertIsNot(normalized, plan)
+        self.assertEqual([p["topic"] for p in normalized["focal_points"]], ["Topic A", "Topic B"])
+        self.assertEqual(plan, original)
+
+    def test_invalid_planner_data_raises_clear_value_errors(self):
+        cases = [
+            (
+                {"daily_overview": "Bad plan.", "focal_points": "not a list", "discarded_items": []},
+                "focal_points must be a list",
+            ),
+            (
+                {"daily_overview": "Bad plan.", "focal_points": ["bad point"], "discarded_items": []},
+                "focal_points[0] must be an object",
+            ),
+            (
+                {
+                    "daily_overview": "Bad plan.",
+                    "focal_points": [
+                        {
+                            "priority": 1,
+                            "strategy": "SUMMARIZE",
+                        }
+                    ],
+                    "discarded_items": [],
+                },
+                "focal_points[0] missing required field: topic",
+            ),
+            (
+                {
+                    "daily_overview": "Bad plan.",
+                    "focal_points": [
+                        {
+                            "priority": 1,
+                            "topic": "Missing strategy",
+                        }
+                    ],
+                    "discarded_items": [],
+                },
+                "focal_points[0] missing required field: strategy",
+            ),
+            (
+                {
+                    "daily_overview": "Bad plan.",
+                    "focal_points": [
+                        {
+                            "topic": "Missing priority",
+                            "strategy": "SUMMARIZE",
+                        }
+                    ],
+                    "discarded_items": [],
+                },
+                "focal_points[0] missing required field: priority",
+            ),
+            (
+                {
+                    "daily_overview": "Bad plan.",
+                    "focal_points": [
+                        {
+                            "priority": "high",
+                            "topic": "Bad priority",
+                            "strategy": "SUMMARIZE",
+                        }
+                    ],
+                    "discarded_items": [],
+                },
+                "focal_points[0] priority must be an integer",
+            ),
+        ]
+
+        for plan, message in cases:
+            with self.subTest(message=message):
+                with self.assertRaises(ValueError) as error:
+                    normalize_plan_layers(plan)
+                self.assertEqual(str(error.exception), message)
+
+    def test_invalid_generation_mode_normalizes_by_strategy_and_reason_quality(self):
+        flash_point = _point("Flash", 1, "INVALID")
+        flash_point["strategy"] = "FLASH_NEWS"
+        concrete_point = _point(
+            "Concrete",
+            2,
+            "INVALID",
+            why_expand="Unresolved timing affects downstream roadmap decisions.",
+        )
+        vague_point = _point("Vague", 3, "INVALID", why_expand="Worth watching.")
+        plan = {
+            "daily_overview": "Market day.",
+            "today_pattern": "Markets favored infrastructure over demos.",
+            "daily_brief_items": [],
+            "focal_points": [
+                vague_point,
+                concrete_point,
+                flash_point,
+            ],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(
+            [p["generation_mode"] for p in normalized["focal_points"]],
+            [BRIEF_ONLY, OPTIONAL_DEEP, BRIEF_ONLY],
+        )
 
     def test_optional_section_uses_specific_reason(self):
         point = _point(

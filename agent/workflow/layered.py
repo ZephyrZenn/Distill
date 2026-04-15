@@ -52,8 +52,8 @@ def normalize_plan_layers(plan: AgentPlanResult) -> AgentPlanResult:
         normalized["today_pattern"] = normalized.get("daily_overview", "")
 
     focal_points = sorted(
-        normalized.get("focal_points", []),
-        key=lambda point: point.get("priority", 0),
+        _validate_focal_points(normalized),
+        key=lambda point: point["priority"],
     )
     normalized["focal_points"] = focal_points
 
@@ -72,12 +72,16 @@ def normalize_plan_layers(plan: AgentPlanResult) -> AgentPlanResult:
             ):
                 auto_deep_count += 1
             else:
-                point["generation_mode"] = OPTIONAL_DEEP
-                point["why_expand"] = _fallback_why_expand(point)
+                why_expand = _concrete_auto_demotion_reason(point)
+                if why_expand:
+                    point["generation_mode"] = OPTIONAL_DEEP
+                    point["why_expand"] = why_expand
+                else:
+                    point["generation_mode"] = BRIEF_ONLY
+                    point["why_expand"] = ""
 
         if point["generation_mode"] == OPTIONAL_DEEP:
-            point["why_expand"] = point.get("why_expand") or _fallback_why_expand(point)
-            if not _is_concrete_why_expand(point["why_expand"]):
+            if not _is_concrete_why_expand(point.get("why_expand", "")):
                 point["generation_mode"] = BRIEF_ONLY
                 point["why_expand"] = ""
 
@@ -149,25 +153,43 @@ def _allows_second_auto_deep(point: FocalPoint) -> bool:
     )
 
 
-def _fallback_why_expand(point: FocalPoint) -> str:
-    reason = point.get("deep_analysis_reason") or point.get("reasoning", "")
-    topic = point.get("topic", "this topic")
-    if _is_concrete_why_expand(reason):
-        return reason
-    if reason:
-        return (
-            f"{reason} Further analysis of {topic} could clarify downstream "
-            "strategic impact."
-        )
-    return (
-        f"Unresolved questions about {topic} could affect strategic impact "
-        "and downstream decisions."
-    )
+def _validate_focal_points(plan: AgentPlanResult) -> list[FocalPoint]:
+    focal_points = plan.get("focal_points", [])
+    if not isinstance(focal_points, list):
+        raise ValueError("focal_points must be a list")
+
+    for index, point in enumerate(focal_points):
+        if not isinstance(point, dict):
+            raise ValueError(f"focal_points[{index}] must be an object")
+        for field in ("topic", "strategy", "priority"):
+            if field not in point:
+                raise ValueError(f"focal_points[{index}] missing required field: {field}")
+        point["priority"] = _validate_priority(point["priority"], index)
+
+    return focal_points
+
+
+def _validate_priority(priority: object, index: int) -> int:
+    try:
+        if isinstance(priority, bool):
+            raise TypeError
+        if isinstance(priority, float) and not priority.is_integer():
+            raise ValueError
+        return int(priority)
+    except (TypeError, ValueError):
+        raise ValueError(f"focal_points[{index}] priority must be an integer") from None
+
+
+def _concrete_auto_demotion_reason(point: FocalPoint) -> str:
+    for reason in (point.get("deep_analysis_reason", ""), point.get("reasoning", "")):
+        if _is_concrete_why_expand(reason):
+            return reason
+    return ""
 
 
 def _is_concrete_why_expand(reason: str) -> bool:
     text = reason.strip()
-    if not text or len(text) < 24:
+    if not text or len(text) < 20:
         return False
 
     lowered = text.lower()
