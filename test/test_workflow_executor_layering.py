@@ -117,5 +117,32 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
         asyncio.run(_run_test())
 
 
+class WorkflowOverviewTest(unittest.TestCase):
+    def test_workflow_uses_today_pattern_as_overview(self):
+        from agent.workflow import SummarizeAgenticWorkflow
+
+        workflow = SummarizeAgenticWorkflow(lazy_init=True)
+        plan = {
+            "daily_overview": "Old overview.",
+            "today_pattern": "Infrastructure is the main signal today.",
+        }
+
+        self.assertEqual(workflow._extract_overview(plan), "Infrastructure is the main signal today.")
+
+    def test_workflow_falls_back_to_daily_overview(self):
+        from agent.workflow import SummarizeAgenticWorkflow
+
+        workflow = SummarizeAgenticWorkflow(lazy_init=True)
+        plan = {"daily_overview": "Old overview."}
+
+        self.assertEqual(workflow._extract_overview(plan), "Old overview.")
+
+    def test_workflow_returns_empty_for_none_plan(self):
+        from agent.workflow import SummarizeAgenticWorkflow
+
+        workflow = SummarizeAgenticWorkflow(lazy_init=True)
+        self.assertEqual(workflow._extract_overview(None), "")
+
+
 if __name__ == "__main__":
     unittest.main()

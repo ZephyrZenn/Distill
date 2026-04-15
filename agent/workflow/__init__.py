@@ -111,7 +111,7 @@ class SummarizeAgenticWorkflow:
 
             # 返回简报内容、外部搜索结果和日报概览
             ext_info = state.get("ext_info", [])
-            overview = plan.get("daily_overview", "") if plan else ""
+            overview = self._extract_overview(plan)
             state["status"] = "COMPLETED"
             return "\n\n".join(result_strings), ext_info, overview
         except Exception as e:
@@ -121,6 +121,11 @@ class SummarizeAgenticWorkflow:
                 task_id, state.get("status"), e,
             )
             raise
+
+    def _extract_overview(self, plan: dict | None) -> str:
+        if not plan:
+            return ""
+        return str(plan.get("today_pattern") or plan.get("daily_overview") or "")
 
     def _build_state(
         self,
