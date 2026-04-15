@@ -616,5 +616,29 @@ class PrimaryBriefWriterTest(unittest.TestCase):
         asyncio.run(_run_test())
 
 
+class ReadingBurdenRegressionTest(unittest.TestCase):
+    def test_final_report_does_not_put_optional_before_deep_or_brief(self):
+        report = assemble_layered_report(
+            primary_brief="# Today Brief\n\n## What Happened\n- One\n\n## Today's Pattern\nA synthesis.",
+            deep_sections=["## Market Structure\nDeep analysis."],
+            optional_points=[
+                _point(
+                    "Secondary Topic",
+                    2,
+                    OPTIONAL_DEEP,
+                    why_expand="Unresolved customer impact could affect adoption timing.",
+                )
+            ],
+        )
+
+        brief_index = report.index("# Today Brief")
+        deep_index = report.index("## Deep Analysis")
+        optional_index = report.index("## Optional Analysis")
+
+        self.assertLess(brief_index, deep_index)
+        self.assertLess(deep_index, optional_index)
+        self.assertEqual(report.count("## Deep Analysis"), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
