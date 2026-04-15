@@ -574,5 +574,47 @@ class AgentPlannerNormalizationTest(unittest.TestCase):
         asyncio.run(_run_test())
 
 
+class PrimaryBriefWriterTest(unittest.TestCase):
+    def test_primary_brief_prompt_enforces_one_minute_structure(self):
+        from agent.tools.writing_tool import _build_primary_brief_prompt
+
+        plan = {
+            "today_pattern": "Infrastructure spending is becoming the main AI signal.",
+            "daily_brief_items": [
+                {
+                    "title": "GPU Orders",
+                    "summary": "Cloud providers increased GPU orders.",
+                    "importance": "This points to sustained AI infrastructure demand.",
+                    "article_ids": ["1"],
+                }
+            ],
+            "focal_points": [
+                _point("GPU Orders", 1, "AUTO_DEEP", deep_analysis_reason="Large capital allocation.")
+            ],
+        }
+
+        prompt = _build_primary_brief_prompt(plan)
+        text = "\n".join(message.content for message in prompt)
+
+        self.assertIn("What Happened", text)
+        self.assertIn("Today's Pattern", text)
+        self.assertIn("5-8", text)
+        self.assertIn("complete on its own", text)
+
+    def test_write_primary_brief_calls_client(self):
+        from agent.tools.writing_tool import write_primary_brief
+
+        async def _run_test():
+            client = MagicMock()
+            client.completion = AsyncMock(return_value="# Today Brief\n\n## What Happened\n- A\n\n## Today's Pattern\nB")
+            result = await write_primary_brief(client, {"focal_points": [], "daily_brief_items": [], "today_pattern": "B"})
+            self.assertTrue(result.startswith("# Today Brief"))
+            client.completion.assert_awaited_once()
+
+        import asyncio
+
+        asyncio.run(_run_test())
+
+
 if __name__ == "__main__":
     unittest.main()
