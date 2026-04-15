@@ -170,14 +170,9 @@ def _validate_focal_points(plan: AgentPlanResult) -> list[FocalPoint]:
 
 
 def _validate_priority(priority: object, index: int) -> int:
-    try:
-        if isinstance(priority, bool):
-            raise TypeError
-        if isinstance(priority, float) and not priority.is_integer():
-            raise ValueError
-        return int(priority)
-    except (TypeError, ValueError):
+    if isinstance(priority, bool) or not isinstance(priority, int):
         raise ValueError(f"focal_points[{index}] priority must be an integer") from None
+    return priority
 
 
 def _concrete_auto_demotion_reason(point: FocalPoint) -> str:

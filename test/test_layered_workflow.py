@@ -302,6 +302,28 @@ class LayeredWorkflowTest(unittest.TestCase):
                     normalize_plan_layers(plan)
                 self.assertEqual(str(error.exception), message)
 
+    def test_priority_rejects_non_integer_values(self):
+        for priority in ("1", 1.0, True):
+            with self.subTest(priority=priority):
+                plan = {
+                    "daily_overview": "Bad plan.",
+                    "focal_points": [
+                        {
+                            "priority": priority,
+                            "topic": "Bad priority",
+                            "strategy": "SUMMARIZE",
+                        }
+                    ],
+                    "discarded_items": [],
+                }
+
+                with self.assertRaises(ValueError) as error:
+                    normalize_plan_layers(plan)
+                self.assertEqual(
+                    str(error.exception),
+                    "focal_points[0] priority must be an integer",
+                )
+
     def test_invalid_generation_mode_normalizes_by_strategy_and_reason_quality(self):
         flash_point = _point("Flash", 1, "INVALID")
         flash_point["strategy"] = "FLASH_NEWS"
