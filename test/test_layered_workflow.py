@@ -1,5 +1,7 @@
 import unittest
+from unittest.mock import AsyncMock, MagicMock, patch
 
+from agent.prompts import PLANNER_SYSTEM_PROMPT
 from agent.workflow.layered import (
     AUTO_DEEP,
     BRIEF_ONLY,
@@ -473,6 +475,92 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         self.assertTrue(report.startswith("# Today Brief"))
         self.assertIn("## Deep Analysis\n\n## Deep Topic", report)
+
+
+class PlannerLayerContractTest(unittest.TestCase):
+    def test_planner_prompt_mentions_layered_generation_contract(self):
+        self.assertIn("generation_mode", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("BRIEF_ONLY", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("OPTIONAL_DEEP", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("AUTO_DEEP", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("最多 1 个", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("不能偷偷生成", PLANNER_SYSTEM_PROMPT)
+
+
+class AgentPlannerNormalizationTest(unittest.TestCase):
+    def test_plan_normalizes_generation_modes_before_storing_state(self):
+        from agent.workflow.planner import AgentPlanner
+
+        async def _run_test():
+            client = MagicMock()
+            client.completion = AsyncMock(
+                return_value="""
+                {
+                  "daily_overview": "Two big stories.",
+                  "today_pattern": "The day split between policy and platforms.",
+                  "daily_brief_items": [],
+                  "focal_points": [
+                    {
+                      "priority": 1,
+                      "topic": "Policy",
+                      "match_type": "GLOBAL_STRATEGIC",
+                      "relevance_description": "Regulation affects AI deployment.",
+                      "strategy": "SUMMARIZE",
+                      "article_ids": ["1"],
+                      "reasoning": "Major regulation.",
+                      "search_query": "",
+                      "writing_guide": "Explain impact.",
+                      "history_memory_id": [],
+                      "generation_mode": "AUTO_DEEP",
+                      "brief_summary": "Policy changed.",
+                      "deep_analysis_reason": "Regulation changes deployment strategy."
+                    },
+                    {
+                      "priority": 2,
+                      "topic": "Platform",
+                      "match_type": "GLOBAL_STRATEGIC",
+                      "relevance_description": "Platform affects developers.",
+                      "strategy": "SUMMARIZE",
+                      "article_ids": ["2"],
+                      "reasoning": "Major platform shift.",
+                      "search_query": "",
+                      "writing_guide": "Explain platform impact.",
+                      "history_memory_id": [],
+                      "generation_mode": "AUTO_DEEP",
+                      "brief_summary": "Platform changed.",
+                      "deep_analysis_reason": "Platform changes developer roadmap."
+                    }
+                  ],
+                  "discarded_items": []
+                }
+                """
+            )
+            planner = AgentPlanner(client)
+            state = {
+                "raw_articles": [{"id": "1", "title": "A", "url": "u", "summary": "s", "pub_date": ""}],
+                "focus": "AI",
+                "log_history": [],
+                "history_memories": {},
+                "scored_articles": [],
+                "groups": [],
+                "status": "PENDING",
+                "created_at": None,
+            }
+
+            with patch.object(planner, "_rank_articles", AsyncMock(return_value=[
+                {"id": "1", "title": "A", "url": "u", "summary": "s", "pub_date": "", "score": 9, "reasoning": "r"}
+            ])), patch("agent.workflow.planner.find_keywords_with_llm", AsyncMock(return_value=[])), patch(
+                "agent.workflow.planner.search_memory", AsyncMock(return_value={})
+            ):
+                result = await planner.plan(state)
+
+            self.assertEqual(result["focal_points"][0]["generation_mode"], "AUTO_DEEP")
+            self.assertEqual(result["focal_points"][1]["generation_mode"], "OPTIONAL_DEEP")
+            self.assertEqual(state["plan"], result)
+
+        import asyncio
+
+        asyncio.run(_run_test())
 
 
 if __name__ == "__main__":

@@ -7,41 +7,60 @@ PLANNER_SYSTEM_PROMPT = """
 1. **用户关注点相关性 (Focus Match)**
 2. **全局影响力权重 (Global Strategic)**
 
-## 规划逻辑 (Top-Down Priority)
-你的目标不是重新打分，而是根据得分分布进行“资源分配”：
+## 规划逻辑 (Selective Reading Agenda)
+你的目标不是为每个重要话题都写长文，而是构建一个能在 1 分钟内读完的分层阅读议程。
 
-1. **顶级专题构建 (Score 8-10)**：
-   - 必须将此类文章设为 `priority: 1-2` 的焦点专题。
-   - **双线并进**：无论得分是因为匹配 Focus 还是因为 Global Strategic，只要是高分，必须独立或聚合成专题处理。
-   - 若高分内容分散，尝试寻找其潜在的“因果联系”或“对冲关系”。
+1. **先保证 Brief 完整**
+   - `daily_brief_items` 必须覆盖当天最重要的 5-8 个事件。
+   - `today_pattern` 必须综合当天的共同方向，不能重复 bullet 内容。
 
-2. **策略选择 (Strategy)**：
-   - **SUMMARIZE**：多篇高分文章指向同一主题，需进行综合对比。
-   - **SEARCH_ENHANCE**：高分文章提出了一个重大但描述模糊的新概念、新政策或新技术（尤其是 `GLOBAL_STRATEGIC` 类）。
-   - **FLASH_NEWS**：分值中等 (5-7分) 但具备情报价值的单点资讯。
+2. **严格分层生成**
+   - `BRIEF_ONLY`: 只进入 1 分钟简报，不生成深度分析。
+   - `OPTIONAL_DEEP`: 进入简报，并在 Optional Analysis 中给出一句话和具体展开理由；初始运行不能偷偷生成深度分析。
+   - `AUTO_DEEP`: 自动生成深度分析。默认最多 1 个。只有两个独立高影响事件无法合并时，才允许最多 2 个，并必须填写 `auto_deep_exception`。
 
-3. **冗余清洗**：
-   - 对分值较低 (0-4分) 的内容，直接放入 `discarded_items`，除非你发现多条低分信息其实在共同指向一个被漏掉的“黑天鹅”预兆。
+3. **选择性优先**
+   - 不要把旧流程的所有 focal points 重新贴标签。
+   - 优先减少话题数量，保留用户真正需要知道的内容。
+   - `OPTIONAL_DEEP.why_expand` 必须具体，基于未解决问题、不确定性、信源冲突、下游影响或战略含义，不能写“值得关注”“影响很大”等空话。
 
 ## 输出约束
-- **逻辑透明**：在 `reasoning` 中必须点出该专题的价值来源——是因为它是用户指定的“必读项”，还是它属于足以影响行业格局的“变局项”。
-- **严禁废话**: 仅输出纯 JSON 格式。
-- **字数限制**: topic 字数限制在 20 个字以内，reasoning 字数限制在 100 个字以内。
+- 仅输出纯 JSON。
+- `AUTO_DEEP` 正常情况下最多 1 个。
+- `BRIEF_ONLY` 和 `OPTIONAL_DEEP` 不能偷偷生成深度分析。
+- `topic` 限制在 20 个字以内。
+- `brief_summary` 限制在 40 个字以内。
+- `why_expand` 限制在 80 个字以内。
+- `today_pattern` 限制在 120 个字以内。
 
 ## 输出格式 (JSON)
 {{
-  "daily_overview": "概括今日资讯的能量分布（例如：今日 Focus 内容平淡，但行业技术端有重磅突破）",
+  "daily_overview": "兼容旧字段：用一句话概括今日资讯能量分布",
+  "today_pattern": "综合当天共同方向，不重复条目摘要",
+  "daily_brief_items": [
+    {{
+      "title": "简短标题",
+      "summary": "一句话说明发生了什么",
+      "importance": "一句话说明为什么重要",
+      "article_ids": ["文章ID"]
+    }}
+  ],
   "focal_points": [
     {{
-      "priority": 1, 
+      "priority": 1,
       "topic": "专题名称",
       "match_type": "FOCUS_MATCH | GLOBAL_STRATEGIC | HISTORICAL_CONTINUITY",
-      "relevance_description": "明确解释：是因匹配用户 Focus 入选，还是因其全球/行业影响力入选",
+      "relevance_description": "入选原因",
       "strategy": "SUMMARIZE | SEARCH_ENHANCE | FLASH_NEWS",
-      "article_ids": [涉及的文章id列表],
-      "reasoning": "结合前序评分理由，阐述这些文章为何值得最高优先级处理，及它们之间的关联",
+      "generation_mode": "BRIEF_ONLY | OPTIONAL_DEEP | AUTO_DEEP",
+      "brief_summary": "用于 1 分钟简报的一句话",
+      "why_expand": "仅 OPTIONAL_DEEP 必填：具体展开理由",
+      "deep_analysis_reason": "仅 AUTO_DEEP 必填：为何必须自动深度分析",
+      "auto_deep_exception": "仅第 2 个 AUTO_DEEP 必填：解释为何两个高影响话题不能合并",
+      "article_ids": ["涉及的文章id列表"],
+      "reasoning": "入选与分层依据",
       "search_query": "仅在 SEARCH_ENHANCE 时提供",
-      "writing_guide": "告诉下级Agent：是做深度对比、技术原理解析，还是影响预测",
+      "writing_guide": "告诉下级 Agent 如何分析",
       "history_memory_id": []
     }}
   ],
