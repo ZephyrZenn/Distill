@@ -75,6 +75,27 @@ class AgentPlanResult(TypedDict):
     discarded_items: list[DiscardedItem]
 
 
+class ExpandableArticleSnapshot(TypedDict):
+    id: str
+    title: str
+    url: str
+    summary: str
+    pub_date: str
+    score: float
+    reasoning: str
+
+
+class ExpandableTopic(TypedDict):
+    topic_id: str
+    topic: str
+    why_expand: str
+    strategy: Literal["SUMMARIZE", "SEARCH_ENHANCE", "FLASH_NEWS"]
+    search_query: str
+    history_memory_id: list[int]
+    focal_point: FocalPoint
+    articles: list[ExpandableArticleSnapshot]
+
+
 class SummaryMemory(TypedDict):
     id: int
     topic: str
@@ -100,6 +121,7 @@ class AgentState(TypedDict):
     raw_articles: list[RawArticle]
     scored_articles: list[Article]
     plan: NotRequired[AgentPlanResult]
+    expandable_topics: NotRequired[list[ExpandableTopic]]
     writing_materials: NotRequired[list[WritingMaterial]]
     summary_results: NotRequired[list[str]]
     execution_status: NotRequired[
