@@ -122,5 +122,9 @@ class FeedBrief:
         if include_content:
             result["content"] = self.content
             result["ext_info"] = self.ext_info
-            result["expandable_topics"] = self.expandable_topics
+            result["expandable_topics"] = [
+                {"topic_id": t["topic_id"], "topic": t["topic"]}
+                for t in self.expandable_topics
+                if t.get("topic_id") and t.get("topic")
+            ]
         return result

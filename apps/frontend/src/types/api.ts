@@ -39,19 +39,6 @@ export interface FeedBrief {
 export interface ExpandableTopic {
   topicId: string;
   topic: string;
-  whyExpand: string;
-  strategy: string;
-  searchQuery: string;
-  historyMemoryId: number[];
-  articles: Array<{
-    id: string;
-    title: string;
-    url: string;
-    summary: string;
-    pubDate: string;
-    score: number;
-    reasoning: string;
-  }>;
 }
 
 export interface OptionalTopicExpansion {

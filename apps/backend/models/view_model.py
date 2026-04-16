@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import Field
-
 from .common import CamelModel, CommonResult
 from core.config.defaults import DEFAULT_AGENT_LIMITS as _AGENT_LIMITS_DEFAULTS
 
@@ -22,24 +20,9 @@ class FeedGroupVO(CamelModel):
     feeds: List[FeedVO]
 
 
-class ExpandableTopicArticleVO(CamelModel):
-    id: str
-    title: str
-    url: str
-    summary: str
-    pub_date: Optional[str] = None
-    score: Optional[float] = None
-    reasoning: Optional[str] = None
-
-
 class ExpandableTopicVO(CamelModel):
     topic_id: str
     topic: str
-    why_expand: Optional[str] = None
-    strategy: Optional[str] = None
-    search_query: Optional[str] = None
-    history_memory_id: List[int] = Field(default_factory=list)
-    articles: List[ExpandableTopicArticleVO] = Field(default_factory=list)
 
 
 class FeedBriefVO(CamelModel):
