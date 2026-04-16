@@ -523,16 +523,18 @@ const SummaryPage = () => {
                   <h2 className="text-sm font-bold theme-text uppercase tracking-wider mb-4">Optional Analysis</h2>
                   {selectedBrief.expandableTopics.map((topic) => (
                     <article key={topic.topicId} className="summary-expansion mb-6">
-                      <h3 className="text-base font-semibold theme-text mb-1">{topic.topic}</h3>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-1">
+                        <h3 className="text-base font-semibold theme-text m-0">{topic.topic}</h3>
+                        <button
+                          type="button"
+                          onClick={() => handleExpandTopic(topic.topicId)}
+                          disabled={expandingTopicId === topic.topicId}
+                          className="self-start shrink-0 px-3 py-1.5 text-sm theme-surface border theme-border rounded theme-accent-text-hover theme-surface-hover transition-colors disabled:opacity-50"
+                        >
+                          {expandingTopicId === topic.topicId ? "Generating..." : "Generate analysis"}
+                        </button>
+                      </div>
                       <p className="text-sm theme-text-muted mb-2">{topic.whyExpand}</p>
-                      <button
-                        type="button"
-                        onClick={() => handleExpandTopic(topic.topicId)}
-                        disabled={expandingTopicId === topic.topicId}
-                        className="px-3 py-1.5 text-sm theme-surface border theme-border rounded theme-accent-text-hover theme-surface-hover transition-colors disabled:opacity-50"
-                      >
-                        {expandingTopicId === topic.topicId ? "Generating..." : "Generate analysis"}
-                      </button>
                       {expandedTopics[topic.topicId] ? (
                         <div className="mt-4">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
