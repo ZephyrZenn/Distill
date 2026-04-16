@@ -23,6 +23,7 @@ import type {
   UpdateSchedulePayload,
   Memory,
   MemoryResponse,
+  OptionalTopicExpansion,
 } from '@/types/api';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? '/api';
@@ -83,6 +84,10 @@ export const api = {
       result?: string;
       error?: string;
     }>>(`/briefs/generate/${taskId}`)),
+  expandOptionalTopic: (briefId: number, topicId: string) =>
+    unwrap<OptionalTopicExpansion>(
+      client.post<ApiResponse<OptionalTopicExpansion>>(`/briefs/${briefId}/expand/${topicId}`)
+    ),
 
   // Groups
   getGroups: () => unwrap<FeedGroup[]>(client.get<FeedGroupListResponse>('/groups/')),

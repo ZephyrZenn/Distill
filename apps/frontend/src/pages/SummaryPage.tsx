@@ -4,7 +4,7 @@ import { DateFilter } from "@/components/DateFilter";
 import { Layout } from "@/components/Layout";
 import { useToast } from "@/context/ToastContext";
 import { useApiQuery } from "@/hooks/useApiQuery";
-import type { FeedBrief } from "@/types/api";
+import type { FeedBrief, OptionalTopicExpansion } from "@/types/api";
 import { formatDate } from "@/utils/date";
 import { Check, ChevronRight, Copy, FileText, List, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
@@ -115,6 +115,8 @@ const SummaryPage = () => {
     }
     return true;
   });
+  const [expandedTopics, setExpandedTopics] = useState<Record<string, OptionalTopicExpansion>>({});
+  const [expandingTopicId, setExpandingTopicId] = useState<string | null>(null);
   const today = getTodayString();
   const [startDate, setStartDate] = useState<string>(today);
   const [endDate, setEndDate] = useState<string>(today);
@@ -301,6 +303,20 @@ const SummaryPage = () => {
     } catch (error) {
       console.error("Failed to copy content:", error);
       showToast("复制失败，请重试", { type: "error" });
+    }
+  };
+
+  const handleExpandTopic = async (topicId: string) => {
+    if (!selectedBrief?.id || expandedTopics[topicId]) return;
+    setExpandingTopicId(topicId);
+    try {
+      const result = await api.expandOptionalTopic(selectedBrief.id, topicId);
+      setExpandedTopics((current) => ({
+        ...current,
+        [topicId]: result,
+      }));
+    } finally {
+      setExpandingTopicId(null);
     }
   };
 
@@ -501,6 +517,44 @@ const SummaryPage = () => {
                   {selectedBrief.content || ""}
                 </ReactMarkdown>
               </div>
+
+              {selectedBrief?.expandableTopics?.length ? (
+                <section className="summary-expansions px-6 py-4 border-t theme-border">
+                  <h2 className="text-sm font-bold theme-text uppercase tracking-wider mb-4">Optional Analysis</h2>
+                  {selectedBrief.expandableTopics.map((topic) => (
+                    <article key={topic.topicId} className="summary-expansion mb-6">
+                      <h3 className="text-base font-semibold theme-text mb-1">{topic.topic}</h3>
+                      <p className="text-sm theme-text-muted mb-2">{topic.whyExpand}</p>
+                      <button
+                        type="button"
+                        onClick={() => handleExpandTopic(topic.topicId)}
+                        disabled={expandingTopicId === topic.topicId}
+                        className="px-3 py-1.5 text-sm theme-surface border theme-border rounded theme-accent-text-hover theme-surface-hover transition-colors disabled:opacity-50"
+                      >
+                        {expandingTopicId === topic.topicId ? "Generating..." : "Generate analysis"}
+                      </button>
+                      {expandedTopics[topic.topicId] ? (
+                        <div className="mt-4">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {expandedTopics[topic.topicId].content}
+                          </ReactMarkdown>
+                          {expandedTopics[topic.topicId].extInfo?.length ? (
+                            <ul className="mt-2 text-sm theme-text-muted">
+                              {expandedTopics[topic.topicId].extInfo.map((item, index) => (
+                                <li key={`${topic.topicId}-${index}`}>
+                                  <a href={String(item["url"] || "#")} target="_blank" rel="noreferrer" className="theme-accent-text-hover underline">
+                                    {String(item["title"] || item["url"] || "Source")}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </article>
+                  ))}
+                </section>
+              ) : null}
 
               {/* 大纲侧边栏 - 只在展开时渲染 */}
               {headings.length > 0 && showOutline && (

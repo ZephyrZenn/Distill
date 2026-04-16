@@ -33,6 +33,33 @@ export interface FeedBrief {
     content: string;
     score: number;
   }>;
+  expandableTopics?: ExpandableTopic[];
+}
+
+export interface ExpandableTopic {
+  topicId: string;
+  topic: string;
+  whyExpand: string;
+  strategy: string;
+  searchQuery: string;
+  historyMemoryId: number[];
+  articles: Array<{
+    id: string;
+    title: string;
+    url: string;
+    summary: string;
+    pubDate: string;
+    score: number;
+    reasoning: string;
+  }>;
+}
+
+export interface OptionalTopicExpansion {
+  briefId: number;
+  topicId: string;
+  topic: string;
+  content: string;
+  extInfo: Array<Record<string, unknown>>;
 }
 
 export interface ModelSetting {
