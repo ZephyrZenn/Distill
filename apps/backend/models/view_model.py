@@ -156,3 +156,15 @@ class BriefGenerationStatusResponse(CommonResult[dict]):
     """生成任务状态响应"""
 
     pass
+
+
+class OptionalTopicExpansionVO(CamelModel):
+    brief_id: int
+    topic_id: str
+    topic: str
+    content: str
+    ext_info: Optional[List[dict]] = None
+
+
+class OptionalTopicExpansionResponse(CommonResult[OptionalTopicExpansionVO]):
+    pass

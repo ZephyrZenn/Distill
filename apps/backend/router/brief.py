@@ -11,6 +11,7 @@ from apps.backend.models.view_model import (
     FeedBriefResponse,
     GenerateBriefResponse,
     BriefGenerationStatusResponse,
+    OptionalTopicExpansionResponse,
 )
 from apps.backend.services import brief_service, group_service, task_service
 
@@ -52,10 +53,19 @@ async def get_brief_detail(brief_id: int):
     brief = brief_service.get_brief_by_id(brief_id)
     if not brief:
         raise HTTPException(status_code=404, detail="Brief not found")
-    
+
     group_ids = brief.group_ids
     groups = group_service.get_groups(group_ids)
     return success_with_data(brief.to_view_model(groups, include_content=True))
+
+
+@router.post("/{brief_id}/expand/{topic_id}", response_model=OptionalTopicExpansionResponse)
+async def expand_optional_topic(brief_id: int, topic_id: str):
+    try:
+        result = await brief_service.expand_optional_topic(brief_id, topic_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return success_with_data(result)
 
 
 @router.post("/generate", response_model=GenerateBriefResponse)
