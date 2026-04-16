@@ -355,7 +355,45 @@ def _insert_brief(
             )
 
 
-async def expand_optional_topic(brief_id: int, topic_id: str) -> dict:
+def _patch_brief_expansion(brief_id: int, topic_id: str, new_section: str) -> None:
+    """Replace the section under the matching ## heading and remove topic from expandable_topics."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT content, expandable_topics FROM feed_brief WHERE id = %s",
+                (brief_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return
+            content: str = row[0] or ""
+            expandable_topics: list[dict] = json.loads(row[1]) if isinstance(row[1], str) else (row[1] if row[1] else [])
+
+    topic_entry = next(
+        (t for t in expandable_topics if t.get("topic_id") == topic_id), None
+    )
+    topic_name = topic_entry["focal_point"]["topic"] if topic_entry else None
+
+    if topic_name:
+        pattern = rf"(## {re.escape(topic_name)}\n)(.*?)(?=\n## |\Z)"
+        replacement = new_section + "\n"
+        new_content, n = re.subn(pattern, replacement, content, flags=re.DOTALL)
+        if n == 0:
+            new_content = content.rstrip() + "\n\n" + new_section
+    else:
+        new_content = content.rstrip() + "\n\n" + new_section
+
+    new_expandable = [t for t in expandable_topics if t.get("topic_id") != topic_id]
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE feed_brief SET content = %s, expandable_topics = %s::jsonb WHERE id = %s",
+                (new_content, json.dumps(new_expandable), brief_id),
+            )
+
+
+async def expand_optional_topic(brief_id: int, topic_id: str) -> None:
     from agent.tools import get_article_content
     from agent.workflow.executor import AgentExecutor
     from agent.workflow.expansion import build_expansion_state
@@ -365,27 +403,18 @@ async def expand_optional_topic(brief_id: int, topic_id: str) -> dict:
         raise LookupError("Brief not found")
 
     topic = next(
-        (
-            item
-            for item in (brief.expandable_topics or [])
-            if item.get("topic_id") == topic_id
-        ),
+        (t for t in (brief.expandable_topics or []) if t.get("topic_id") == topic_id),
         None,
     )
     if not topic:
         raise LookupError("Expandable topic not found")
 
+    article_ids = list(topic["focal_point"].get("article_ids", []))
+    fetched_articles = await get_article_content(article_ids)
+
     client = auto_build_client()
     executor = AgentExecutor(client)
-    state = build_expansion_state(topic)
-
-    # Re-fetch full article content before writing
-    article_ids = [a["id"] for a in state["scored_articles"]]
-    db_articles = await get_article_content(article_ids)
-    for article in state["scored_articles"]:
-        if article["id"] in db_articles:
-            article["content"] = db_articles[article["id"]]
-
+    state = build_expansion_state(topic, fetched_articles)
     point = state["plan"]["focal_points"][0]
 
     if point["strategy"] == "SEARCH_ENHANCE":
@@ -395,10 +424,4 @@ async def expand_optional_topic(brief_id: int, topic_id: str) -> dict:
     else:
         content = await executor.handle_flash_news(point, state)
 
-    return {
-        "brief_id": brief_id,
-        "topic_id": topic_id,
-        "topic": topic["focal_point"]["topic"],
-        "content": content,
-        "ext_info": state.get("ext_info", []),
-    }
+    _patch_brief_expansion(brief_id, topic_id, content)
