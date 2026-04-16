@@ -375,7 +375,9 @@ def _patch_brief_expansion(brief_id: int, topic_id: str, new_section: str) -> No
     topic_name = topic_entry["focal_point"]["topic"] if topic_entry else None
 
     if topic_name:
-        pattern = rf"(## {re.escape(topic_name)}\n)(.*?)(?=\n## |\Z)"
+        # Match the heading with optional （可展开分析） suffix
+        heading_pattern = rf"## {re.escape(topic_name)}（可展开分析）|## {re.escape(topic_name)}"
+        pattern = rf"(?:{heading_pattern})\n(.*?)(?=\n## |\Z)"
         replacement = new_section + "\n"
         new_content, n = re.subn(pattern, replacement, content, flags=re.DOTALL)
         if n == 0:

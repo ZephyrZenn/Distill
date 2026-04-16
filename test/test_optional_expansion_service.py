@@ -75,6 +75,21 @@ class PatchBriefExpansionTest(unittest.TestCase):
         self.assertIn("Deep analysis.", new_content)
         self.assertIn("Some content.", new_content)
 
+    def test_replaces_section_with_expandable_suffix_heading(self):
+        content = "# Brief\n\n## AI Pricing（可展开分析）\n\nOld summary.\n\n## Other Topic\n\nOther content."
+        expandable_topics = [_expandable_topic()]
+        conn, cursor = self._make_conn(content, expandable_topics)
+
+        with patch("apps.backend.services.brief_service.get_connection", return_value=conn):
+            _patch_brief_expansion(12, "1-ai-pricing", "## AI Pricing\n\nDeep analysis.")
+
+        update_call = cursor.execute.call_args_list[-1]
+        new_content = update_call.args[1][0]
+        self.assertIn("Deep analysis.", new_content)
+        self.assertNotIn("Old summary.", new_content)
+        self.assertNotIn("可展开分析", new_content)
+        self.assertIn("## Other Topic", new_content)
+
 
 class ExpandOptionalTopicTest(unittest.TestCase):
     def test_fetches_articles_and_patches_brief(self):
