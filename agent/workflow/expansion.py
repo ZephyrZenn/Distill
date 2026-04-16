@@ -137,7 +137,6 @@ def build_expansion_state(
         raw_articles=[],
         scored_articles=articles,
         plan={
-            "daily_overview": "",
             "today_pattern": "",
             "daily_brief_items": [],
             "focal_points": [focal_point],

@@ -614,6 +614,16 @@ class PlannerLayerContractTest(unittest.TestCase):
         self.assertIn("target 2-3, ceiling 4", PLANNER_SYSTEM_PROMPT)
         self.assertIn("same strategic implication", PLANNER_SYSTEM_PROMPT)
 
+    def test_planner_prompt_uses_today_pattern_as_only_day_synthesis_field(self):
+        self.assertIn("today_pattern", PLANNER_SYSTEM_PROMPT)
+        self.assertNotIn("daily_overview", PLANNER_SYSTEM_PROMPT)
+
+    def test_daily_overview_is_only_legacy_optional_plan_field(self):
+        from agent.models import AgentPlanResult
+
+        self.assertIn("today_pattern", AgentPlanResult.__required_keys__)
+        self.assertIn("daily_overview", AgentPlanResult.__optional_keys__)
+
 
 class AgentPlannerNormalizationTest(unittest.TestCase):
     def test_plan_normalizes_generation_modes_before_storing_state(self):

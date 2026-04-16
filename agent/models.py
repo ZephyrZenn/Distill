@@ -68,8 +68,8 @@ class DiscardedItem(TypedDict):
 
 
 class AgentPlanResult(TypedDict):
-    daily_overview: str
-    today_pattern: NotRequired[str]
+    today_pattern: str
+    daily_overview: NotRequired[str]
     daily_brief_items: NotRequired[list[DailyBriefItem]]
     focal_points: list[FocalPoint]
     discarded_items: list[DiscardedItem]

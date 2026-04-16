@@ -48,7 +48,6 @@ PLANNER_SYSTEM_PROMPT = """
 
 ## 输出格式 (JSON)
 {{
-  "daily_overview": "兼容旧字段：用一句话概括今日资讯能量分布",
   "today_pattern": "综合当天共同方向，不重复条目摘要",
   "daily_brief_items": [
     {{

@@ -304,7 +304,7 @@ def _insert_brief(
         group_ids: 分组ID列表
         brief: 简报内容
         ext_info: 外部搜索结果列表（SearchResult 对象或字典）
-        overview: 日报概览（来自 plan 的 daily_overview）
+        overview: 日报概览（来自 plan 的 today_pattern）
     """
     # 提取二级标题作为概要
     summary = _extract_h2_headings(brief)

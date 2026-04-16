@@ -78,7 +78,7 @@ async def save_current_execution_records(state: AgentState) -> None:
                 or plan.get("daily_overview")
                 or "Today Brief"
             )
-            reasoning = plan.get("daily_overview") or "Layered daily brief"
+            reasoning = plan.get("today_pattern") or "Layered daily brief"
             memory_items = [({"topic": topic, "reasoning": reasoning}, summary_results[0])]
     else:
         # 过滤出成功的 point 和 result
