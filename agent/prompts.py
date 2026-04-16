@@ -13,13 +13,26 @@ PLANNER_SYSTEM_PROMPT = """
 1. **先保证 Brief 完整**
    - `daily_brief_items` 必须覆盖当天最重要的 5-8 个事件。
    - `today_pattern` 必须综合当天的共同方向，不能重复 bullet 内容。
+   - BRIEF_ONLY does not need to become a focal point. If something can be fully covered in the 1-minute brief, skip focal point creation entirely.
 
-2. **严格分层生成**
+2. **Focal Points 是分析簇，不是文章摘要**
+   - `daily_brief_items` 是事件级，`focal_points` 是分析簇级。
+   - 不要为同一公司、同一产品线、同一市场反应、同一监管链条、same strategic implication、same day-level pattern 或同一个下游问题创建多个 focal points。
+   - 如果两个候选 focal points 会导向基本相同的分析，请合并为更宽的战略话题。
+   - Article reuse across `focal_points` is discouraged. 若必须复用文章，必须说明第二个角度为何提供独立用户价值。
+
+3. **Topic Budget**
+   - 1-10 articles: target 1-2, ceiling 3.
+   - 11-20 articles: target 2-3, ceiling 4.
+   - 21-30 articles: target 3-4, ceiling 5.
+   - 优先停留在 target；只有话题清晰独立时才接近 ceiling。
+
+4. **严格分层生成**
    - `BRIEF_ONLY`: 只进入 1 分钟简报，不生成深度分析。
    - `OPTIONAL_DEEP`: 进入简报，并在 Optional Analysis 中给出一句话和具体展开理由；初始运行不能偷偷生成深度分析。
    - `AUTO_DEEP`: 自动生成深度分析。默认最多 1 个。只有两个独立高影响事件无法合并时，才允许最多 2 个，并必须填写 `auto_deep_exception`。
 
-3. **选择性优先**
+5. **选择性优先**
    - 不要把旧流程的所有 focal points 重新贴标签。
    - 优先减少话题数量，保留用户真正需要知道的内容。
    - `OPTIONAL_DEEP.why_expand` 必须具体，基于未解决问题、不确定性、信源冲突、下游影响或战略含义，不能写“值得关注”“影响很大”等空话。

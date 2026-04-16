@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from difflib import SequenceMatcher
+import re
 
 from agent.models import AgentPlanResult, FocalPoint, GenerationMode
 
@@ -44,6 +46,41 @@ _CONCRETE_MARKERS = (
     "风险",
     "路线图",
 )
+_MODE_RANK = {BRIEF_ONLY: 0, OPTIONAL_DEEP: 1, AUTO_DEEP: 2}
+_OVERLAP_STOP_WORDS = {
+    "the",
+    "and",
+    "for",
+    "with",
+    "from",
+    "this",
+    "that",
+    "into",
+    "onto",
+    "over",
+    "under",
+    "about",
+    "topic",
+    "story",
+    "news",
+    "update",
+    "updates",
+    "shift",
+    "changed",
+    "changes",
+    "impact",
+    "strategic",
+    "same",
+    "market",
+    "value",
+    "explain",
+    "affect",
+    "affects",
+    "decision",
+    "decisions",
+    "happened",
+    "shock",
+}
 
 
 def normalize_plan_layers(plan: AgentPlanResult) -> AgentPlanResult:
@@ -55,6 +92,7 @@ def normalize_plan_layers(plan: AgentPlanResult) -> AgentPlanResult:
         _validate_focal_points(normalized),
         key=lambda point: point["priority"],
     )
+    focal_points = _normalize_topic_overlap(focal_points)
     normalized["focal_points"] = focal_points
 
     auto_deep_count = 0
@@ -87,6 +125,140 @@ def normalize_plan_layers(plan: AgentPlanResult) -> AgentPlanResult:
                 point["why_expand"] = ""
 
     return normalized
+
+
+def _normalize_topic_overlap(focal_points: list[FocalPoint]) -> list[FocalPoint]:
+    merged: list[FocalPoint] = []
+
+    for point in focal_points:
+        target = _find_overlapping_point(merged, point)
+        if target is None:
+            merged.append(point)
+        else:
+            _merge_point(target, point)
+
+    budgeted = merged[:_focal_point_ceiling(_unique_article_count(merged))]
+    for index, point in enumerate(budgeted, 1):
+        point["priority"] = index
+    return budgeted
+
+
+def _find_overlapping_point(
+    candidates: list[FocalPoint],
+    point: FocalPoint,
+) -> FocalPoint | None:
+    for candidate in candidates:
+        if (
+            _article_overlap(candidate, point) >= 0.5
+            or _topic_similarity(candidate, point) >= 0.72
+            or _implication_similarity(candidate, point) >= 0.5
+        ):
+            return candidate
+    return None
+
+
+def _merge_point(target: FocalPoint, source: FocalPoint) -> None:
+    target["article_ids"] = _merge_article_ids(
+        target.get("article_ids", []),
+        source.get("article_ids", []),
+    )
+
+    target_mode = _normalize_generation_mode(target)
+    source_mode = _normalize_generation_mode(source)
+    if _MODE_RANK[source_mode] > _MODE_RANK[target_mode]:
+        target["generation_mode"] = source_mode
+
+    for field in ("why_expand", "deep_analysis_reason", "auto_deep_exception"):
+        if not _optional_text(target, field) and _optional_text(source, field):
+            target[field] = source[field]
+
+    if _optional_text(source, "reasoning"):
+        target_reasoning = _optional_text(target, "reasoning")
+        source_reasoning = _optional_text(source, "reasoning")
+        if source_reasoning not in target_reasoning:
+            target["reasoning"] = (
+                f"{target_reasoning} / {source_reasoning}"
+                if target_reasoning
+                else source_reasoning
+            )
+
+
+def _merge_article_ids(first: object, second: object) -> list[str]:
+    merged: list[str] = []
+    for article_id in list(first or []) + list(second or []):
+        text_id = str(article_id)
+        if text_id not in merged:
+            merged.append(text_id)
+    return merged
+
+
+def _article_overlap(first: FocalPoint, second: FocalPoint) -> float:
+    first_ids = {str(article_id) for article_id in first.get("article_ids", [])}
+    second_ids = {str(article_id) for article_id in second.get("article_ids", [])}
+    if not first_ids or not second_ids:
+        return 0.0
+    return len(first_ids & second_ids) / len(first_ids | second_ids)
+
+
+def _topic_similarity(first: FocalPoint, second: FocalPoint) -> float:
+    first_topic = _normalize_overlap_text(_optional_text(first, "topic"))
+    second_topic = _normalize_overlap_text(_optional_text(second, "topic"))
+    if not first_topic or not second_topic:
+        return 0.0
+    return SequenceMatcher(None, first_topic, second_topic).ratio()
+
+
+def _implication_similarity(first: FocalPoint, second: FocalPoint) -> float:
+    first_tokens = _meaningful_tokens(_implication_text(first))
+    second_tokens = _meaningful_tokens(_implication_text(second))
+    if len(first_tokens) < 4 or len(second_tokens) < 4:
+        return 0.0
+    shared_tokens = first_tokens & second_tokens
+    if len(shared_tokens) < 3:
+        return 0.0
+    return len(shared_tokens) / min(len(first_tokens), len(second_tokens))
+
+
+def _implication_text(point: FocalPoint) -> str:
+    return " ".join(
+        _optional_text(point, field)
+        for field in (
+            "relevance_description",
+            "reasoning",
+            "writing_guide",
+            "brief_summary",
+        )
+    )
+
+
+def _meaningful_tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", text.lower())
+        if len(token) >= 4 and token not in _OVERLAP_STOP_WORDS
+    }
+
+
+def _normalize_overlap_text(text: str) -> str:
+    return " ".join(_meaningful_tokens(text))
+
+
+def _unique_article_count(focal_points: list[FocalPoint]) -> int:
+    return len(
+        {
+            str(article_id)
+            for point in focal_points
+            for article_id in point.get("article_ids", [])
+        }
+    )
+
+
+def _focal_point_ceiling(article_count: int) -> int:
+    if article_count <= 10:
+        return 3
+    if article_count <= 20:
+        return 4
+    return 5
 
 
 def get_auto_deep_points(plan: AgentPlanResult) -> list[FocalPoint]:

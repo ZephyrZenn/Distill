@@ -476,6 +476,127 @@ class LayeredWorkflowTest(unittest.TestCase):
         self.assertTrue(report.startswith("# Today Brief"))
         self.assertIn("## Deep Analysis\n\n## Deep Topic", report)
 
+    def test_normalize_merges_overlapping_article_sets(self):
+        platform_point = _point(
+            "AI Platform Shift",
+            1,
+            AUTO_DEEP,
+            deep_analysis_reason="Strategic platform impact changes enterprise roadmap decisions.",
+        )
+        platform_point["article_ids"] = ["1", "2", "3"]
+        platform_point["brief_summary"] = "AI platforms changed pricing and access."
+        pricing_point = _point(
+            "Platform Pricing",
+            2,
+            OPTIONAL_DEEP,
+            why_expand="Unresolved pricing timing affects enterprise budget planning.",
+        )
+        pricing_point["article_ids"] = ["2", "3", "4"]
+        pricing_point["brief_summary"] = "AI platform pricing changed."
+        plan = {
+            "daily_overview": "Platform competition intensified.",
+            "today_pattern": "AI platforms moved toward enterprise pricing pressure.",
+            "daily_brief_items": [],
+            "focal_points": [platform_point, pricing_point],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(len(normalized["focal_points"]), 1)
+        self.assertEqual(normalized["focal_points"][0]["article_ids"], ["1", "2", "3", "4"])
+        self.assertEqual(normalized["focal_points"][0]["generation_mode"], AUTO_DEEP)
+
+    def test_normalize_merges_same_strategic_implication_without_article_overlap(self):
+        infrastructure_point = _point(
+            "GPU Demand",
+            1,
+            AUTO_DEEP,
+            deep_analysis_reason="Strategic infrastructure cost impact changes enterprise budget planning.",
+        )
+        infrastructure_point["article_ids"] = ["1"]
+        infrastructure_point["relevance_description"] = "Cloud GPU demand raises AI infrastructure costs."
+        infrastructure_point["reasoning"] = "Same strategic implication: enterprise budget pressure."
+        capital_point = _point(
+            "Cloud Capex",
+            2,
+            OPTIONAL_DEEP,
+            why_expand="Unresolved downstream budget impact affects enterprise AI roadmap decisions.",
+        )
+        capital_point["article_ids"] = ["2"]
+        capital_point["relevance_description"] = "Cloud capital spending raises AI infrastructure costs."
+        capital_point["reasoning"] = "Same strategic implication: enterprise budget pressure."
+        plan = {
+            "daily_overview": "Infrastructure costs dominated.",
+            "today_pattern": "AI infrastructure costs are pressuring enterprise budgets.",
+            "daily_brief_items": [],
+            "focal_points": [infrastructure_point, capital_point],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual([p["topic"] for p in normalized["focal_points"]], ["GPU Demand"])
+        self.assertEqual(normalized["focal_points"][0]["article_ids"], ["1", "2"])
+
+    def test_normalize_applies_article_count_budget_ceiling(self):
+        points = []
+        for index in range(1, 6):
+            point = _point(f"Topic {index}", index, OPTIONAL_DEEP, why_expand="Unresolved impact affects roadmap decisions.")
+            point["article_ids"] = [str(article_id) for article_id in range(index * 3 - 2, index * 3 + 1)]
+            points.append(point)
+        points[-1]["article_ids"] = ["13", "14", "15", "16", "17"]
+        plan = {
+            "daily_overview": "Seventeen articles across several areas.",
+            "today_pattern": "The day had several independent but bounded patterns.",
+            "daily_brief_items": [],
+            "focal_points": points,
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(len(normalized["focal_points"]), 4)
+        self.assertEqual([p["topic"] for p in normalized["focal_points"]], ["Topic 1", "Topic 2", "Topic 3", "Topic 4"])
+
+    def test_normalize_reenforces_auto_deep_limit_after_merge(self):
+        first = _point(
+            "Model Pricing",
+            1,
+            AUTO_DEEP,
+            deep_analysis_reason="Strategic pricing impact changes enterprise budget planning.",
+        )
+        first["article_ids"] = ["1", "2"]
+        duplicate = _point(
+            "AI Model Price",
+            2,
+            AUTO_DEEP,
+            deep_analysis_reason="Strategic pricing impact changes enterprise budget planning.",
+        )
+        duplicate["article_ids"] = ["2", "3"]
+        independent = _point(
+            "Chip Supply",
+            3,
+            AUTO_DEEP,
+            deep_analysis_reason="Strategic supply risk affects infrastructure roadmap decisions.",
+        )
+        independent["article_ids"] = ["4"]
+        plan = {
+            "daily_overview": "Pricing and chips both moved.",
+            "today_pattern": "AI economics shifted through pricing and supply pressure.",
+            "daily_brief_items": [],
+            "focal_points": [first, duplicate, independent],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(len(normalized["focal_points"]), 2)
+        self.assertEqual(
+            [p["generation_mode"] for p in normalized["focal_points"]],
+            [AUTO_DEEP, OPTIONAL_DEEP],
+        )
+
 
 class PlannerLayerContractTest(unittest.TestCase):
     def test_planner_prompt_mentions_layered_generation_contract(self):
@@ -488,6 +609,10 @@ class PlannerLayerContractTest(unittest.TestCase):
         self.assertIn("daily_brief_items", PLANNER_SYSTEM_PROMPT)
         self.assertIn("today_pattern", PLANNER_SYSTEM_PROMPT)
         self.assertIn("auto_deep_exception", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("BRIEF_ONLY does not need to become a focal point", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("11-20 articles", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("target 2-3, ceiling 4", PLANNER_SYSTEM_PROMPT)
+        self.assertIn("same strategic implication", PLANNER_SYSTEM_PROMPT)
 
 
 class AgentPlannerNormalizationTest(unittest.TestCase):
