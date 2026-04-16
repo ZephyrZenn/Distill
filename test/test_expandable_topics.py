@@ -108,6 +108,29 @@ class ExpandableTopicsTest(unittest.TestCase):
 
         self.assertEqual(plan["focal_points"][0]["article_ids"], ["2"])
 
+    def test_topic_id_uses_source_priority_after_overlap_merge(self):
+        plan = {
+            "daily_overview": "Day.",
+            "focal_points": [
+                {
+                    **_point("Platform Shift", 5, "OPTIONAL_DEEP"),
+                    "article_ids": ["1", "2"],
+                },
+                {
+                    **_point("Platform Pricing", 6, "OPTIONAL_DEEP"),
+                    "article_ids": ["1", "2", "3"],
+                    "reasoning": "Pricing and platform changes overlap.",
+                    "why_expand": "Unresolved pricing and platform impact affects budget planning.",
+                },
+            ],
+            "discarded_items": [],
+        }
+
+        topics = build_expandable_topics(plan, [_article("1"), _article("2"), _article("3")])
+
+        self.assertEqual(len(topics), 1)
+        self.assertEqual(topics[0]["topic_id"], "5-platform-shift")
+
 
 if __name__ == "__main__":
     unittest.main()

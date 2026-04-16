@@ -18,6 +18,7 @@ def build_expandable_topics(
     scored_articles: list[Article],
 ) -> list[ExpandableTopic]:
     source_priority_by_signature = _source_priority_by_signature(plan)
+    source_priority_by_topic = _source_priority_by_topic(plan)
     normalized_plan = normalize_plan_layers(plan)
     articles_by_id = {str(article["id"]): article for article in scored_articles}
     topics: list[ExpandableTopic] = []
@@ -32,7 +33,11 @@ def build_expandable_topics(
             continue
         topics.append(
             ExpandableTopic(
-                topic_id=_topic_id(point, source_priority_by_signature),
+                topic_id=_topic_id(
+                    point,
+                    source_priority_by_signature,
+                    source_priority_by_topic,
+                ),
                 topic=point["topic"],
                 why_expand=str(point.get("why_expand", "")),
                 strategy=point["strategy"],
@@ -46,9 +51,18 @@ def build_expandable_topics(
     return topics
 
 
-def _topic_id(point: FocalPoint, source_priority_by_signature: dict[tuple[str, tuple[str, ...]], int]) -> str:
+def _topic_id(
+    point: FocalPoint,
+    source_priority_by_signature: dict[tuple[str, tuple[str, ...]], int],
+    source_priority_by_topic: dict[str, int],
+) -> str:
     signature = _point_signature(point)
-    priority = str(source_priority_by_signature.get(signature, point.get("priority", "topic")))
+    priority = source_priority_by_signature.get(signature)
+    if priority is None:
+        priority = source_priority_by_topic.get(point["topic"])
+    if priority is None:
+        priority = point.get("priority", "topic")
+    priority = str(priority)
     slug = re.sub(r"[^a-z0-9]+", "-", point["topic"].lower()).strip("-")
     return f"{priority}-{slug or 'topic'}"
 
@@ -62,6 +76,21 @@ def _source_priority_by_signature(plan: AgentPlanResult) -> dict[tuple[str, tupl
         if isinstance(priority, bool) or not isinstance(priority, int):
             continue
         priorities.setdefault(_point_signature(point), priority)
+    return priorities
+
+
+def _source_priority_by_topic(plan: AgentPlanResult) -> dict[str, int]:
+    priorities: dict[str, int] = {}
+    for point in plan.get("focal_points", []):
+        if not isinstance(point, dict):
+            continue
+        priority = point.get("priority")
+        topic = point.get("topic")
+        if not isinstance(topic, str):
+            continue
+        if isinstance(priority, bool) or not isinstance(priority, int):
+            continue
+        priorities.setdefault(topic, priority)
     return priorities
 
 
