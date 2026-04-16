@@ -6,7 +6,7 @@ import { useToast } from "@/context/ToastContext";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import type { FeedBrief, OptionalTopicExpansion } from "@/types/api";
 import { formatDate } from "@/utils/date";
-import { Check, ChevronRight, Copy, FileText, List, X } from "lucide-react";
+import { Check, ChevronRight, Copy, FileText, List, Sparkles, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate, useParams } from "react-router-dom";
@@ -451,13 +451,26 @@ const SummaryPage = () => {
                                 handleExpandTopic(expandableTopic.topicId)
                               }
                               disabled={isExpanding || Boolean(expansion)}
-                              className="self-start shrink-0 px-3 py-1.5 text-sm theme-surface border theme-border rounded theme-accent-text-hover theme-surface-hover transition-colors disabled:opacity-50"
+                              title={
+                                expansion
+                                  ? "深度分析已生成"
+                                  : isExpanding
+                                    ? "正在生成深度分析"
+                                    : `生成「${expandableTopic.topic}」的深度分析`
+                              }
+                              aria-label={
+                                expansion
+                                  ? "深度分析已生成"
+                                  : isExpanding
+                                    ? "正在生成深度分析"
+                                    : `生成「${expandableTopic.topic}」的深度分析`
+                              }
+                              className="self-start shrink-0 p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors disabled:opacity-50"
                             >
-                              {isExpanding
-                                ? "Generating..."
-                                : expansion
-                                  ? "Generated"
-                                  : "Generate analysis"}
+                              <Sparkles
+                                size={16}
+                                className={isExpanding ? "animate-pulse" : ""}
+                              />
                             </button>
                           </div>
                           {expansion ? (
