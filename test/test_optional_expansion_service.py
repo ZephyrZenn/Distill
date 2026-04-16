@@ -47,15 +47,16 @@ class OptionalExpansionServiceTest(unittest.TestCase):
                 "apps.backend.services.brief_service.auto_build_client",
                 return_value=client,
             ), patch(
-                "agent.workflow.executor.get_article_content",
+                "agent.tools.get_article_content",
                 AsyncMock(return_value={"1": "Full article content."}),
-            ):
+            ) as fetch_content:
                 with patch("agent.workflow.executor.AgentExecutor.handle_summarize", AsyncMock(return_value="## AI Pricing\nDeep analysis.")) as writer:
                     result = await expand_optional_topic(12, "1-ai-pricing")
 
             self.assertEqual(result["topic_id"], "1-ai-pricing")
             self.assertIn("Deep analysis.", result["content"])
             writer.assert_awaited_once()
+            fetch_content.assert_awaited_once_with(["1"])
 
         import asyncio
 

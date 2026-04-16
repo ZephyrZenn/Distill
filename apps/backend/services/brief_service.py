@@ -356,6 +356,7 @@ def _insert_brief(
 
 
 async def expand_optional_topic(brief_id: int, topic_id: str) -> dict:
+    from agent.tools import get_article_content
     from agent.workflow.executor import AgentExecutor
     from agent.workflow.expansion import build_expansion_state
 
@@ -377,6 +378,14 @@ async def expand_optional_topic(brief_id: int, topic_id: str) -> dict:
     client = auto_build_client()
     executor = AgentExecutor(client)
     state = build_expansion_state(topic)
+
+    # Re-fetch full article content before writing
+    article_ids = [a["id"] for a in state["scored_articles"]]
+    db_articles = await get_article_content(article_ids)
+    for article in state["scored_articles"]:
+        if article["id"] in db_articles:
+            article["content"] = db_articles[article["id"]]
+
     point = state["plan"]["focal_points"][0]
 
     if point["strategy"] == "SEARCH_ENHANCE":
