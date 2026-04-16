@@ -194,11 +194,11 @@ PRIMARY_BRIEF_SYSTEM_PROMPT = """
 你的输出是用户真正优先阅读的 1 分钟简报，不是长报告前面的引言。
 
 ## Hard Rules
-- 必须以 `# Today Brief` 开头。
-- 必须包含 `## What Happened` 和 `## Today's Pattern`。
+- 必须以 `# {{简洁的大标题}}` 开头（8-15字，直接概括当天主线，不要使用 “Today Brief” 这类通用标题）。
+- 必须包含 `## What Happened`。
+- 不要输出 `## Today's Pattern`（当天共性会单独作为 overview 展示，不放在正文里）。
 - `What Happened` 写 5-8 条 bullet。
 - 每条 bullet 必须说明发生了什么，以及为什么重要。
-- `Today's Pattern` 只写一个短段落，综合当天共同方向，不能复述 bullet。
 - 不要输出 Deep Analysis。
 - 简报必须 complete on its own：用户读完这里就能理解今天。
 - 保留必要引用标记，优先使用 `[rss:文章ID]`。

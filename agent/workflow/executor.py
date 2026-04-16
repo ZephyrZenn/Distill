@@ -1,18 +1,19 @@
 import asyncio
 import logging
 from typing import Literal
+
 from agent.models import (
+    AgentCriticResult,
     AgentState,
     FocalPoint,
     WritingMaterial,
-    AgentCriticResult,
     log_step,
 )
 from agent.tools import (
-    search_web,
     fetch_web_contents,
-    is_search_engine_available,
     get_article_content,
+    is_search_engine_available,
+    search_web,
 )
 from agent.tools.writing_tool import (
     review_article,
@@ -33,7 +34,6 @@ logger = logging.getLogger(__name__)
 
 
 class AgentExecutor:
-
     def __init__(self, client: LLMClient, max_retries: int = 3):
         self.client = client
         self.max_retries = max_retries
@@ -70,7 +70,11 @@ class AgentExecutor:
         async def run_point(point: FocalPoint) -> tuple[str, bool]:
             topic = point.get("topic", "")
             strategy = point.get("strategy", "")
-            logger.info("[workflow:executor] point start topic=%s strategy=%s", topic[:48], strategy)
+            logger.info(
+                "[workflow:executor] point start topic=%s strategy=%s",
+                topic[:48],
+                strategy,
+            )
             try:
                 result = None
                 if point["strategy"] == "SUMMARIZE":
