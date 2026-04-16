@@ -11,7 +11,6 @@ from apps.backend.models.view_model import (
     FeedBriefResponse,
     GenerateBriefResponse,
     BriefGenerationStatusResponse,
-    OptionalTopicExpansionResponse,
 )
 from apps.backend.services import brief_service, group_service, task_service
 
@@ -59,13 +58,19 @@ async def get_brief_detail(brief_id: int):
     return success_with_data(brief.to_view_model(groups, include_content=True))
 
 
-@router.post("/{brief_id}/expand/{topic_id}", response_model=OptionalTopicExpansionResponse)
+@router.post("/{brief_id}/expand/{topic_id}", status_code=202)
 async def expand_optional_topic(brief_id: int, topic_id: str):
-    try:
-        result = await brief_service.expand_optional_topic(brief_id, topic_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return success_with_data(result)
+    brief = brief_service.get_brief_by_id(brief_id)
+    if not brief:
+        raise HTTPException(status_code=404, detail="Brief not found")
+    topic = next(
+        (t for t in (brief.expandable_topics or []) if t.get("topic_id") == topic_id),
+        None,
+    )
+    if not topic:
+        raise HTTPException(status_code=404, detail="Expandable topic not found")
+    asyncio.create_task(brief_service.expand_optional_topic(brief_id, topic_id))
+    return {"message": "expansion started"}
 
 
 @router.post("/generate", response_model=GenerateBriefResponse)
