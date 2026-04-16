@@ -38,7 +38,7 @@ class AgentTest(unittest.TestCase):
         def on_step(message: str):
             print(f"[STEP] {message}")
 
-        result, _ = asyncio.run(
+        result, *_ = asyncio.run(
             agent.summarize(
                 task_id="test",
                 hour_gap=24,

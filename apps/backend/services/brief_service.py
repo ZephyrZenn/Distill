@@ -273,6 +273,8 @@ async def generate_brief_for_groups_async(
     if len(result) == 2:
         brief, ext_info = result
         overview = ""
+    elif len(result) == 4:
+        brief, ext_info, overview, _expandable_topics = result
     else:
         brief, ext_info, overview = result
 

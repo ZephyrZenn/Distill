@@ -112,8 +112,9 @@ class SummarizeAgenticWorkflow:
             # 返回简报内容、外部搜索结果和日报概览
             ext_info = state.get("ext_info", [])
             overview = plan.get("daily_overview", "") if plan else ""
+            expandable_topics = state.get("expandable_topics", [])
             state["status"] = "COMPLETED"
-            return "\n\n".join(result_strings), ext_info, overview
+            return "\n\n".join(result_strings), ext_info, overview, expandable_topics
         except Exception as e:
             state["status"] = "FAILED"
             logger.exception(
