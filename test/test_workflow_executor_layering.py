@@ -78,10 +78,9 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
             deep_point = executor.handle_summarize.await_args.args[0]
             self.assertEqual(deep_point["topic"], "Auto")
             self.assertEqual(deep_point["generation_mode"], "AUTO_DEEP")
-            self.assertIn("# Today Brief", results[0][0])
-            self.assertIn("## Deep Analysis", results[0][0])
+            self.assertNotIn("## Deep Analysis", results[0][0])
             self.assertIn("Deep analysis.", results[0][0])
-            self.assertIn("## Optional Analysis", results[0][0])
+            self.assertIn("## Optional（可展开分析）", results[0][0])
             self.assertIn("Optional happened.", results[0][0])
 
         asyncio.run(_run_test())
@@ -123,8 +122,8 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
 
             write_primary_brief_mock.assert_awaited_once_with(client, state["plan"])
             executor.handle_summarize.assert_not_called()
-            self.assertTrue(results[0][0].startswith("# Today Brief"))
-            self.assertIn("## Optional Analysis", results[0][0])
+            self.assertNotIn("## Optional Analysis", results[0][0])
+            self.assertIn("## Optional（可展开分析）", results[0][0])
 
         asyncio.run(_run_test())
 
@@ -165,7 +164,7 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
 
             executor.handle_summarize.assert_not_called()
             self.assertEqual(len(state["expandable_topics"]), 1)
-            self.assertEqual(state["expandable_topics"][0]["topic"], "Optional")
+            self.assertEqual(state["expandable_topics"][0]["focal_point"]["topic"], "Optional")
             self.assertEqual(state["expandable_topics"][0]["articles"][0]["id"], "1")
 
         asyncio.run(_run_test())

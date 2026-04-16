@@ -41,11 +41,6 @@ def build_expandable_topics(
                     source_priority_by_signature,
                     source_priority_by_topic,
                 ),
-                topic=point["topic"],
-                why_expand=str(point.get("why_expand", "")),
-                strategy=point["strategy"],
-                search_query=str(point.get("search_query", "")),
-                history_memory_id=list(point.get("history_memory_id", [])),
                 focal_point={**deepcopy(point), "generation_mode": OPTIONAL_DEEP},
                 articles=snapshots,
             )

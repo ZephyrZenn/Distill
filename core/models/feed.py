@@ -123,8 +123,8 @@ class FeedBrief:
             result["content"] = self.content
             result["ext_info"] = self.ext_info
             result["expandable_topics"] = [
-                {"topic_id": t["topic_id"], "topic": t["topic"]}
+                {"topic_id": t["topic_id"], "topic": t["focal_point"]["topic"]}
                 for t in self.expandable_topics
-                if t.get("topic_id") and t.get("topic")
+                if t.get("topic_id") and t.get("focal_point", {}).get("topic")
             ]
         return result

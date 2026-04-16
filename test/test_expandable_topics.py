@@ -57,9 +57,9 @@ class ExpandableTopicsTest(unittest.TestCase):
 
         self.assertEqual(len(topics), 1)
         topic = topics[0]
-        self.assertEqual(topic["topic"], "Optional Topic")
+        self.assertEqual(topic["focal_point"]["topic"], "Optional Topic")
         self.assertEqual(topic["topic_id"], "2-optional-topic")
-        self.assertEqual(topic["why_expand"], "Unresolved downstream impact affects budget planning.")
+        self.assertEqual(topic["focal_point"]["why_expand"], "Unresolved downstream impact affects budget planning.")
         self.assertEqual(topic["focal_point"]["generation_mode"], "OPTIONAL_DEEP")
         self.assertEqual(topic["articles"][0]["id"], "2")
         self.assertNotIn("content", topic["articles"][0])

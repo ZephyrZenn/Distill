@@ -87,11 +87,6 @@ class ExpandableArticleSnapshot(TypedDict):
 
 class ExpandableTopic(TypedDict):
     topic_id: str
-    topic: str
-    why_expand: str
-    strategy: Literal["SUMMARIZE", "SEARCH_ENHANCE", "FLASH_NEWS"]
-    search_query: str
-    history_memory_id: list[int]
     focal_point: FocalPoint
     articles: list[ExpandableArticleSnapshot]
 

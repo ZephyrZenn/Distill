@@ -389,7 +389,7 @@ async def expand_optional_topic(brief_id: int, topic_id: str) -> dict:
     return {
         "brief_id": brief_id,
         "topic_id": topic_id,
-        "topic": topic["topic"],
+        "topic": topic["focal_point"]["topic"],
         "content": content,
         "ext_info": state.get("ext_info", []),
     }

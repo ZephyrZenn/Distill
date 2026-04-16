@@ -7,11 +7,6 @@ from apps.backend.services.brief_service import expand_optional_topic
 def _expandable_topic(strategy: str = "SUMMARIZE"):
     return {
         "topic_id": "1-ai-pricing",
-        "topic": "AI Pricing",
-        "why_expand": "Unresolved budget impact affects roadmap decisions.",
-        "strategy": strategy,
-        "search_query": "AI pricing enterprise budget",
-        "history_memory_id": [],
         "focal_point": {
             "priority": 1,
             "topic": "AI Pricing",
