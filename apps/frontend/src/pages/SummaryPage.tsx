@@ -4,7 +4,7 @@ import { DateFilter } from "@/components/DateFilter";
 import { Layout } from "@/components/Layout";
 import { useToast } from "@/context/ToastContext";
 import { useApiQuery } from "@/hooks/useApiQuery";
-import type { FeedBrief, OptionalTopicExpansion } from "@/types/api";
+import type { FeedBrief } from "@/types/api";
 import { formatDate } from "@/utils/date";
 import { Check, ChevronRight, Copy, FileText, List, Sparkles, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
@@ -115,8 +115,6 @@ const SummaryPage = () => {
     }
     return true;
   });
-  const [expandedTopics, setExpandedTopics] = useState<Record<string, OptionalTopicExpansion>>({});
-  const [expandingTopicId, setExpandingTopicId] = useState<string | null>(null);
   const today = getTodayString();
   const [startDate, setStartDate] = useState<string>(today);
   const [endDate, setEndDate] = useState<string>(today);
@@ -307,16 +305,12 @@ const SummaryPage = () => {
   };
 
   const handleExpandTopic = async (topicId: string) => {
-    if (!selectedBrief?.id || expandedTopics[topicId]) return;
-    setExpandingTopicId(topicId);
+    if (!selectedBrief?.id) return;
     try {
-      const result = await api.expandOptionalTopic(selectedBrief.id, topicId);
-      setExpandedTopics((current) => ({
-        ...current,
-        [topicId]: result,
-      }));
-    } finally {
-      setExpandingTopicId(null);
+      await api.expandOptionalTopic(selectedBrief.id, topicId);
+      showToast("正在生成深度分析，完成后将自动更新");
+    } catch {
+      showToast("触发失败，请稍后重试");
     }
   };
 
@@ -437,10 +431,6 @@ const SummaryPage = () => {
                         return <h2 id={id} {...props} />;
                       }
 
-                      const expansion = expandedTopics[expandableTopic.topicId];
-                      const isExpanding =
-                        expandingTopicId === expandableTopic.topicId;
-
                       return (
                         <div>
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -450,56 +440,13 @@ const SummaryPage = () => {
                               onClick={() =>
                                 handleExpandTopic(expandableTopic.topicId)
                               }
-                              disabled={isExpanding || Boolean(expansion)}
-                              title={
-                                expansion
-                                  ? "深度分析已生成"
-                                  : isExpanding
-                                    ? "正在生成深度分析"
-                                    : `生成「${expandableTopic.topic}」的深度分析`
-                              }
-                              aria-label={
-                                expansion
-                                  ? "深度分析已生成"
-                                  : isExpanding
-                                    ? "正在生成深度分析"
-                                    : `生成「${expandableTopic.topic}」的深度分析`
-                              }
-                              className="self-start shrink-0 p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors disabled:opacity-50"
+                              title={`生成「${expandableTopic.topic}」的深度分析`}
+                              aria-label={`生成「${expandableTopic.topic}」的深度分析`}
+                              className="self-start shrink-0 p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors"
                             >
-                              <Sparkles
-                                size={16}
-                                className={isExpanding ? "animate-pulse" : ""}
-                              />
+                              <Sparkles size={16} />
                             </button>
                           </div>
-                          {expansion ? (
-                            <div className="mt-4">
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {expansion.content}
-                              </ReactMarkdown>
-                              {expansion.extInfo?.length ? (
-                                <ul className="mt-2 text-sm theme-text-muted">
-                                  {expansion.extInfo.map((item, index) => (
-                                    <li key={`${expandableTopic.topicId}-${index}`}>
-                                      <a
-                                        href={String(item["url"] || "#")}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="theme-accent-text-hover underline"
-                                      >
-                                        {String(
-                                          item["title"] ||
-                                            item["url"] ||
-                                            "Source",
-                                        )}
-                                      </a>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : null}
-                            </div>
-                          ) : null}
                         </div>
                       );
                     },

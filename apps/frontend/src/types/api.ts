@@ -41,14 +41,6 @@ export interface ExpandableTopic {
   topic: string;
 }
 
-export interface OptionalTopicExpansion {
-  briefId: number;
-  topicId: string;
-  topic: string;
-  content: string;
-  extInfo: Array<Record<string, unknown>>;
-}
-
 export interface ModelSetting {
   model: string;
   provider: string;
