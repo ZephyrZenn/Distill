@@ -281,11 +281,15 @@ def build_optional_analysis_section(points: list[FocalPoint]) -> str:
     if not points:
         return ""
 
-    lines = ["## Optional Analysis"]
+    lines: list[str] = []
     for point in points:
+        topic = _optional_text(point, "topic") or "Optional Topic"
         brief_summary = _optional_text(point, "brief_summary") or point["topic"]
         why_expand = _optional_text(point, "why_expand")
-        lines.append(f"- {brief_summary} Why expand: {why_expand}")
+        lines.append(f"## {topic}（可展开分析）")
+        lines.append(brief_summary)
+        if why_expand:
+            lines.append(f"\nWhy expand: {why_expand}")
     return "\n".join(lines)
 
 
@@ -298,7 +302,7 @@ def assemble_layered_report(
 
     cleaned_deep_sections = [section.strip() for section in deep_sections if section.strip()]
     if cleaned_deep_sections:
-        sections.append("## Deep Analysis\n\n" + "\n\n".join(cleaned_deep_sections))
+        sections.append("\n\n".join(cleaned_deep_sections))
 
     optional_section = build_optional_analysis_section(optional_points)
     if optional_section:
