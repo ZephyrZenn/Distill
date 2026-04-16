@@ -4,7 +4,7 @@ import { DateFilter } from "@/components/DateFilter";
 import { Layout } from "@/components/Layout";
 import { useToast } from "@/context/ToastContext";
 import { useApiQuery } from "@/hooks/useApiQuery";
-import type { FeedBrief, OptionalTopicExpansion } from "@/types/api";
+import type { ExpandableTopic, FeedBrief, OptionalTopicExpansion } from "@/types/api";
 import { formatDate } from "@/utils/date";
 import { Check, ChevronRight, Copy, FileText, List, Sparkles, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
@@ -100,6 +100,9 @@ const getTodayString = () => {
   const today = new Date();
   return today.toISOString().split("T")[0];
 };
+
+const getExpandableTopicId = (topic: ExpandableTopic) =>
+  topic.topicId || topic.topic_id || "";
 
 const SummaryPage = () => {
   const { id: briefIdParam } = useParams<{ id?: string }>();
@@ -427,19 +430,28 @@ const SummaryPage = () => {
                     h2: ({ node, ...props }) => {
                       const text = String(props.children ?? "");
                       const id = `h2-${slugify(text)}`;
-                      const expandableTopic = selectedBrief.expandableTopics?.find(
-                        (topic) =>
-                          text.includes(topic.topic) ||
-                          text.includes(topic.topicId),
-                      );
+                      const expandableTopic =
+                        selectedBrief.expandableTopics?.find((topic) => {
+                          const topicId = getExpandableTopicId(topic);
+                          return (
+                            text.includes(topic.topic) ||
+                            (topicId ? text.includes(topicId) : false)
+                          );
+                        });
 
                       if (!expandableTopic) {
                         return <h2 id={id} {...props} />;
                       }
 
-                      const expansion = expandedTopics[expandableTopic.topicId];
-                      const isExpanding =
-                        expandingTopicId === expandableTopic.topicId;
+                      const expandableTopicId =
+                        getExpandableTopicId(expandableTopic);
+
+                      if (!expandableTopicId) {
+                        return <h2 id={id} {...props} />;
+                      }
+
+                      const expansion = expandedTopics[expandableTopicId];
+                      const isExpanding = expandingTopicId === expandableTopicId;
 
                       return (
                         <div>
@@ -448,7 +460,7 @@ const SummaryPage = () => {
                             <button
                               type="button"
                               onClick={() =>
-                                handleExpandTopic(expandableTopic.topicId)
+                                handleExpandTopic(expandableTopicId)
                               }
                               disabled={isExpanding || Boolean(expansion)}
                               title={
@@ -481,7 +493,7 @@ const SummaryPage = () => {
                               {expansion.extInfo?.length ? (
                                 <ul className="mt-2 text-sm theme-text-muted">
                                   {expansion.extInfo.map((item, index) => (
-                                    <li key={`${expandableTopic.topicId}-${index}`}>
+                                    <li key={`${expandableTopicId}-${index}`}>
                                       <a
                                         href={String(item["url"] || "#")}
                                         target="_blank"

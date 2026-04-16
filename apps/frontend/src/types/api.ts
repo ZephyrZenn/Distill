@@ -37,18 +37,23 @@ export interface FeedBrief {
 }
 
 export interface ExpandableTopic {
-  topicId: string;
+  topicId?: string;
+  topic_id?: string;
   topic: string;
-  whyExpand: string;
+  whyExpand?: string;
+  why_expand?: string;
   strategy: string;
-  searchQuery: string;
-  historyMemoryId: number[];
+  searchQuery?: string;
+  search_query?: string;
+  historyMemoryId?: number[];
+  history_memory_id?: number[];
   articles: Array<{
     id: string;
     title: string;
     url: string;
     summary: string;
-    pubDate: string;
+    pubDate?: string;
+    pub_date?: string;
     score: number;
     reasoning: string;
   }>;
