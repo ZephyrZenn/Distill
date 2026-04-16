@@ -101,6 +101,22 @@ const getTodayString = () => {
   return today.toISOString().split("T")[0];
 };
 
+const getNodeText = (node: React.ReactNode): string => {
+  if (node === null || node === undefined || typeof node === "boolean") {
+    return "";
+  }
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(getNodeText).join("");
+  }
+  if (React.isValidElement(node)) {
+    return getNodeText((node.props as { children?: React.ReactNode }).children);
+  }
+  return "";
+};
+
 const SummaryPage = () => {
   const { id: briefIdParam } = useParams<{ id?: string }>();
   const navigate = useNavigate();
@@ -434,6 +450,73 @@ const SummaryPage = () => {
                       const id = `h3-${slugify(text)}`;
                       return <h3 id={id} {...props} />;
                     },
+                    li: ({ node, ...props }: any) => {
+                      const text = getNodeText(props.children);
+                      const expandableTopic = selectedBrief.expandableTopics?.find(
+                        (topic) =>
+                          text.includes(topic.whyExpand) ||
+                          text.includes(topic.topic),
+                      );
+
+                      if (!expandableTopic) {
+                        return <li {...props} />;
+                      }
+
+                      const expansion = expandedTopics[expandableTopic.topicId];
+                      const isExpanding =
+                        expandingTopicId === expandableTopic.topicId;
+
+                      return (
+                        <li {...props}>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <span className="min-w-0 flex-1">
+                              {props.children}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleExpandTopic(expandableTopic.topicId)
+                              }
+                              disabled={isExpanding || Boolean(expansion)}
+                              className="self-start shrink-0 px-3 py-1.5 text-sm theme-surface border theme-border rounded theme-accent-text-hover theme-surface-hover transition-colors disabled:opacity-50"
+                            >
+                              {isExpanding
+                                ? "Generating..."
+                                : expansion
+                                  ? "Generated"
+                                  : "Generate analysis"}
+                            </button>
+                          </div>
+                          {expansion ? (
+                            <div className="mt-4">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {expansion.content}
+                              </ReactMarkdown>
+                              {expansion.extInfo?.length ? (
+                                <ul className="mt-2 text-sm theme-text-muted">
+                                  {expansion.extInfo.map((item, index) => (
+                                    <li key={`${expandableTopic.topicId}-${index}`}>
+                                      <a
+                                        href={String(item["url"] || "#")}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="theme-accent-text-hover underline"
+                                      >
+                                        {String(
+                                          item["title"] ||
+                                            item["url"] ||
+                                            "Source",
+                                        )}
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    },
                     // 自定义脚注引用渲染
                     sup: ({ node, ...props }: any) => {
                       // 检查是否是脚注引用
@@ -517,46 +600,6 @@ const SummaryPage = () => {
                   {selectedBrief.content || ""}
                 </ReactMarkdown>
               </div>
-
-              {selectedBrief?.expandableTopics?.length ? (
-                <section className="summary-expansions px-6 py-4 border-t theme-border">
-                  <h2 className="text-sm font-bold theme-text uppercase tracking-wider mb-4">Optional Analysis</h2>
-                  {selectedBrief.expandableTopics.map((topic) => (
-                    <article key={topic.topicId} className="summary-expansion mb-6">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-1">
-                        <h3 className="text-base font-semibold theme-text m-0">{topic.topic}</h3>
-                        <button
-                          type="button"
-                          onClick={() => handleExpandTopic(topic.topicId)}
-                          disabled={expandingTopicId === topic.topicId}
-                          className="self-start shrink-0 px-3 py-1.5 text-sm theme-surface border theme-border rounded theme-accent-text-hover theme-surface-hover transition-colors disabled:opacity-50"
-                        >
-                          {expandingTopicId === topic.topicId ? "Generating..." : "Generate analysis"}
-                        </button>
-                      </div>
-                      <p className="text-sm theme-text-muted mb-2">{topic.whyExpand}</p>
-                      {expandedTopics[topic.topicId] ? (
-                        <div className="mt-4">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {expandedTopics[topic.topicId].content}
-                          </ReactMarkdown>
-                          {expandedTopics[topic.topicId].extInfo?.length ? (
-                            <ul className="mt-2 text-sm theme-text-muted">
-                              {expandedTopics[topic.topicId].extInfo.map((item, index) => (
-                                <li key={`${topic.topicId}-${index}`}>
-                                  <a href={String(item["url"] || "#")} target="_blank" rel="noreferrer" className="theme-accent-text-hover underline">
-                                    {String(item["title"] || item["url"] || "Source")}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </article>
-                  ))}
-                </section>
-              ) : null}
 
               {/* 大纲侧边栏 - 只在展开时渲染 */}
               {headings.length > 0 && showOutline && (
