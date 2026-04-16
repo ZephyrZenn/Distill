@@ -128,6 +128,48 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
 
         asyncio.run(_run_test())
 
+    def test_execute_saves_optional_topics_for_later_expansion(self):
+        async def _run_test():
+            client = MagicMock()
+            executor = AgentExecutor(client)
+            state = {
+                "plan": {
+                    "daily_overview": "Overview",
+                    "today_pattern": "Pattern",
+                    "daily_brief_items": [],
+                    "focal_points": [
+                        _point("Optional", 1, "OPTIONAL_DEEP"),
+                        _point("Brief", 2, "BRIEF_ONLY"),
+                    ],
+                    "discarded_items": [],
+                },
+                "scored_articles": [_article("1"), _article("2")],
+                "raw_articles": [],
+                "history_memories": {},
+                "log_history": [],
+                "focus": "AI",
+                "groups": [],
+                "status": "RUNNING",
+                "created_at": None,
+            }
+
+            write_primary_brief_mock = AsyncMock(
+                return_value="# Today Brief\n\n## What Happened\n- Optional\n\n## Today's Pattern\nPattern"
+            )
+            with patch("agent.workflow.executor.get_article_content", AsyncMock(return_value={})), patch(
+                "agent.workflow.executor.write_primary_brief",
+                write_primary_brief_mock,
+            ):
+                executor.handle_summarize = AsyncMock(return_value="This must not be called.")
+                await executor.execute(state)
+
+            executor.handle_summarize.assert_not_called()
+            self.assertEqual(len(state["expandable_topics"]), 1)
+            self.assertEqual(state["expandable_topics"][0]["topic"], "Optional")
+            self.assertEqual(state["expandable_topics"][0]["articles"][0]["id"], "1")
+
+        asyncio.run(_run_test())
+
 
 class WorkflowOverviewTest(unittest.TestCase):
     def test_workflow_uses_today_pattern_as_overview(self):

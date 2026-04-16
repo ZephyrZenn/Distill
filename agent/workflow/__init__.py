@@ -113,7 +113,8 @@ class SummarizeAgenticWorkflow:
             ext_info = state.get("ext_info", [])
             overview = self._extract_overview(plan)
             state["status"] = "COMPLETED"
-            return "\n\n".join(result_strings), ext_info, overview
+            expandable_topics = state.get("expandable_topics", [])
+            return "\n\n".join(result_strings), ext_info, overview, expandable_topics
         except Exception as e:
             state["status"] = "FAILED"
             logger.exception(
