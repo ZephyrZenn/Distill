@@ -5,6 +5,7 @@ import logging
 import re
 
 from core.db.pool import get_connection
+from core.llm_client import auto_build_client
 from core.models.feed import FeedBrief
 
 logger = logging.getLogger(__name__)
@@ -352,3 +353,43 @@ def _insert_brief(
                     json.dumps(expandable_topics_list),
                 ),
             )
+
+
+async def expand_optional_topic(brief_id: int, topic_id: str) -> dict:
+    from agent.workflow.executor import AgentExecutor
+    from agent.workflow.expansion import build_expansion_state
+
+    brief = get_brief_by_id(brief_id)
+    if not brief:
+        raise LookupError("Brief not found")
+
+    topic = next(
+        (
+            item
+            for item in (brief.expandable_topics or [])
+            if item.get("topic_id") == topic_id
+        ),
+        None,
+    )
+    if not topic:
+        raise LookupError("Expandable topic not found")
+
+    client = auto_build_client()
+    executor = AgentExecutor(client)
+    state = build_expansion_state(topic)
+    point = state["plan"]["focal_points"][0]
+
+    if point["strategy"] == "SEARCH_ENHANCE":
+        content = await executor.handle_search_enhance(point, state)
+    elif point["strategy"] == "SUMMARIZE":
+        content = await executor.handle_summarize(point, state)
+    else:
+        content = await executor.handle_flash_news(point, state)
+
+    return {
+        "brief_id": brief_id,
+        "topic_id": topic_id,
+        "topic": topic["topic"],
+        "content": content,
+        "ext_info": state.get("ext_info", []),
+    }

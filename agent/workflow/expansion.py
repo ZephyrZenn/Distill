@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime
 import re
 
 from agent.models import (
     AgentPlanResult,
+    AgentState,
     Article,
     ExpandableArticleSnapshot,
     ExpandableTopic,
     FocalPoint,
+    SummaryMemory,
 )
 from agent.workflow.layered import OPTIONAL_DEEP, get_optional_deep_points, normalize_plan_layers
 
@@ -108,4 +111,40 @@ def _article_snapshot(article: Article) -> ExpandableArticleSnapshot:
         pub_date=str(article.get("pub_date", "")),
         score=float(article.get("score", 0.0) or 0.0),
         reasoning=str(article.get("reasoning", "")),
+    )
+
+
+def build_expansion_state(
+    topic: ExpandableTopic,
+    history_memories: dict[int, SummaryMemory] | None = None,
+) -> AgentState:
+    focal_point = topic["focal_point"]
+    articles = [
+        {
+            "id": article["id"],
+            "title": article["title"],
+            "url": article["url"],
+            "summary": article["summary"],
+            "pub_date": article["pub_date"],
+            "score": article["score"],
+            "reasoning": article["reasoning"],
+        }
+        for article in topic["articles"]
+    ]
+    return AgentState(
+        focus="",
+        groups=[],
+        raw_articles=[],
+        scored_articles=articles,
+        plan={
+            "daily_overview": "",
+            "today_pattern": "",
+            "daily_brief_items": [],
+            "focal_points": [focal_point],
+            "discarded_items": [],
+        },
+        history_memories=history_memories or {},
+        log_history=[],
+        status="RUNNING",
+        created_at=datetime.now(),
     )
