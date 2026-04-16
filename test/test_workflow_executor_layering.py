@@ -63,16 +63,24 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
                 "created_at": None,
             }
 
+            write_primary_brief_mock = AsyncMock(
+                return_value="# Today Brief\n\n## What Happened\n- Auto\n- Optional\n- Brief\n\n## Today's Pattern\nPattern"
+            )
             with patch("agent.workflow.executor.get_article_content", AsyncMock(return_value={})), patch(
                 "agent.workflow.executor.write_primary_brief",
-                AsyncMock(return_value="# Today Brief\n\n## What Happened\n- Auto\n- Optional\n- Brief\n\n## Today's Pattern\nPattern"),
+                write_primary_brief_mock,
             ):
                 executor.handle_summarize = AsyncMock(return_value="## Auto\nDeep analysis.")
                 results = await executor.execute(state)
 
+            write_primary_brief_mock.assert_awaited_once_with(client, state["plan"])
             executor.handle_summarize.assert_awaited_once()
+            deep_point = executor.handle_summarize.await_args.args[0]
+            self.assertEqual(deep_point["topic"], "Auto")
+            self.assertEqual(deep_point["generation_mode"], "AUTO_DEEP")
             self.assertIn("# Today Brief", results[0][0])
             self.assertIn("## Deep Analysis", results[0][0])
+            self.assertIn("Deep analysis.", results[0][0])
             self.assertIn("## Optional Analysis", results[0][0])
             self.assertIn("Optional happened.", results[0][0])
 
@@ -103,13 +111,17 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
                 "created_at": None,
             }
 
+            write_primary_brief_mock = AsyncMock(
+                return_value="# Today Brief\n\n## What Happened\n- Optional\n- Brief\n\n## Today's Pattern\nPattern"
+            )
             with patch("agent.workflow.executor.get_article_content", AsyncMock(return_value={})), patch(
                 "agent.workflow.executor.write_primary_brief",
-                AsyncMock(return_value="# Today Brief\n\n## What Happened\n- Optional\n- Brief\n\n## Today's Pattern\nPattern"),
+                write_primary_brief_mock,
             ):
                 executor.handle_summarize = AsyncMock(return_value="This must not be called.")
                 results = await executor.execute(state)
 
+            write_primary_brief_mock.assert_awaited_once_with(client, state["plan"])
             executor.handle_summarize.assert_not_called()
             self.assertTrue(results[0][0].startswith("# Today Brief"))
             self.assertIn("## Optional Analysis", results[0][0])
