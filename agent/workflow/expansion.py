@@ -17,6 +17,7 @@ def build_expandable_topics(
     plan: AgentPlanResult,
     scored_articles: list[Article],
 ) -> list[ExpandableTopic]:
+    source_priority_by_signature = _source_priority_by_signature(plan)
     normalized_plan = normalize_plan_layers(plan)
     articles_by_id = {str(article["id"]): article for article in scored_articles}
     topics: list[ExpandableTopic] = []
@@ -31,7 +32,7 @@ def build_expandable_topics(
             continue
         topics.append(
             ExpandableTopic(
-                topic_id=_topic_id(point),
+                topic_id=_topic_id(point, source_priority_by_signature),
                 topic=point["topic"],
                 why_expand=str(point.get("why_expand", "")),
                 strategy=point["strategy"],
@@ -45,10 +46,28 @@ def build_expandable_topics(
     return topics
 
 
-def _topic_id(point: FocalPoint) -> str:
-    priority = str(point.get("priority", "topic"))
+def _topic_id(point: FocalPoint, source_priority_by_signature: dict[tuple[str, tuple[str, ...]], int]) -> str:
+    signature = _point_signature(point)
+    priority = str(source_priority_by_signature.get(signature, point.get("priority", "topic")))
     slug = re.sub(r"[^a-z0-9]+", "-", point["topic"].lower()).strip("-")
     return f"{priority}-{slug or 'topic'}"
+
+
+def _source_priority_by_signature(plan: AgentPlanResult) -> dict[tuple[str, tuple[str, ...]], int]:
+    priorities: dict[tuple[str, tuple[str, ...]], int] = {}
+    for point in plan.get("focal_points", []):
+        if not isinstance(point, dict):
+            continue
+        priority = point.get("priority")
+        if isinstance(priority, bool) or not isinstance(priority, int):
+            continue
+        priorities.setdefault(_point_signature(point), priority)
+    return priorities
+
+
+def _point_signature(point: FocalPoint) -> tuple[str, tuple[str, ...]]:
+    article_ids = tuple(str(article_id) for article_id in point.get("article_ids", []))
+    return point["topic"], article_ids
 
 
 def _article_snapshot(article: Article) -> ExpandableArticleSnapshot:

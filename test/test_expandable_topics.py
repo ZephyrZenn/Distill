@@ -58,7 +58,7 @@ class ExpandableTopicsTest(unittest.TestCase):
         self.assertEqual(len(topics), 1)
         topic = topics[0]
         self.assertEqual(topic["topic"], "Optional Topic")
-        self.assertEqual(topic["topic_id"], "1-optional-topic")
+        self.assertEqual(topic["topic_id"], "2-optional-topic")
         self.assertEqual(topic["why_expand"], "Unresolved downstream impact affects budget planning.")
         self.assertEqual(topic["focal_point"]["generation_mode"], "OPTIONAL_DEEP")
         self.assertEqual(topic["articles"][0]["id"], "2")
@@ -78,7 +78,7 @@ class ExpandableTopicsTest(unittest.TestCase):
 
         topics = build_expandable_topics(plan, [_article("a"), _article("b")])
 
-        self.assertEqual(topics[0]["topic_id"], "1-gpu-supply-cloud-cost")
+        self.assertEqual(topics[0]["topic_id"], "7-gpu-supply-cloud-cost")
 
     def test_build_normalizes_before_collecting_optional_topics(self):
         plan = {
