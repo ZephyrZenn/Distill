@@ -101,22 +101,6 @@ const getTodayString = () => {
   return today.toISOString().split("T")[0];
 };
 
-const getNodeText = (node: React.ReactNode): string => {
-  if (node === null || node === undefined || typeof node === "boolean") {
-    return "";
-  }
-  if (typeof node === "string" || typeof node === "number") {
-    return String(node);
-  }
-  if (Array.isArray(node)) {
-    return node.map(getNodeText).join("");
-  }
-  if (React.isValidElement(node)) {
-    return getNodeText((node.props as { children?: React.ReactNode }).children);
-  }
-  return "";
-};
-
 const SummaryPage = () => {
   const { id: briefIdParam } = useParams<{ id?: string }>();
   const navigate = useNavigate();
@@ -443,23 +427,14 @@ const SummaryPage = () => {
                     h2: ({ node, ...props }) => {
                       const text = String(props.children ?? "");
                       const id = `h2-${slugify(text)}`;
-                      return <h2 id={id} {...props} />;
-                    },
-                    h3: ({ node, ...props }) => {
-                      const text = String(props.children ?? "");
-                      const id = `h3-${slugify(text)}`;
-                      return <h3 id={id} {...props} />;
-                    },
-                    li: ({ node, ...props }: any) => {
-                      const text = getNodeText(props.children);
                       const expandableTopic = selectedBrief.expandableTopics?.find(
                         (topic) =>
-                          text.includes(topic.whyExpand) ||
-                          text.includes(topic.topic),
+                          text.includes(topic.topic) ||
+                          text.includes(topic.topicId),
                       );
 
                       if (!expandableTopic) {
-                        return <li {...props} />;
+                        return <h2 id={id} {...props} />;
                       }
 
                       const expansion = expandedTopics[expandableTopic.topicId];
@@ -467,11 +442,9 @@ const SummaryPage = () => {
                         expandingTopicId === expandableTopic.topicId;
 
                       return (
-                        <li {...props}>
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <span className="min-w-0 flex-1">
-                              {props.children}
-                            </span>
+                        <div>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <h2 id={id} {...props} />
                             <button
                               type="button"
                               onClick={() =>
@@ -514,8 +487,13 @@ const SummaryPage = () => {
                               ) : null}
                             </div>
                           ) : null}
-                        </li>
+                        </div>
                       );
+                    },
+                    h3: ({ node, ...props }) => {
+                      const text = String(props.children ?? "");
+                      const id = `h3-${slugify(text)}`;
+                      return <h3 id={id} {...props} />;
                     },
                     // 自定义脚注引用渲染
                     sup: ({ node, ...props }: any) => {
