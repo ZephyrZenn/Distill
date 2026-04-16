@@ -286,7 +286,7 @@ def build_optional_analysis_section(points: list[FocalPoint]) -> str:
         topic = _optional_text(point, "topic") or "Optional Topic"
         brief_summary = _optional_text(point, "brief_summary") or point["topic"]
         why_expand = _optional_text(point, "why_expand")
-        lines.append(f"## {topic}（可展开分析）")
+        lines.append(f"## {topic}")
         lines.append(brief_summary)
         if why_expand:
             lines.append(f"\nWhy expand: {why_expand}")
