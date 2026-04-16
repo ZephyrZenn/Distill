@@ -75,20 +75,9 @@ class AgentPlanResult(TypedDict):
     discarded_items: list[DiscardedItem]
 
 
-class ExpandableArticleSnapshot(TypedDict):
-    id: str
-    title: str
-    url: str
-    summary: str
-    pub_date: str
-    score: float
-    reasoning: str
-
-
 class ExpandableTopic(TypedDict):
     topic_id: str
     focal_point: FocalPoint
-    articles: list[ExpandableArticleSnapshot]
 
 
 class SummaryMemory(TypedDict):

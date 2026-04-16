@@ -56,10 +56,7 @@ class AgentExecutor:
         focal_points = normalized_plan.get("focal_points", [])
         auto_deep_points = get_auto_deep_points(normalized_plan)
         optional_points = get_optional_deep_points(normalized_plan)
-        state["expandable_topics"] = build_expandable_topics(
-            normalized_plan,
-            state["scored_articles"],
-        )
+        state["expandable_topics"] = build_expandable_topics(normalized_plan)
         logger.info(
             "[workflow:executor] layered routing total=%d auto_deep=%d optional=%d",
             len(focal_points),

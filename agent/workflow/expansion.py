@@ -7,8 +7,6 @@ import re
 from agent.models import (
     AgentPlanResult,
     AgentState,
-    Article,
-    ExpandableArticleSnapshot,
     ExpandableTopic,
     FocalPoint,
     SummaryMemory,
@@ -18,21 +16,14 @@ from agent.workflow.layered import OPTIONAL_DEEP, get_optional_deep_points, norm
 
 def build_expandable_topics(
     plan: AgentPlanResult,
-    scored_articles: list[Article],
 ) -> list[ExpandableTopic]:
     source_priority_by_signature = _source_priority_by_signature(plan)
     source_priority_by_topic = _source_priority_by_topic(plan)
     normalized_plan = normalize_plan_layers(plan)
-    articles_by_id = {str(article["id"]): article for article in scored_articles}
     topics: list[ExpandableTopic] = []
 
     for point in get_optional_deep_points(normalized_plan):
-        snapshots = [
-            _article_snapshot(articles_by_id[article_id])
-            for article_id in point.get("article_ids", [])
-            if article_id in articles_by_id
-        ]
-        if not snapshots:
+        if not point.get("article_ids"):
             continue
         topics.append(
             ExpandableTopic(
@@ -42,7 +33,6 @@ def build_expandable_topics(
                     source_priority_by_topic,
                 ),
                 focal_point={**deepcopy(point), "generation_mode": OPTIONAL_DEEP},
-                articles=snapshots,
             )
         )
 
@@ -97,40 +87,30 @@ def _point_signature(point: FocalPoint) -> tuple[str, tuple[str, ...]]:
     return point["topic"], article_ids
 
 
-def _article_snapshot(article: Article) -> ExpandableArticleSnapshot:
-    return ExpandableArticleSnapshot(
-        id=str(article.get("id", "")),
-        title=str(article.get("title", "")),
-        url=str(article.get("url", "")),
-        summary=str(article.get("summary", "")),
-        pub_date=str(article.get("pub_date", "")),
-        score=float(article.get("score", 0.0) or 0.0),
-        reasoning=str(article.get("reasoning", "")),
-    )
-
-
 def build_expansion_state(
     topic: ExpandableTopic,
+    fetched_articles: dict[str, str],
     history_memories: dict[int, SummaryMemory] | None = None,
 ) -> AgentState:
     focal_point = topic["focal_point"]
-    articles = [
+    scored_articles = [
         {
-            "id": article["id"],
-            "title": article["title"],
-            "url": article["url"],
-            "summary": article["summary"],
-            "pub_date": article["pub_date"],
-            "score": article["score"],
-            "reasoning": article["reasoning"],
+            "id": article_id,
+            "title": "",
+            "url": "",
+            "summary": "",
+            "pub_date": "",
+            "score": 0.0,
+            "reasoning": "",
+            "content": fetched_articles.get(article_id, ""),
         }
-        for article in topic["articles"]
+        for article_id in focal_point.get("article_ids", [])
     ]
     return AgentState(
         focus="",
         groups=[],
         raw_articles=[],
-        scored_articles=articles,
+        scored_articles=scored_articles,
         plan={
             "today_pattern": "",
             "daily_brief_items": [],

@@ -165,7 +165,6 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
             executor.handle_summarize.assert_not_called()
             self.assertEqual(len(state["expandable_topics"]), 1)
             self.assertEqual(state["expandable_topics"][0]["focal_point"]["topic"], "Optional")
-            self.assertEqual(state["expandable_topics"][0]["articles"][0]["id"], "1")
 
         asyncio.run(_run_test())
 
