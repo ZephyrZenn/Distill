@@ -32,7 +32,11 @@ def _build_query_patterns(query: str) -> list[str]:
 
 
 async def get_recent_group_update(
-    hour_gap: int, group_ids: list[int], focus: str = ""
+    hour_gap: int,
+    group_ids: list[int],
+    focus: str = "",
+    candidate_limit: int = 0,
+    use_vector_prefilter: bool = True,
 ) -> Tuple[List[FeedGroup], List[RawArticle]]:
     """获取最近更新的分组及其文章
 
@@ -46,20 +50,23 @@ async def get_recent_group_update(
     if hour_gap <= 0:
         raise ValueError("hour_gap 必须大于 0")
 
-    focus = focus or ""
+    focus = (focus or "").strip()
+    if candidate_limit <= 0:
+        candidate_limit = DEFAULT_FEED_CANDIDATE_LIMIT if focus else 0
+    candidate_limit = min(max(candidate_limit, 1), MAX_FEED_CANDIDATE_LIMIT)
 
     use_vector_match = False
     focus_embedding = None
-    if focus and is_embedding_configured():
+    if focus and use_vector_prefilter and is_embedding_configured():
         try:
             focus_embedding = await embed_text(focus)
             use_vector_match = True
-            logger.debug("Using vector similarity matching for focus: %s", focus)
+            logger.debug("Using vector similarity prefilter for focus: %s", focus)
         except EmbeddingError as e:
             logger.warning(
-                "Failed to generate focus embedding, falling back to string matching: %s", e
+                "Failed to generate focus embedding, fallback to lexical prefilter: %s",
+                e,
             )
-            use_vector_match = False
 
     async with get_async_connection() as conn:
         async with conn.cursor() as cur:
@@ -76,66 +83,177 @@ async def get_recent_group_update(
             if not groups:
                 return [], []
 
-            if use_vector_match and focus_embedding:
-                await cur.execute(
-                    """
-                    SELECT
-                        fi.id, fi.title, fi.link, fi.summary, fi.pub_date,
-                        fic.content
-                    FROM feed_items fi
-                    JOIN feed_group_items fgi ON fgi.feed_id = fi.feed_id
-                    JOIN feed_item_contents fic ON fic.feed_item_id = fi.id
-                    WHERE fgi.feed_group_id = ANY(%s)
-                      AND fi.pub_date >= NOW() - INTERVAL '1 hour' * %s
-                      AND NOT EXISTS (
-                          SELECT 1
-                          FROM excluded_feed_item_ids efi
-                          WHERE efi.item_id = fi.id
-                            AND efi.group_ids @> %s::integer[] AND efi.group_ids <@ %s::integer[]
-                            AND efi.pub_date >= NOW() - INTERVAL '1 hour' * %s
-                            AND (
-                                (efi.focus_embedding IS NOT NULL
-                                 AND 1 - (efi.focus_embedding <=> %s::vector) >= %s)
-                                OR
-                                (efi.focus_embedding IS NULL AND efi.focus = %s)
-                            )
-                      );
-                    """,
-                    (
-                        group_ids,
-                        hour_gap,
-                        group_ids,
-                        group_ids,
-                        hour_gap,
-                        focus_embedding,
-                        FOCUS_SIMILARITY_THRESHOLD,
-                        focus,
-                    ),
-                )
-            else:
-                await cur.execute(
-                    """
-                    SELECT
-                        fi.id, fi.title, fi.link, fi.summary, fi.pub_date,
-                        fic.content
-                    FROM feed_items fi
-                    JOIN feed_group_items fgi ON fgi.feed_id = fi.feed_id
-                    JOIN feed_item_contents fic ON fic.feed_item_id = fi.id
-                    WHERE fgi.feed_group_id = ANY(%s)
-                      AND fi.pub_date >= NOW() - INTERVAL '1 hour' * %s
-                      AND NOT EXISTS (
-                          SELECT 1
-                          FROM excluded_feed_item_ids efi
-                          WHERE efi.item_id = fi.id
-                            AND efi.focus = %s
-                            AND efi.group_ids @> %s::integer[] AND efi.group_ids <@ %s::integer[]
-                            AND efi.pub_date >= NOW() - INTERVAL '1 hour' * %s
-                      );
-                    """,
-                    (group_ids, hour_gap, focus, group_ids, group_ids, hour_gap),
-                )
+            item_rows = []
+            used_vector_prefilter = False
+            used_lexical_prefilter = False
 
-            item_rows = await cur.fetchall()
+            if use_vector_match and focus_embedding:
+                try:
+                    await cur.execute(
+                        """
+                        SELECT
+                            fi.id, fi.title, fi.link, fi.summary, fi.pub_date,
+                            fic.content,
+                            1 - (
+                                COALESCE(fi.summary_embedding, fi.title_embedding) <=> %s::vector
+                            ) AS semantic_prefilter_score
+                        FROM feed_items fi
+                        JOIN feed_group_items fgi ON fgi.feed_id = fi.feed_id
+                        JOIN feed_item_contents fic ON fic.feed_item_id = fi.id
+                        WHERE fgi.feed_group_id = ANY(%s)
+                          AND fi.pub_date >= NOW() - INTERVAL '1 hour' * %s
+                          AND COALESCE(fi.summary_embedding, fi.title_embedding) IS NOT NULL
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM excluded_feed_item_ids efi
+                              WHERE efi.item_id = fi.id
+                                AND efi.group_ids @> %s::integer[]
+                                AND efi.group_ids <@ %s::integer[]
+                                AND efi.pub_date >= NOW() - INTERVAL '1 hour' * %s
+                                AND (
+                                    (efi.focus_embedding IS NOT NULL
+                                     AND 1 - (efi.focus_embedding <=> %s::vector) >= %s)
+                                    OR
+                                    (efi.focus_embedding IS NULL AND efi.focus = %s)
+                                )
+                          )
+                        ORDER BY COALESCE(fi.summary_embedding, fi.title_embedding) <=> %s::vector ASC,
+                                 fi.pub_date DESC
+                        LIMIT %s
+                        """,
+                        (
+                            focus_embedding,
+                            group_ids,
+                            hour_gap,
+                            group_ids,
+                            group_ids,
+                            hour_gap,
+                            focus_embedding,
+                            FOCUS_SIMILARITY_THRESHOLD,
+                            focus,
+                            focus_embedding,
+                            candidate_limit,
+                        ),
+                    )
+                    item_rows = await cur.fetchall()
+                    used_vector_prefilter = True
+                except Exception as exc:
+                    logger.warning(
+                        "Vector prefilter unavailable for group update, fallback to lexical prefilter: %s",
+                        exc,
+                    )
+
+            if focus and not item_rows:
+                patterns = _build_query_patterns(focus)
+                if patterns:
+                    await cur.execute(
+                        """
+                        SELECT
+                            fi.id, fi.title, fi.link, fi.summary, fi.pub_date,
+                            fic.content
+                        FROM feed_items fi
+                        JOIN feed_group_items fgi ON fgi.feed_id = fi.feed_id
+                        JOIN feed_item_contents fic ON fic.feed_item_id = fi.id
+                        WHERE fgi.feed_group_id = ANY(%s)
+                          AND fi.pub_date >= NOW() - INTERVAL '1 hour' * %s
+                          AND (
+                              fi.title ILIKE ANY(%s)
+                              OR fi.summary ILIKE ANY(%s)
+                          )
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM excluded_feed_item_ids efi
+                              WHERE efi.item_id = fi.id
+                                AND efi.group_ids @> %s::integer[]
+                                AND efi.group_ids <@ %s::integer[]
+                                AND efi.pub_date >= NOW() - INTERVAL '1 hour' * %s
+                                AND efi.focus = %s
+                          )
+                        ORDER BY fi.pub_date DESC
+                        LIMIT %s
+                        """,
+                        (
+                            group_ids,
+                            hour_gap,
+                            patterns,
+                            patterns,
+                            group_ids,
+                            group_ids,
+                            hour_gap,
+                            focus,
+                            candidate_limit,
+                        ),
+                    )
+                    item_rows = await cur.fetchall()
+                    used_lexical_prefilter = True
+
+            if not item_rows:
+                if focus or candidate_limit > 0:
+                    await cur.execute(
+                        """
+                        SELECT
+                            fi.id, fi.title, fi.link, fi.summary, fi.pub_date,
+                            fic.content
+                        FROM feed_items fi
+                        JOIN feed_group_items fgi ON fgi.feed_id = fi.feed_id
+                        JOIN feed_item_contents fic ON fic.feed_item_id = fi.id
+                        WHERE fgi.feed_group_id = ANY(%s)
+                          AND fi.pub_date >= NOW() - INTERVAL '1 hour' * %s
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM excluded_feed_item_ids efi
+                              WHERE efi.item_id = fi.id
+                                AND efi.group_ids @> %s::integer[]
+                                AND efi.group_ids <@ %s::integer[]
+                                AND efi.pub_date >= NOW() - INTERVAL '1 hour' * %s
+                                AND efi.focus = %s
+                          )
+                        ORDER BY fi.pub_date DESC
+                        LIMIT %s
+                        """,
+                        (
+                            group_ids,
+                            hour_gap,
+                            group_ids,
+                            group_ids,
+                            hour_gap,
+                            focus,
+                            candidate_limit,
+                        ),
+                    )
+                else:
+                    await cur.execute(
+                        """
+                        SELECT
+                            fi.id, fi.title, fi.link, fi.summary, fi.pub_date,
+                            fic.content
+                        FROM feed_items fi
+                        JOIN feed_group_items fgi ON fgi.feed_id = fi.feed_id
+                        JOIN feed_item_contents fic ON fic.feed_item_id = fi.id
+                        WHERE fgi.feed_group_id = ANY(%s)
+                          AND fi.pub_date >= NOW() - INTERVAL '1 hour' * %s
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM excluded_feed_item_ids efi
+                              WHERE efi.item_id = fi.id
+                                AND efi.group_ids @> %s::integer[]
+                                AND efi.group_ids <@ %s::integer[]
+                                AND efi.pub_date >= NOW() - INTERVAL '1 hour' * %s
+                                AND efi.focus = %s
+                          )
+                        ORDER BY fi.pub_date DESC
+                        """,
+                        (
+                            group_ids,
+                            hour_gap,
+                            group_ids,
+                            group_ids,
+                            hour_gap,
+                            focus,
+                        ),
+                    )
+                item_rows = await cur.fetchall()
+
             items = [
                 RawArticle(
                     id=row[0],
@@ -147,6 +265,19 @@ async def get_recent_group_update(
                 )
                 for row in item_rows
             ]
+            for article, row in zip(items, item_rows):
+                if len(row) > 6 and row[6] is not None:
+                    article["semantic_prefilter_score"] = float(row[6])
+
+            logger.info(
+                "[db:get_recent_group_update] focus=%s hour_gap=%s limit=%s rows=%d vector_prefilter=%s lexical_prefilter=%s",
+                focus,
+                hour_gap,
+                candidate_limit,
+                len(items),
+                used_vector_prefilter,
+                used_lexical_prefilter,
+            )
 
             return groups, items
 

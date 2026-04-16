@@ -5,6 +5,7 @@ from contextlib import suppress
 from typing import Optional
 from agent.models import AgentState, RawArticle, StepCallback, log_step
 from agent.tools import get_recent_group_update, save_current_execution_records
+from agent.tools.constants import DEFAULT_FEED_CANDIDATE_LIMIT
 from agent.workflow.executor import AgentExecutor
 from agent.workflow.planner import AgentPlanner
 from core.llm_client import auto_build_client
@@ -64,7 +65,13 @@ class SummarizeAgenticWorkflow:
         # This will raise APIKeyNotConfiguredError if API key is not set
         self._init_client()
 
-        groups, articles = await get_recent_group_update(hour_gap, group_ids, focus)
+        groups, articles = await get_recent_group_update(
+            hour_gap=hour_gap,
+            group_ids=group_ids,
+            focus=focus,
+            candidate_limit=DEFAULT_FEED_CANDIDATE_LIMIT,
+            use_vector_prefilter=True,
+        )
 
         if task_id in self._states:
             raise ValueError(f"Task {task_id} already exists")
