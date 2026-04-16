@@ -435,17 +435,22 @@ const SummaryPage = () => {
                         <div>
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <h2 id={id} {...props} />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleExpandTopic(expandableTopic.topicId)
-                              }
-                              title={`生成「${expandableTopic.topic}」的深度分析`}
-                              aria-label={`生成「${expandableTopic.topic}」的深度分析`}
-                              className="self-start shrink-0 p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors"
-                            >
-                              <Sparkles size={16} />
-                            </button>
+                            <div className="relative group/expand self-start shrink-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleExpandTopic(expandableTopic.topicId)
+                                }
+                                aria-label={`生成「${expandableTopic.topic}」的深度分析`}
+                                className="p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors"
+                              >
+                                <Sparkles size={16} />
+                              </button>
+                              <div className="pointer-events-none absolute right-0 top-full mt-1 z-50 w-56 rounded-lg border theme-border theme-surface shadow-lg px-3 py-2 text-xs theme-text leading-relaxed opacity-0 group-hover/expand:opacity-100 transition-opacity duration-150">
+                                <p className="font-semibold theme-accent-text mb-1">深度分析可用</p>
+                                <p className="theme-text-muted">点击生成「{expandableTopic.topic}」的完整深度分析，内容将直接更新到文章中。</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       );
