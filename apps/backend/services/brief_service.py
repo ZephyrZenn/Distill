@@ -182,7 +182,7 @@ def get_briefs(
             if include_content:
                 # 包含完整内容
                 cur.execute(
-                    """SELECT id, content, created_at, group_ids, summary, overview, ext_info
+                    """SELECT id, content, created_at, group_ids, summary, overview, ext_info, expandable_topics
                        FROM feed_brief
                        WHERE created_at::date BETWEEN %s AND %s
                        ORDER BY id DESC""",
@@ -197,6 +197,7 @@ def get_briefs(
                         summary=row[4] or "",
                         overview=row[5] or "",
                         ext_info=row[6] if row[6] else [],
+                        expandable_topics=row[7] if row[7] else [],
                     )
                     for row in cur.fetchall()
                 ]
@@ -228,7 +229,7 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """SELECT id, content, created_at, group_ids, summary, overview, ext_info
+                """SELECT id, content, created_at, group_ids, summary, overview, ext_info, expandable_topics
                    FROM feed_brief
                    WHERE id = %s""",
                 (brief_id,),
@@ -244,6 +245,7 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
                 summary=row[4] or "",
                 overview=row[5] or "",
                 ext_info=row[6] if row[6] else [],
+                expandable_topics=row[7] if row[7] else [],
             )
 
 
@@ -273,18 +275,28 @@ async def generate_brief_for_groups_async(
     if len(result) == 2:
         brief, ext_info = result
         overview = ""
-    else:
+        expandable_topics = []
+    elif len(result) == 3:
         brief, ext_info, overview = result
+        expandable_topics = []
+    else:
+        brief, ext_info, overview, expandable_topics = result
 
     if not brief:
         logger.warning("No brief generated for groups %s", group_ids)
         return ""
-    _insert_brief(group_ids, brief, ext_info, overview)
+    _insert_brief(group_ids, brief, ext_info, overview, expandable_topics)
     logger.info("Brief generation completed for groups %s", group_ids)
     return brief
 
 
-def _insert_brief(group_ids: list[int], brief: str, ext_info: list = None, overview: str = ""):
+def _insert_brief(
+    group_ids: list[int],
+    brief: str,
+    ext_info: list = None,
+    overview: str = "",
+    expandable_topics: list[dict] | None = None,
+):
     """插入简报到数据库
 
     Args:
@@ -324,10 +336,19 @@ def _insert_brief(group_ids: list[int], brief: str, ext_info: list = None, overv
                     }
                 )
 
+    expandable_topics_list = expandable_topics or []
+
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """INSERT INTO feed_brief (group_ids, content, summary, overview, ext_info)
-                   VALUES (%s::integer[], %s, %s, %s, %s::jsonb)""",
-                (group_ids, brief, summary, overview, json.dumps(ext_info_list)),
+                """INSERT INTO feed_brief (group_ids, content, summary, overview, ext_info, expandable_topics)
+                   VALUES (%s::integer[], %s, %s, %s, %s::jsonb, %s::jsonb)""",
+                (
+                    group_ids,
+                    brief,
+                    summary,
+                    overview,
+                    json.dumps(ext_info_list),
+                    json.dumps(expandable_topics_list),
+                ),
             )

@@ -90,7 +90,8 @@ class FeedBrief:
         group_ids: list[int] = None,
         summary: str = "",
         overview: str = "",
-        ext_info: list[dict] = None
+        ext_info: list[dict] = None,
+        expandable_topics: list[dict] = None,
     ):
         self.id = id
         self.content = content
@@ -99,6 +100,9 @@ class FeedBrief:
         self.summary = summary
         self.overview = overview
         self.ext_info = ext_info if ext_info is not None else []
+        self.expandable_topics = (
+            expandable_topics if expandable_topics is not None else []
+        )
 
     def to_view_model(self, groups_dict: dict[int, FeedGroup], include_content: bool = True) -> dict:
         """转换为视图模型
@@ -118,4 +122,5 @@ class FeedBrief:
         if include_content:
             result["content"] = self.content
             result["ext_info"] = self.ext_info
+            result["expandable_topics"] = self.expandable_topics
         return result
