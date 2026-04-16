@@ -240,7 +240,7 @@ def _meaningful_tokens(text: str) -> set[str]:
 
 
 def _normalize_overlap_text(text: str) -> str:
-    return " ".join(_meaningful_tokens(text))
+    return " ".join(sorted(_meaningful_tokens(text)))
 
 
 def _unique_article_count(focal_points: list[FocalPoint]) -> int:
