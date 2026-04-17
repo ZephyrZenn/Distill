@@ -25,12 +25,14 @@ class Schedule:
         focus: str,
         group_ids: List[int],
         enabled: bool = True,
+        auto_expand: bool = False,
     ):
         self.id = id
         self.time = time
         self.focus = focus
         self.group_ids = group_ids
         self.enabled = enabled
+        self.auto_expand = auto_expand
 
     def to_dict(self) -> dict:
         return {
@@ -39,17 +41,19 @@ class Schedule:
             "focus": self.focus,
             "group_ids": self.group_ids,
             "enabled": self.enabled,
+            "auto_expand": self.auto_expand,
         }
 
     @classmethod
     def from_db_row(cls, row: tuple) -> "Schedule":
-        """Create Schedule from database row (id, time, focus, group_ids, enabled)."""
+        """Create Schedule from database row (id, time, focus, group_ids, enabled, auto_expand)."""
         return cls(
             id=row[0],
             time=row[1],
             focus=row[2],
             group_ids=list(row[3]) if row[3] else [],
             enabled=row[4],
+            auto_expand=row[5] if len(row) > 5 else False,
         )
 
 
@@ -93,7 +97,7 @@ def shutdown_scheduler() -> None:
 
 
 def add_schedule_job(
-    schedule_id: str, hour: int, minute: int, group_ids: list[int], focus: str
+    schedule_id: str, hour: int, minute: int, group_ids: list[int], focus: str, auto_expand: bool = False,
 ) -> None:
     """Add a scheduled brief generation job."""
     scheduler = _get_scheduler()
@@ -109,7 +113,7 @@ def add_schedule_job(
         id=job_id,
         hour=hour,
         minute=minute,
-        args=[schedule_id, group_ids, focus],
+        args=[schedule_id, group_ids, focus, auto_expand],
     )
     logger.info(f"Added schedule job {job_id} at {hour:02d}:{minute:02d}")
 
@@ -128,7 +132,7 @@ def _load_schedules() -> List[Schedule]:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, time, focus, group_ids, enabled
+                SELECT id, time, focus, group_ids, enabled, auto_expand
                 FROM schedules
                 ORDER BY time
             """)
@@ -141,13 +145,14 @@ def _save_schedule(schedule: Schedule) -> None:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO schedules (id, time, focus, group_ids, enabled)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO schedules (id, time, focus, group_ids, enabled, auto_expand)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
                     time = EXCLUDED.time,
                     focus = EXCLUDED.focus,
                     group_ids = EXCLUDED.group_ids,
                     enabled = EXCLUDED.enabled,
+                    auto_expand = EXCLUDED.auto_expand,
                     updated_at = CURRENT_TIMESTAMP
             """, (
                 schedule.id,
@@ -155,6 +160,7 @@ def _save_schedule(schedule: Schedule) -> None:
                 schedule.focus,
                 schedule.group_ids,
                 schedule.enabled,
+                schedule.auto_expand,
             ))
     logger.info(f"Saved schedule {schedule.id} to database")
 
@@ -177,7 +183,7 @@ def get_schedule(schedule_id: str) -> Optional[Schedule]:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, time, focus, group_ids, enabled
+                SELECT id, time, focus, group_ids, enabled, auto_expand
                 FROM schedules
                 WHERE id = %s
             """, (schedule_id,))
@@ -187,7 +193,7 @@ def get_schedule(schedule_id: str) -> Optional[Schedule]:
             return None
 
 
-def create_schedule(time_str: str, focus: str, group_ids: List[int]) -> Schedule:
+def create_schedule(time_str: str, focus: str, group_ids: List[int], auto_expand: bool = False) -> Schedule:
     """Create a new schedule."""
     if not group_ids:
         raise ValueError("group_ids cannot be empty")
@@ -212,12 +218,13 @@ def create_schedule(time_str: str, focus: str, group_ids: List[int]) -> Schedule
         focus=focus,
         group_ids=group_ids,
         enabled=True,
+        auto_expand=auto_expand,
     )
 
     _save_schedule(schedule)
 
     # Add to scheduler
-    add_schedule_job(schedule_id, hour, minute, group_ids, focus)
+    add_schedule_job(schedule_id, hour, minute, group_ids, focus, auto_expand)
 
     logger.info(f"Created schedule {schedule_id} at {time_str}")
     return schedule
@@ -229,6 +236,7 @@ def update_schedule(
     focus: Optional[str] = None,
     group_ids: Optional[List[int]] = None,
     enabled: Optional[bool] = None,
+    auto_expand: Optional[bool] = None,
 ) -> Optional[Schedule]:
     """Update an existing schedule."""
     if group_ids is not None and len(group_ids) == 0:
@@ -253,6 +261,8 @@ def update_schedule(
         schedule.group_ids = group_ids
     if enabled is not None:
         schedule.enabled = enabled
+    if auto_expand is not None:
+        schedule.auto_expand = auto_expand
 
     _save_schedule(schedule)
 
@@ -265,6 +275,7 @@ def update_schedule(
             schedule.time.minute,
             schedule.group_ids,
             schedule.focus,
+            schedule.auto_expand,
         )
 
     logger.info(f"Updated schedule {schedule_id}")
@@ -299,6 +310,7 @@ def update_schedule_jobs() -> None:
                 schedule.time.minute,
                 schedule.group_ids,
                 schedule.focus,
+                schedule.auto_expand,
             )
 
     logger.info(f"Updated {len([s for s in schedules if s.enabled])} schedule jobs")

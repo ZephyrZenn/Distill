@@ -285,10 +285,10 @@ async def generate_brief_for_groups_async(
 
     if not brief:
         logger.warning("No brief generated for groups %s", group_ids)
-        return ""
-    _insert_brief(group_ids, brief, ext_info, overview, expandable_topics)
+        return "", 0, []
+    brief_id = _insert_brief(group_ids, brief, ext_info, overview, expandable_topics)
     logger.info("Brief generation completed for groups %s", group_ids)
-    return brief
+    return brief, brief_id, expandable_topics
 
 
 def _insert_brief(
@@ -343,7 +343,8 @@ def _insert_brief(
         with conn.cursor() as cur:
             cur.execute(
                 """INSERT INTO feed_brief (group_ids, content, summary, overview, ext_info, expandable_topics)
-                   VALUES (%s::integer[], %s, %s, %s, %s::jsonb, %s::jsonb)""",
+                   VALUES (%s::integer[], %s, %s, %s, %s::jsonb, %s::jsonb)
+                   RETURNING id""",
                 (
                     group_ids,
                     brief,
@@ -353,6 +354,7 @@ def _insert_brief(
                     json.dumps(expandable_topics_list),
                 ),
             )
+            return cur.fetchone()[0]
 
 
 def _patch_brief_expansion(brief_id: int, topic_id: str, new_section: str) -> None:

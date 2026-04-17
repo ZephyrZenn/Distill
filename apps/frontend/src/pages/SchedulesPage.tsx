@@ -6,6 +6,7 @@ import {
   Edit3,
   Power,
   Activity,
+  Sparkles,
 } from 'lucide-react';
 import { api } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
@@ -31,6 +32,7 @@ const SchedulesPage = () => {
     groupIds: number[];
     focus: string;
     active: boolean;
+    autoExpand: boolean;
   } | null>(null);
 
   const allSchedules = schedules ?? [];
@@ -49,6 +51,7 @@ const SchedulesPage = () => {
       time: editingSchedule.time,
       groupIds: editingSchedule.groupIds,
       focus: editingSchedule.focus,
+      autoExpand: editingSchedule.autoExpand,
     });
   }, {
     onSuccess: () => {
@@ -68,6 +71,7 @@ const SchedulesPage = () => {
       groupIds: editingSchedule.groupIds,
       focus: editingSchedule.focus,
       enabled: editingSchedule.active,
+      autoExpand: editingSchedule.autoExpand,
     });
   }, {
     onSuccess: () => {
@@ -110,9 +114,10 @@ const SchedulesPage = () => {
         groupIds: schedule.groupIds,
         focus: schedule.focus || '',
         active: schedule.enabled,
+        autoExpand: schedule.autoExpand ?? false,
       });
     } else {
-      setEditingSchedule({ time: '08:00', groupIds: [], focus: '', active: true });
+      setEditingSchedule({ time: '08:00', groupIds: [], focus: '', active: true, autoExpand: false });
     }
     setIsModalOpen(true);
   };
@@ -222,13 +227,21 @@ const SchedulesPage = () => {
                       size={14}
                       className={`mt-0.5 ${isActive ? 'theme-accent-text' : 'theme-text-muted'}`}
                     />
-                    <p
-                      className={`text-sm font-medium leading-relaxed truncate max-w-md ${
-                        isActive ? 'theme-text-muted' : 'theme-text-muted opacity-80'
-                      }`}
-                    >
-                      {task.focus || '默认广度总结模式'}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <p
+                        className={`text-sm font-medium leading-relaxed truncate max-w-md ${
+                          isActive ? 'theme-text-muted' : 'theme-text-muted opacity-80'
+                        }`}
+                      >
+                        {task.focus || '默认广度总结模式'}
+                      </p>
+                      {task.autoExpand && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                          <Sparkles size={11} />
+                          自动扩写
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -355,6 +368,35 @@ const SchedulesPage = () => {
               rows={2}
               className="w-full theme-surface theme-text theme-border border rounded-2xl px-5 py-3 text-sm resize-none outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20"
             />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-[10px] font-black theme-text-muted uppercase tracking-widest ml-1">
+                自动展开所有主题
+              </label>
+              <p className="text-xs theme-text-muted mt-1 ml-1">
+                生成后自动展开所有可扩展主题的深度分析
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setEditingSchedule((prev) =>
+                  prev ? { ...prev, autoExpand: !prev.autoExpand } : null
+                )
+              }
+              className={`relative w-12 h-7 rounded-full transition-all duration-300 flex items-center px-1 shadow-inner shrink-0 ${
+                editingSchedule?.autoExpand ? 'bg-emerald-500' : 'theme-surface-hover'
+              }`}
+              style={!editingSchedule?.autoExpand ? { backgroundColor: 'var(--theme-border)' } : undefined}
+            >
+              <div
+                className={`absolute transition-all duration-300 h-5 w-5 rounded-full theme-surface shadow-md theme-border border ${
+                  editingSchedule?.autoExpand ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
         </div>
       </Modal>

@@ -132,6 +132,7 @@ class CreateScheduleRequest(CamelModel):
     time: str  # HH:MM format
     focus: str
     group_ids: list[int]
+    auto_expand: bool = False
 
     @validator("time")
     def validate_time(cls, value):
@@ -149,6 +150,7 @@ class UpdateScheduleRequest(CamelModel):
     focus: Optional[str] = None
     group_ids: Optional[list[int]] = None
     enabled: Optional[bool] = None
+    auto_expand: Optional[bool] = None
 
     @validator("time")
     def validate_time(cls, value):

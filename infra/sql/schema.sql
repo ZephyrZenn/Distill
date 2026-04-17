@@ -205,3 +205,14 @@ BEGIN
         RAISE NOTICE 'Added feed_brief.expandable_topics column';
     END IF;
 END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'schedules' AND column_name = 'auto_expand'
+    ) THEN
+        ALTER TABLE schedules ADD COLUMN auto_expand BOOLEAN NOT NULL DEFAULT FALSE;
+        RAISE NOTICE 'Added schedules.auto_expand column';
+    END IF;
+END $$;

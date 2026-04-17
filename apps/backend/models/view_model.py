@@ -106,6 +106,7 @@ class ScheduleVO(CamelModel):
     focus: str
     group_ids: List[int]
     enabled: bool
+    auto_expand: bool = False
 
 
 class FeedBriefResponse(CommonResult[FeedBriefVO]):

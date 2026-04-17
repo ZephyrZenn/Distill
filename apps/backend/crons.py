@@ -7,6 +7,7 @@ async def generate_scheduled_brief(
     schedule_id: str,
     group_ids: list[int],
     focus: str,
+    auto_expand: bool = False,
 ):
     """Generate a brief for specific groups with custom focus (async, single event loop).
 
@@ -15,11 +16,13 @@ async def generate_scheduled_brief(
     - 不足则触发爬虫补充
     - 爬虫失败且仍无文章时放弃本次生成
     - 否则调用 workflow 生成简报
+    - 若 auto_expand=True，自动展开所有可扩展主题
 
     Args:
         schedule_id: 调度任务ID
         group_ids: 分组ID列表
         focus: 用户关注点
+        auto_expand: 是否自动展开所有可扩展主题
     """
     from apps.backend.services.task_service import (
         NoArticlesAvailableError,
@@ -27,21 +30,39 @@ async def generate_scheduled_brief(
     )
 
     logger.info(
-        "Generating scheduled brief %s for groups %s with focus: %s",
+        "Generating scheduled brief %s for groups %s with focus: %s (auto_expand=%s)",
         schedule_id,
         group_ids,
         focus,
+        auto_expand,
     )
 
     try:
-        await generate_brief_with_material_check(
+        _, brief_id, expandable_topics = await generate_brief_with_material_check(
             task_id=schedule_id,
             group_ids=group_ids,
             focus=focus,
         )
-        logger.info("Finished generating scheduled brief %s", schedule_id)
+        logger.info("Finished generating scheduled brief %s (id=%d)", schedule_id, brief_id)
+
+        if auto_expand and expandable_topics:
+            from apps.backend.services.brief_service import expand_optional_topic
+
+            for topic in expandable_topics:
+                topic_id = topic.get("topic_id")
+                if not topic_id:
+                    continue
+                try:
+                    logger.info("Auto-expanding topic %s for brief %d", topic_id, brief_id)
+                    await expand_optional_topic(brief_id, topic_id)
+                    logger.info("Auto-expanded topic %s for brief %d", topic_id, brief_id)
+                except Exception as e:
+                    logger.error(
+                        "Failed to auto-expand topic %s for brief %d: %s",
+                        topic_id, brief_id, e, exc_info=True,
+                    )
+
     except NoArticlesAvailableError as e:
-        # 与手动任务保持一致：没有文章时不生成简报，但不中断调度器本身
         logger.warning(
             "Scheduled brief %s skipped due to no available articles: %s",
             schedule_id,

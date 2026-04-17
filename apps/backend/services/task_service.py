@@ -153,7 +153,7 @@ async def execute_brief_generation_task(task_id: str):
         else:
             # 使用原有的 workflow 方式（带素材检查与爬虫兜底）
             try:
-                brief = await generate_brief_with_material_check(
+                brief, _, _ = await generate_brief_with_material_check(
                     task_id=task_id,
                     group_ids=task.group_ids,
                     focus=task.focus,
@@ -280,7 +280,7 @@ async def generate_brief_with_material_check(
     focus: str = "",
     on_step=None,
     min_article_count: int = DEFAULT_MIN_ARTICLE_COUNT,
-) -> str:
+) -> tuple:
     """统一的 workflow 简报生成流程：素材检查 + 爬虫兜底 + 生成简报。
 
     该函数会：
@@ -288,6 +288,9 @@ async def generate_brief_with_material_check(
     2. 不足则触发爬虫补充
     3. 如果爬虫失败且仍然没有任何文章可用，抛出 NoArticlesAvailableError
     4. 最终调用 generate_brief_for_groups_async 生成简报
+
+    Returns:
+        (brief_content, brief_id, expandable_topics)
     """
     from apps.backend.services.brief_service import generate_brief_for_groups_async
 

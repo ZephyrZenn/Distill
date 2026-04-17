@@ -25,6 +25,7 @@ async def get_all_schedules():
             focus=s.focus,
             group_ids=s.group_ids,
             enabled=s.enabled,
+            auto_expand=s.auto_expand,
         )
         for s in schedules
     ]
@@ -45,6 +46,7 @@ async def get_schedule(schedule_id: str):
             focus=schedule.focus,
             group_ids=schedule.group_ids,
             enabled=schedule.enabled,
+            auto_expand=schedule.auto_expand,
         )
     )
 
@@ -56,8 +58,9 @@ async def create_schedule(request: CreateScheduleRequest):
         time_str=request.time,
         focus=request.focus,
         group_ids=request.group_ids,
+        auto_expand=request.auto_expand,
     )
-    
+
     return success_with_data(
         ScheduleVO(
             id=schedule.id,
@@ -65,6 +68,7 @@ async def create_schedule(request: CreateScheduleRequest):
             focus=schedule.focus,
             group_ids=schedule.group_ids,
             enabled=schedule.enabled,
+            auto_expand=schedule.auto_expand,
         )
     )
 
@@ -78,11 +82,12 @@ async def update_schedule(schedule_id: str, request: UpdateScheduleRequest):
         focus=request.focus,
         group_ids=request.group_ids,
         enabled=request.enabled,
+        auto_expand=request.auto_expand,
     )
-    
+
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
-    
+
     return success_with_data(
         ScheduleVO(
             id=schedule.id,
@@ -90,6 +95,7 @@ async def update_schedule(schedule_id: str, request: UpdateScheduleRequest):
             focus=schedule.focus,
             group_ids=schedule.group_ids,
             enabled=schedule.enabled,
+            auto_expand=schedule.auto_expand,
         )
     )
 

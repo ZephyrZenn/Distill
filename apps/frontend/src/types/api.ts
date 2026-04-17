@@ -153,12 +153,14 @@ export interface Schedule {
   focus: string;
   groupIds: number[];
   enabled: boolean;
+  autoExpand: boolean;
 }
 
 export interface CreateSchedulePayload {
   time: string; // HH:MM format
   focus: string;
   groupIds: number[];
+  autoExpand?: boolean;
 }
 
 export interface UpdateSchedulePayload {
@@ -166,6 +168,7 @@ export interface UpdateSchedulePayload {
   focus?: string;
   groupIds?: number[];
   enabled?: boolean;
+  autoExpand?: boolean;
 }
 
 export type ScheduleListResponse = ApiResponse<Schedule[]>;
