@@ -1,20 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { Gauge, LayoutList, Bot, Save, Check, ArrowLeft } from 'lucide-react';
-import { api } from '@/api/client';
-import { queryKeys } from '@/api/queryKeys';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useApiMutation } from '@/hooks/useApiMutation';
-import { Layout } from '@/components/Layout';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { useToast } from '@/context/ToastContext';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { Gauge, LayoutList, Bot, Save, Check, ArrowLeft } from "lucide-react";
+import { api } from "@/api/client";
+import { queryKeys } from "@/api/queryKeys";
+import { useApiQuery } from "@/hooks/useApiQuery";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { Layout } from "@/components/Layout";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { useToast } from "@/context/ToastContext";
 import type {
   AgentLimitsSetting,
   ContextSetting,
   RateLimitSetting,
   Setting,
-} from '@/types/api';
+} from "@/types/api";
 
 const DEFAULT_RATE_LIMIT: RateLimitSetting = {
   requestsPerMinute: 60,
@@ -43,7 +43,10 @@ const DEFAULT_AGENT_LIMITS: AgentLimitsSetting = {
 const SettingsAdvancedPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: setting } = useApiQuery<Setting>(queryKeys.settings, api.getSetting);
+  const { data: setting } = useApiQuery<Setting>(
+    queryKeys.settings,
+    api.getSetting,
+  );
   const { showToast } = useToast();
 
   const [advancedConfig, setAdvancedConfig] = useState({
@@ -63,27 +66,30 @@ const SettingsAdvancedPage = () => {
     }
   }, [setting]);
 
-  const saveMutation = useApiMutation(async () => {
-    await api.updateSetting({
-      rateLimit: advancedConfig.rateLimit,
-      context: advancedConfig.context,
-      agentLimits: advancedConfig.agentLimits,
-    });
-  }, {
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
-      setShowSaveToast(true);
-      setTimeout(() => setShowSaveToast(false), 3000);
-      showToast('高级配置保存成功');
+  const saveMutation = useApiMutation(
+    async () => {
+      await api.updateSetting({
+        rateLimit: advancedConfig.rateLimit,
+        context: advancedConfig.context,
+        agentLimits: advancedConfig.agentLimits,
+      });
     },
-    onError: (error) => {
-      showToast(error.message || '保存失败', { type: 'error' });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+        setShowSaveToast(true);
+        setTimeout(() => setShowSaveToast(false), 3000);
+        showToast("高级配置保存成功");
+      },
+      onError: (error) => {
+        showToast(error.message || "保存失败", { type: "error" });
+      },
     },
-  });
+  );
 
   const inputCls =
-    'theme-surface theme-text theme-border border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 text-sm w-full min-w-0';
-  const labelCls = 'text-xs theme-text-muted mb-1 block';
+    "theme-surface theme-text theme-border border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 text-sm w-full min-w-0";
+  const labelCls = "text-xs theme-text-muted mb-1 block";
 
   return (
     <Layout>
@@ -94,14 +100,14 @@ const SettingsAdvancedPage = () => {
             <div className="flex items-center gap-3 mb-6">
               <button
                 type="button"
-                onClick={() => navigate('/settings')}
+                onClick={() => navigate("/settings")}
                 className="p-2 rounded-lg theme-text-muted theme-surface-hover theme-accent-text-hover transition-colors"
                 aria-label="返回设置"
               >
                 <ArrowLeft size={20} />
               </button>
               <div>
-                <h1 className="text-lg md:text-xl font-black theme-text tracking-tight">
+                <h1 className="text-lg md:text-xl font-semibold theme-text">
                   高级设置
                 </h1>
                 <p className="theme-text-muted text-xs font-medium">
@@ -115,7 +121,9 @@ const SettingsAdvancedPage = () => {
               <section className="rounded-xl theme-surface p-4 md:p-5 border theme-border">
                 <div className="flex items-center gap-2 mb-4">
                   <Gauge size={16} className="theme-accent-text" />
-                  <h2 className="text-sm font-bold theme-text">限流与重试</h2>
+                  <h2 className="text-sm font-semibold theme-text">
+                    限流与重试
+                  </h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">
@@ -249,7 +257,7 @@ const SettingsAdvancedPage = () => {
               <section className="rounded-xl theme-surface p-4 md:p-5 border theme-border">
                 <div className="flex items-center gap-2 mb-4">
                   <LayoutList size={16} className="theme-accent-text" />
-                  <h2 className="text-sm font-bold theme-text">上下文</h2>
+                  <h2 className="text-sm font-semibold theme-text">上下文</h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">
@@ -297,7 +305,9 @@ const SettingsAdvancedPage = () => {
               <section className="rounded-xl theme-surface p-4 md:p-5 border theme-border">
                 <div className="flex items-center gap-2 mb-4">
                   <Bot size={16} className="theme-accent-text" />
-                  <h2 className="text-sm font-bold theme-text">Agent 循环上限</h2>
+                  <h2 className="text-sm font-semibold theme-text">
+                    Agent 循环上限
+                  </h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">
@@ -417,8 +427,10 @@ const SettingsAdvancedPage = () => {
         <div className="shrink-0 border-t theme-border theme-surface backdrop-blur p-4 md:p-6">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div
-              className={`flex items-center gap-2 text-emerald-500 text-xs font-bold transition-all duration-500 ${
-                showSaveToast ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
+              className={`flex items-center gap-2 text-emerald-500 text-xs font-semibold transition-all duration-500 ${
+                showSaveToast
+                  ? "opacity-100 translate-x-0"
+                  : "opacity-0 -translate-x-4"
               }`}
             >
               <Check size={14} /> 保存成功
@@ -426,7 +438,7 @@ const SettingsAdvancedPage = () => {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => navigate('/settings')}
+                onClick={() => navigate("/settings")}
                 className="px-4 py-2.5 rounded-xl theme-text theme-surface-hover theme-accent-text-hover font-medium text-sm transition-colors"
               >
                 返回
@@ -434,7 +446,7 @@ const SettingsAdvancedPage = () => {
               <button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex items-center gap-2 theme-btn-primary theme-on-primary px-6 py-2.5 rounded-xl font-bold shadow-lg transition-all active:scale-95 text-sm disabled:opacity-60"
+                className="flex items-center gap-2 theme-btn-primary theme-on-primary px-6 py-2.5 rounded-xl font-semibold shadow-lg transition-all active:scale-95 text-sm disabled:opacity-60"
               >
                 <Save size={16} /> 保存
               </button>

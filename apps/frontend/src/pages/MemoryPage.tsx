@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, FileText } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import { api } from '@/api/client';
-import { Layout } from '@/components/Layout';
-import { useToast } from '@/context/ToastContext';
-import type { Memory } from '@/types/api';
-import { formatDate } from '@/utils/date';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, Clock, FileText } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import { api } from "@/api/client";
+import { Layout } from "@/components/Layout";
+import { useToast } from "@/context/ToastContext";
+import type { Memory } from "@/types/api";
+import { formatDate } from "@/utils/date";
 
 const MemoryPage = () => {
   const { id: memoryIdParam } = useParams<{ id?: string }>();
@@ -22,27 +22,29 @@ const MemoryPage = () => {
       const memoryId = parseInt(memoryIdParam, 10);
       if (!isNaN(memoryId)) {
         setIsLoading(true);
-        api.getMemory(memoryId)
+        api
+          .getMemory(memoryId)
           .then((data) => {
             setMemory(data);
             setIsLoading(false);
           })
           .catch((error: any) => {
-            console.error('Failed to load memory:', error);
-            const errorMessage = error?.response?.data?.detail || 
-                                error?.response?.data?.message || 
-                                error?.message || 
-                                '加载历史记忆失败';
-            showToast(errorMessage, { type: 'error' });
+            console.error("Failed to load memory:", error);
+            const errorMessage =
+              error?.response?.data?.detail ||
+              error?.response?.data?.message ||
+              error?.message ||
+              "加载历史记忆失败";
+            showToast(errorMessage, { type: "error" });
             setIsLoading(false);
             // 延迟导航，让用户看到错误提示
             setTimeout(() => {
-              navigate('/', { replace: true });
+              navigate("/", { replace: true });
             }, 1500);
           });
       } else {
-        showToast('无效的历史记忆ID', { type: 'error' });
-        navigate('/', { replace: true });
+        showToast("无效的历史记忆ID", { type: "error" });
+        navigate("/", { replace: true });
       }
     }
   }, [memoryIdParam, navigate, showToast]);
@@ -58,53 +60,65 @@ const MemoryPage = () => {
       const handleFootnotClick = (e: Event) => {
         const target = e.target as HTMLElement;
         // 检查是否是脚注链接（在 sup 标签内的 a 标签，或者有 data-footnote-ref 属性）
-        const link = target.closest('sup a, [data-footnote-ref]') as HTMLAnchorElement;
+        const link = target.closest(
+          "sup a, [data-footnote-ref]",
+        ) as HTMLAnchorElement;
         if (link) {
-          const href = link.getAttribute('href') || link.href;
+          const href = link.getAttribute("href") || link.href;
           // remark-gfm 会将脚注链接转换为 #user-content-fn-{index} 格式
-          if (href && (href.startsWith('#user-content-fn-') || href.startsWith('#ref-') || href.startsWith('#fn'))) {
+          if (
+            href &&
+            (href.startsWith("#user-content-fn-") ||
+              href.startsWith("#ref-") ||
+              href.startsWith("#fn"))
+          ) {
             e.preventDefault();
             e.stopPropagation();
             let targetId = href.substring(1);
             // 如果是 user-content-fn-{index} 格式，直接使用
             // 如果是其他格式，尝试查找对应的参考资料锚点
             let targetElement = document.getElementById(targetId);
-            if (!targetElement && targetId.startsWith('user-content-fn-')) {
+            if (!targetElement && targetId.startsWith("user-content-fn-")) {
               // 已经是对应格式，直接查找
               targetElement = document.getElementById(targetId);
-            } else if (targetId.startsWith('ref-')) {
+            } else if (targetId.startsWith("ref-")) {
               // 如果是 ref- 格式，转换为 user-content-fn- 格式
-              const index = targetId.replace('ref-', '');
+              const index = targetId.replace("ref-", "");
               targetId = `user-content-fn-${index}`;
               targetElement = document.getElementById(targetId);
-            } else if (targetId.startsWith('fn')) {
+            } else if (targetId.startsWith("fn")) {
               // 如果是 fn 格式，转换为 user-content-fn- 格式
-              const index = targetId.replace('fn', '');
+              const index = targetId.replace("fn", "");
               targetId = `user-content-fn-${index}`;
               targetElement = document.getElementById(targetId);
             }
-            
+
             if (targetElement) {
-              targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              targetElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
               // 高亮目标元素
               const originalBg = targetElement.style.backgroundColor;
-              targetElement.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+              targetElement.style.backgroundColor = "rgba(99, 102, 241, 0.1)";
               setTimeout(() => {
                 targetElement.style.backgroundColor = originalBg;
               }, 2000);
             } else {
-              console.warn('找不到目标元素:', targetId, '原始链接:', href);
+              console.warn("找不到目标元素:", targetId, "原始链接:", href);
             }
           }
         }
       };
 
       // 使用事件委托，监听整个内容区域的点击
-      const contentArea = document.querySelector('#memory-content .prose') || document.querySelector('#memory-content');
+      const contentArea =
+        document.querySelector("#memory-content .prose") ||
+        document.querySelector("#memory-content");
       if (contentArea) {
-        contentArea.addEventListener('click', handleFootnotClick);
+        contentArea.addEventListener("click", handleFootnotClick);
         cleanup = () => {
-          contentArea.removeEventListener('click', handleFootnotClick);
+          contentArea.removeEventListener("click", handleFootnotClick);
         };
       }
     }, 100);
@@ -152,7 +166,7 @@ const MemoryPage = () => {
                     <FileText size={20} className="md:w-6 md:h-6" />
                   </div>
                   <div>
-                    <h1 className="text-xl md:text-2xl font-black text-slate-800">
+                    <h1 className="text-xl md:text-2xl font-semibold text-slate-800">
                       历史记忆
                     </h1>
                     <div className="flex items-center gap-2 text-xs md:text-sm text-slate-400 mt-1">
@@ -161,7 +175,7 @@ const MemoryPage = () => {
                     </div>
                   </div>
                 </div>
-                <h2 className="text-lg md:text-xl font-bold text-slate-700 mb-2">
+                <h2 className="text-lg md:text-xl font-semibold text-slate-700 mb-2">
                   {memory.topic}
                 </h2>
                 {memory.reasoning && (
@@ -174,11 +188,11 @@ const MemoryPage = () => {
           </div>
 
           {/* Content */}
-          <div 
+          <div
             className="flex-1 overflow-y-auto px-4 md:px-12 py-6 md:py-10 text-sm md:text-base leading-[2.0] text-slate-700 font-medium custom-scrollbar prose prose-slate max-w-none"
             id="memory-content"
           >
-            <ReactMarkdown 
+            <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw]}
               components={{
@@ -188,24 +202,35 @@ const MemoryPage = () => {
                   if (Array.isArray(children) && children.length > 0) {
                     const firstChild = children[0];
                     // 检查是否是脚注链接（指向 #ref- 或 #fn）
-                    if (typeof firstChild === 'object' && firstChild?.props?.href && 
-                        (firstChild.props.href.startsWith('#ref-') || firstChild.props.href.startsWith('#fn'))) {
+                    if (
+                      typeof firstChild === "object" &&
+                      firstChild?.props?.href &&
+                      (firstChild.props.href.startsWith("#ref-") ||
+                        firstChild.props.href.startsWith("#fn"))
+                    ) {
                       return (
                         <sup className="text-amber-600 font-semibold text-xs ml-0.5">
                           {React.cloneElement(firstChild, {
-                            onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                            onClick: (
+                              e: React.MouseEvent<HTMLAnchorElement>,
+                            ) => {
                               e.preventDefault();
                               const href = firstChild.props.href;
                               const targetId = href.substring(1);
-                              const targetElement = document.getElementById(targetId);
+                              const targetElement =
+                                document.getElementById(targetId);
                               if (targetElement) {
-                                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                targetElement.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                                targetElement.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "center",
+                                });
+                                targetElement.style.backgroundColor =
+                                  "rgba(99, 102, 241, 0.1)";
                                 setTimeout(() => {
-                                  targetElement.style.backgroundColor = '';
+                                  targetElement.style.backgroundColor = "";
                                 }, 2000);
                               }
-                            }
+                            },
                           })}
                         </sup>
                       );
@@ -216,19 +241,24 @@ const MemoryPage = () => {
                 // 自定义链接处理
                 a: ({ node, ...props }: any) => {
                   const href = props.href;
-                  if (href && href.startsWith('#ref-')) {
+                  if (href && href.startsWith("#ref-")) {
                     return (
                       <a
                         {...props}
                         onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
                           e.preventDefault();
                           const targetId = href.substring(1);
-                          const targetElement = document.getElementById(targetId);
+                          const targetElement =
+                            document.getElementById(targetId);
                           if (targetElement) {
-                            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            targetElement.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                            targetElement.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center",
+                            });
+                            targetElement.style.backgroundColor =
+                              "rgba(99, 102, 241, 0.1)";
                             setTimeout(() => {
-                              targetElement.style.backgroundColor = '';
+                              targetElement.style.backgroundColor = "";
                             }, 2000);
                           }
                         }}

@@ -3,15 +3,26 @@
 
 :root {
   /* Editorial Intelligence Typography System */
-  --font-display: 'Crimson Pro', Georgia, 'Times New Roman', serif;
-  --font-body: 'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --font-display: "Crimson Pro", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  --type-size-caption: 0.75rem;
+  --type-size-label: 0.75rem;
+  --type-size-body: 0.875rem;
+  --type-size-body-large: 1rem;
+  --type-size-card-title: 1rem;
+  --type-size-section-title: 1.125rem;
+  --type-size-page-title: 1.25rem;
+  --type-leading-tight: 1.3;
+  --type-leading-body: 1.6;
+  --type-leading-readable: 1.8;
 
   font-family: var(--font-body);
   color: var(--theme-text);
   background-color: var(--theme-bg);
   line-height: 1.6;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 * {
@@ -48,7 +59,8 @@ textarea::placeholder {
 }
 
 @keyframes breathing {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.4;
   }
