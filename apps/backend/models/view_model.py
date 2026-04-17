@@ -20,14 +20,20 @@ class FeedGroupVO(CamelModel):
     feeds: List[FeedVO]
 
 
+class ExpandableTopicVO(CamelModel):
+    topic_id: str
+    topic: str
+
+
 class FeedBriefVO(CamelModel):
     id: int
     groups: List[FeedGroupVO]
     content: Optional[str] = None  # 列表接口不返回，详情接口返回
     pub_date: datetime
     summary: Optional[str] = None  # 概要（二级标题列表）
-    overview: Optional[str] = None  # 日报概览（来自 plan 的 daily_overview）
+    overview: Optional[str] = None  # 日报概览（来自 plan 的 today_pattern）
     ext_info: Optional[List[dict]] = None  # 外部搜索结果，列表接口不返回，详情接口返回
+    expandable_topics: Optional[List[ExpandableTopicVO]] = None
 
 
 class ModelSettingVO(CamelModel):

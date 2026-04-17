@@ -1,13 +1,10 @@
 import asyncio
 import os
-import re
 import unittest
 from dotenv import load_dotenv
-import psycopg
 
 from agent import SummarizeAgenticWorkflow
 from core.config.loader import load_config
-from core.db.pool import get_async_connection, get_async_pool, get_connection
 
 
 class AgentTest(unittest.TestCase):
@@ -38,7 +35,7 @@ class AgentTest(unittest.TestCase):
         def on_step(message: str):
             print(f"[STEP] {message}")
 
-        result, *_ = asyncio.run(
+        result, _, _, _ = asyncio.run(
             agent.summarize(
                 task_id="test",
                 hour_gap=24,

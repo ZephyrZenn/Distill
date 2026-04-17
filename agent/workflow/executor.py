@@ -1,20 +1,25 @@
 import asyncio
 import logging
 from typing import Literal
+
 from agent.models import (
+    AgentCriticResult,
     AgentState,
     FocalPoint,
     WritingMaterial,
-    AgentCriticResult,
     log_step,
 )
 from agent.tools import (
-    search_web,
     fetch_web_contents,
-    is_search_engine_available,
     get_article_content,
+    is_search_engine_available,
+    search_web,
 )
-from agent.tools.writing_tool import write_article, review_article, write_primary_brief
+from agent.tools.writing_tool import (
+    review_article,
+    write_article,
+    write_primary_brief,
+)
 from agent.workflow.expansion import build_expandable_topics
 from agent.workflow.layered import (
     assemble_layered_report,
@@ -29,7 +34,6 @@ logger = logging.getLogger(__name__)
 
 
 class AgentExecutor:
-
     def __init__(self, client: LLMClient, max_retries: int = 3):
         self.client = client
         self.max_retries = max_retries
@@ -37,8 +41,10 @@ class AgentExecutor:
     async def execute(self, state: AgentState) -> list[tuple[str, bool]]:
         plan = state["plan"]
         focal_points = plan.get("focal_points", [])
-        n_points = len(focal_points)
-        logger.info("[workflow:executor] execute() start focal_points=%d", n_points)
+        logger.info(
+            "[workflow:executor] execute() start focal_points=%d",
+            len(focal_points),
+        )
         article_ids = [article["id"] for article in state["scored_articles"]]
         db_articles = await get_article_content(article_ids)
         for article in state["scored_articles"]:
@@ -49,25 +55,22 @@ class AgentExecutor:
         focal_points = normalized_plan.get("focal_points", [])
         auto_deep_points = get_auto_deep_points(normalized_plan)
         optional_points = get_optional_deep_points(normalized_plan)
-        state["expandable_topics"] = build_expandable_topics(
-            normalized_plan,
-            state["scored_articles"],
-        )
+        state["expandable_topics"] = build_expandable_topics(normalized_plan)
         logger.info(
             "[workflow:executor] layered routing total=%d auto_deep=%d optional=%d",
             len(focal_points),
             len(auto_deep_points),
             len(optional_points),
         )
-        primary_brief = await write_primary_brief(self.client, normalized_plan)
-
-        tasks = []
-        log_step(state, f"🔄 开始并行执行 {len(auto_deep_points)} 个任务...")
 
         async def run_point(point: FocalPoint) -> tuple[str, bool]:
             topic = point.get("topic", "")
             strategy = point.get("strategy", "")
-            logger.info("[workflow:executor] point start topic=%s strategy=%s", topic[:48], strategy)
+            logger.info(
+                "[workflow:executor] point start topic=%s strategy=%s",
+                topic[:48],
+                strategy,
+            )
             try:
                 result = None
                 if point["strategy"] == "SUMMARIZE":
@@ -83,18 +86,33 @@ class AgentExecutor:
             except Exception as e:  # noqa: BLE001
                 msg = f"❌ 话题 '{point['topic']}' 执行失败: {e}"
                 log_step(state, msg)
-                logger.exception("[workflow:executor] point failed topic=%s strategy=%s error=%s", topic[:48], strategy, e)
-                # 返回占位字符串，保证 summary_results 与 focal_points 对齐
+                logger.exception(
+                    "[workflow:executor] point failed topic=%s strategy=%s error=%s",
+                    topic[:48],
+                    strategy,
+                    e,
+                )
+                # Return a placeholder so the layered brief can still be assembled.
                 error_result = f"[FAILED] {point['topic']}: {e}"
                 return (error_result, False)
 
+        log_step(state, "🧾 正在生成 1 分钟简报...")
+        primary_brief = await write_primary_brief(self.client, normalized_plan)
+
+        tasks = []
+        log_step(state, f"🔄 开始生成 {len(auto_deep_points)} 个自动深度分析...")
         for point in auto_deep_points:
             tasks.append(run_point(point))
 
-        results = await asyncio.gather(*tasks, return_exceptions=False)
+        results = await asyncio.gather(*tasks, return_exceptions=False) if tasks else []
         n_ok = sum(1 for _, success in results if success)
         n_fail = len(results) - n_ok
-        logger.info("[workflow:executor] execute() done total=%d success=%d fail=%d", len(results), n_ok, n_fail)
+        logger.info(
+            "[workflow:executor] execute() done auto_deep=%d success=%d fail=%d",
+            len(results),
+            n_ok,
+            n_fail,
+        )
         log_step(state, "✨ 所有任务执行完成")
         deep_sections = [result for result, success in results if success]
         failed_sections = [result for result, success in results if not success]
@@ -106,12 +124,10 @@ class AgentExecutor:
             deep_sections=deep_sections,
             optional_points=optional_points,
         )
-
-        # 保持向后兼容：summary_results 存储字符串列表
+        overall_success = all(success for _, success in results) if results else True
         state["summary_results"] = [final_report]
-        # 存储执行状态
-        state["execution_status"] = [all(success for _, success in results)] if results else [True]
-        return [(final_report, all(success for _, success in results) if results else True)]
+        state["execution_status"] = [overall_success]
+        return [(final_report, overall_success)]
 
     async def handle_summarize(self, point: FocalPoint, state: AgentState) -> str:
         log_step(state, f"📰 [SUMMARIZE] 处理话题: {point['topic']}")

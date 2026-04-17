@@ -29,8 +29,18 @@ class Article(TypedDict):
     reasoning: str
 
 
+GenerationMode = Literal["BRIEF_ONLY", "OPTIONAL_DEEP", "AUTO_DEEP"]
+
+
+class DailyBriefItem(TypedDict):
+    title: str
+    summary: str
+    importance: str
+    article_ids: list[str]
+
+
 class FocalPoint(TypedDict):
-    """规划阶段产出的单个焦点主题结构，需与 PLANNER_PROMPT_TEMPLATE 中的 JSON 格式严格对齐。"""
+    """规划阶段产出的焦点主题结构，可附加分层工作流的可选后处理元数据。"""
 
     priority: int
     topic: str
@@ -45,6 +55,11 @@ class FocalPoint(TypedDict):
     writing_guide: str
     # 历史记忆的 id 列表（如果延续自历史记忆，则给出历史记忆的 id，否则为空列表）
     history_memory_id: list[int]
+    generation_mode: NotRequired[GenerationMode]
+    brief_summary: NotRequired[str]
+    topic_overview: NotRequired[str]
+    deep_analysis_reason: NotRequired[str]
+    auto_deep_exception: NotRequired[str]
 
 
 class DiscardedItem(TypedDict):
@@ -53,9 +68,16 @@ class DiscardedItem(TypedDict):
 
 
 class AgentPlanResult(TypedDict):
-    daily_overview: str
+    today_pattern: str
+    daily_overview: NotRequired[str]
+    daily_brief_items: NotRequired[list[DailyBriefItem]]
     focal_points: list[FocalPoint]
     discarded_items: list[DiscardedItem]
+
+
+class ExpandableTopic(TypedDict):
+    topic_id: str
+    focal_point: FocalPoint
 
 
 class SummaryMemory(TypedDict):
@@ -83,6 +105,7 @@ class AgentState(TypedDict):
     raw_articles: list[RawArticle]
     scored_articles: list[Article]
     plan: NotRequired[AgentPlanResult]
+    expandable_topics: NotRequired[list[ExpandableTopic]]
     writing_materials: NotRequired[list[WritingMaterial]]
     summary_results: NotRequired[list[str]]
     execution_status: NotRequired[

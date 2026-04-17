@@ -7,41 +7,72 @@ PLANNER_SYSTEM_PROMPT = """
 1. **用户关注点相关性 (Focus Match)**
 2. **全局影响力权重 (Global Strategic)**
 
-## 规划逻辑 (Top-Down Priority)
-你的目标不是重新打分，而是根据得分分布进行“资源分配”：
+## 规划逻辑 (Selective Reading Agenda)
+你的目标不是为每个重要话题都写长文，而是构建一个能在 1 分钟内读完的分层阅读议程。
 
-1. **顶级专题构建 (Score 8-10)**：
-   - 必须将此类文章设为 `priority: 1-2` 的焦点专题。
-   - **双线并进**：无论得分是因为匹配 Focus 还是因为 Global Strategic，只要是高分，必须独立或聚合成专题处理。
-   - 若高分内容分散，尝试寻找其潜在的“因果联系”或“对冲关系”。
+1. **先保证 Brief 完整**
+   - `daily_brief_items` 必须覆盖当天最重要的 5-8 个事件。
+   - `today_pattern` 必须综合当天的共同方向，不能重复 bullet 内容。
+   - BRIEF_ONLY does not need to become a focal point. If something can be fully covered in the 1-minute brief, skip focal point creation entirely.
 
-2. **策略选择 (Strategy)**：
-   - **SUMMARIZE**：多篇高分文章指向同一主题，需进行综合对比。
-   - **SEARCH_ENHANCE**：高分文章提出了一个重大但描述模糊的新概念、新政策或新技术（尤其是 `GLOBAL_STRATEGIC` 类）。
-   - **FLASH_NEWS**：分值中等 (5-7分) 但具备情报价值的单点资讯。
+2. **Focal Points 是分析簇，不是文章摘要**
+   - `daily_brief_items` 是事件级，`focal_points` 是分析簇级。
+   - 不要为同一公司、同一产品线、同一市场反应、同一监管链条、same strategic implication、same day-level pattern 或同一个下游问题创建多个 focal points。
+   - 如果两个候选 focal points 会导向基本相同的分析，请合并为更宽的战略话题。
+   - Article reuse across `focal_points` is discouraged. 若必须复用文章，必须说明第二个角度为何提供独立用户价值。
 
-3. **冗余清洗**：
-   - 对分值较低 (0-4分) 的内容，直接放入 `discarded_items`，除非你发现多条低分信息其实在共同指向一个被漏掉的“黑天鹅”预兆。
+3. **Topic Budget**
+   - 1-10 articles: target 1-2, ceiling 3.
+   - 11-20 articles: target 2-3, ceiling 4.
+   - 21-30 articles: target 3-4, ceiling 5.
+   - 优先停留在 target；只有话题清晰独立时才接近 ceiling。
+
+4. **严格分层生成**
+   - `BRIEF_ONLY`: 只进入 1 分钟简报，不生成深度分析。
+   - `OPTIONAL_DEEP`: 进入简报，并在 Optional Analysis 中给出一句话和话题概述（`topic_overview`）；初始运行不能偷偷生成深度分析。
+   - `OPTIONAL_DEEP.topic_overview` 必须具体，帮助读者快速了解话题内容，不能写"值得关注""影响很大"等空话。
+   - `AUTO_DEEP`: 自动生成深度分析。默认最多 1 个。只有两个独立高影响事件无法合并时，才允许最多 2 个，并必须填写 `auto_deep_exception`。
+
+5. **选择性优先**
+   - 不要把旧流程的所有 focal points 重新贴标签。
+   - 优先减少话题数量，保留用户真正需要知道的内容。
 
 ## 输出约束
-- **逻辑透明**：在 `reasoning` 中必须点出该专题的价值来源——是因为它是用户指定的“必读项”，还是它属于足以影响行业格局的“变局项”。
-- **严禁废话**: 仅输出纯 JSON 格式。
-- **字数限制**: topic 字数限制在 20 个字以内，reasoning 字数限制在 100 个字以内。
+- 仅输出纯 JSON。
+- `AUTO_DEEP` 正常情况下最多 1 个。
+- `BRIEF_ONLY` 和 `OPTIONAL_DEEP` 不能偷偷生成深度分析。
+- `topic` 限制在 20 个字以内。
+- `brief_summary` 限制在 40 个字以内。
+- `topic_overview` 限制在 120 个字以内。
+- `today_pattern` 限制在 120 个字以内。
 
 ## 输出格式 (JSON)
 {{
-  "daily_overview": "概括今日资讯的能量分布（例如：今日 Focus 内容平淡，但行业技术端有重磅突破）",
+  "today_pattern": "综合当天共同方向，不重复条目摘要",
+  "daily_brief_items": [
+    {{
+      "title": "简短标题",
+      "summary": "一句话说明发生了什么",
+      "importance": "一句话说明为什么重要",
+      "article_ids": ["文章ID"]
+    }}
+  ],
   "focal_points": [
     {{
-      "priority": 1, 
+      "priority": 1,
       "topic": "专题名称",
       "match_type": "FOCUS_MATCH | GLOBAL_STRATEGIC | HISTORICAL_CONTINUITY",
-      "relevance_description": "明确解释：是因匹配用户 Focus 入选，还是因其全球/行业影响力入选",
+      "relevance_description": "入选原因",
       "strategy": "SUMMARIZE | SEARCH_ENHANCE | FLASH_NEWS",
-      "article_ids": [涉及的文章id列表],
-      "reasoning": "结合前序评分理由，阐述这些文章为何值得最高优先级处理，及它们之间的关联",
+      "generation_mode": "BRIEF_ONLY | OPTIONAL_DEEP | AUTO_DEEP",
+      "brief_summary": "用于 1 分钟简报的一句话",
+      "topic_overview": "仅 OPTIONAL_DEEP 必填：该话题的简要概述（2-3句话，帮助读者快速了解话题内容）",
+      "deep_analysis_reason": "仅 AUTO_DEEP 必填：为何必须自动深度分析",
+      "auto_deep_exception": "仅第 2 个 AUTO_DEEP 必填：解释为何两个高影响话题不能合并",
+      "article_ids": ["涉及的文章id列表"],
+      "reasoning": "入选与分层依据",
       "search_query": "仅在 SEARCH_ENHANCE 时提供",
-      "writing_guide": "告诉下级Agent：是做深度对比、技术原理解析，还是影响预测",
+      "writing_guide": "告诉下级 Agent 如何分析",
       "history_memory_id": []
     }}
   ],
@@ -153,6 +184,31 @@ WRITER_FLASH_NEWS_PROMPT = """
 - 以 ## {topic} 开头。每行一条简报。
 - **[分类]** **核心主体**: 发生的具体事件。 [对应文章的url链接]
 - **[分类]** **核心主体**: 发生的具体事件。 [对应文章的url链接]
+"""
+
+PRIMARY_BRIEF_SYSTEM_PROMPT = """
+## Role
+你是一位极简但准确的每日新闻简报编辑。
+
+## Mission
+你的输出是用户真正优先阅读的 1 分钟简报，不是长报告前面的引言。
+
+## Hard Rules
+- 必须以 `# {{简洁的大标题}}` 开头（8-15字，直接概括当天主线，不要使用 “Today Brief” 这类通用标题）。
+- 必须包含 `## What Happened`。
+- 不要输出 `## Today's Pattern`（当天共性会单独作为 overview 展示，不放在正文里）。
+- `What Happened` 写 5-8 条 bullet。
+- 每条 bullet 必须说明发生了什么，以及为什么重要。
+- 不要输出 Deep Analysis。
+- 简报必须 complete on its own：用户读完这里就能理解今天。
+- 保留必要引用标记，优先使用 `[rss:文章ID]`。
+"""
+
+PRIMARY_BRIEF_USER_PROMPT = """
+# Planner Agenda
+{plan}
+
+请根据 Planner Agenda 写出 1 分钟简报。
 """
 
 CRITIC_SYSTEM_PROMPT_TEMPLATE = """

@@ -71,7 +71,8 @@ CREATE TABLE IF NOT EXISTS feed_brief
     content    TEXT         NOT NULL,
     summary    TEXT         NOT NULL DEFAULT '',
     overview   TEXT         NOT NULL DEFAULT '',
-    ext_info   JSONB        NOT NULL DEFAULT '[]'::jsonb,
+    ext_info          JSONB        NOT NULL DEFAULT '[]'::jsonb,
+    expandable_topics JSONB        NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -193,3 +194,14 @@ END $$;
 COMMENT ON COLUMN excluded_feed_item_ids.focus IS 'User focus/topic for this exclusion. Empty string means no specific focus. Articles excluded for one focus can be reused for different focuses.';
 COMMENT ON COLUMN feed_brief.summary IS '简报概要，提取自内容中的所有二级标题';
 COMMENT ON COLUMN feed_brief.ext_info IS '使用的外部搜索结果，JSON格式存储';
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'feed_brief' AND column_name = 'expandable_topics'
+    ) THEN
+        ALTER TABLE feed_brief ADD COLUMN expandable_topics JSONB NOT NULL DEFAULT '[]'::jsonb;
+        RAISE NOTICE 'Added feed_brief.expandable_topics column';
+    END IF;
+END $$;

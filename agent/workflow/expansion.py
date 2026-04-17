@@ -1,36 +1,124 @@
 from __future__ import annotations
 
-from agent.models import AgentPlanResult, Article, FocalPoint
+from copy import deepcopy
+from datetime import datetime
+import re
+
+from agent.models import (
+    AgentPlanResult,
+    AgentState,
+    ExpandableTopic,
+    FocalPoint,
+    SummaryMemory,
+)
+from agent.workflow.layered import OPTIONAL_DEEP, get_optional_deep_points, normalize_plan_layers
 
 
 def build_expandable_topics(
     plan: AgentPlanResult,
-    scored_articles: list[Article],
-) -> list[dict]:
-    expandable_topics: list[dict] = []
-    by_id = {str(article["id"]): article for article in scored_articles}
+) -> list[ExpandableTopic]:
+    source_priority_by_signature = _source_priority_by_signature(plan)
+    source_priority_by_topic = _source_priority_by_topic(plan)
+    normalized_plan = normalize_plan_layers(plan)
+    topics: list[ExpandableTopic] = []
 
-    for point in plan.get("focal_points", []):
-        if point.get("generation_mode") != "OPTIONAL_DEEP":
+    for point in get_optional_deep_points(normalized_plan):
+        if not point.get("article_ids"):
             continue
-
-        article_ids = [str(article_id) for article_id in point.get("article_ids", [])]
-        articles = [by_id[article_id] for article_id in article_ids if article_id in by_id]
-
-        expandable_topics.append(
-            {
-                "topic": point.get("topic", ""),
-                "priority": point.get("priority"),
-                "generation_mode": point.get("generation_mode"),
-                "brief_summary": point.get("brief_summary", ""),
-                "why_expand": point.get("why_expand", ""),
-                "match_type": point.get("match_type", ""),
-                "reasoning": point.get("reasoning", ""),
-                "writing_guide": point.get("writing_guide", ""),
-                "article_ids": article_ids,
-                "articles": articles,
-                "focal_point": point,
-            }
+        topics.append(
+            ExpandableTopic(
+                topic_id=_topic_id(
+                    point,
+                    source_priority_by_signature,
+                    source_priority_by_topic,
+                ),
+                focal_point={**deepcopy(point), "generation_mode": OPTIONAL_DEEP},
+            )
         )
 
-    return expandable_topics
+    return topics
+
+
+def _topic_id(
+    point: FocalPoint,
+    source_priority_by_signature: dict[tuple[str, tuple[str, ...]], int],
+    source_priority_by_topic: dict[str, int],
+) -> str:
+    signature = _point_signature(point)
+    priority = source_priority_by_signature.get(signature)
+    if priority is None:
+        priority = source_priority_by_topic.get(point["topic"])
+    if priority is None:
+        priority = point.get("priority", "topic")
+    priority = str(priority)
+    slug = re.sub(r"[^a-z0-9]+", "-", point["topic"].lower()).strip("-")
+    return f"{priority}-{slug or 'topic'}"
+
+
+def _source_priority_by_signature(plan: AgentPlanResult) -> dict[tuple[str, tuple[str, ...]], int]:
+    priorities: dict[tuple[str, tuple[str, ...]], int] = {}
+    for point in plan.get("focal_points", []):
+        if not isinstance(point, dict):
+            continue
+        priority = point.get("priority")
+        if isinstance(priority, bool) or not isinstance(priority, int):
+            continue
+        priorities.setdefault(_point_signature(point), priority)
+    return priorities
+
+
+def _source_priority_by_topic(plan: AgentPlanResult) -> dict[str, int]:
+    priorities: dict[str, int] = {}
+    for point in plan.get("focal_points", []):
+        if not isinstance(point, dict):
+            continue
+        priority = point.get("priority")
+        topic = point.get("topic")
+        if not isinstance(topic, str):
+            continue
+        if isinstance(priority, bool) or not isinstance(priority, int):
+            continue
+        priorities.setdefault(topic, priority)
+    return priorities
+
+
+def _point_signature(point: FocalPoint) -> tuple[str, tuple[str, ...]]:
+    article_ids = tuple(str(article_id) for article_id in point.get("article_ids", []))
+    return point["topic"], article_ids
+
+
+def build_expansion_state(
+    topic: ExpandableTopic,
+    fetched_articles: dict[str, str],
+    history_memories: dict[int, SummaryMemory] | None = None,
+) -> AgentState:
+    focal_point = topic["focal_point"]
+    scored_articles = [
+        {
+            "id": article_id,
+            "title": "",
+            "url": "",
+            "summary": "",
+            "pub_date": "",
+            "score": 0.0,
+            "reasoning": "",
+            "content": fetched_articles.get(article_id, ""),
+        }
+        for article_id in focal_point.get("article_ids", [])
+    ]
+    return AgentState(
+        focus="",
+        groups=[],
+        raw_articles=[],
+        scored_articles=scored_articles,
+        plan={
+            "today_pattern": "",
+            "daily_brief_items": [],
+            "focal_points": [focal_point],
+            "discarded_items": [],
+        },
+        history_memories=history_memories or {},
+        log_history=[],
+        status="RUNNING",
+        created_at=datetime.now(),
+    )

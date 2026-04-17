@@ -6,7 +6,7 @@ import { useToast } from "@/context/ToastContext";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import type { FeedBrief } from "@/types/api";
 import { formatDate } from "@/utils/date";
-import { Check, ChevronRight, Copy, FileText, List, X } from "lucide-react";
+import { Check, ChevronRight, Copy, FileText, List, Sparkles, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate, useParams } from "react-router-dom";
@@ -304,6 +304,16 @@ const SummaryPage = () => {
     }
   };
 
+  const handleExpandTopic = async (topicId: string) => {
+    if (!selectedBrief?.id) return;
+    try {
+      await api.expandOptionalTopic(selectedBrief.id, topicId);
+      showToast("正在生成深度分析，完成后将自动更新");
+    } catch {
+      showToast("触发失败，请稍后重试");
+    }
+  };
+
   // 计算要显示的简报列表
   const displayBriefs = useMemo(() => briefs || [], [briefs]);
 
@@ -411,7 +421,39 @@ const SummaryPage = () => {
                     h2: ({ node, ...props }) => {
                       const text = String(props.children ?? "");
                       const id = `h2-${slugify(text)}`;
-                      return <h2 id={id} {...props} />;
+                      const expandableTopic = selectedBrief.expandableTopics?.find(
+                        (topic) =>
+                          text.includes(topic.topic) ||
+                          text.includes(topic.topicId),
+                      );
+
+                      if (!expandableTopic) {
+                        return <h2 id={id} {...props} />;
+                      }
+
+                      return (
+                        <div>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <h2 id={id} {...props} />
+                            <div className="relative group/expand self-start shrink-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleExpandTopic(expandableTopic.topicId)
+                                }
+                                aria-label={`生成「${expandableTopic.topic}」的深度分析`}
+                                className="p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors"
+                              >
+                                <Sparkles size={16} />
+                              </button>
+                              <div className="pointer-events-none absolute right-0 top-full mt-1 z-50 w-56 rounded-lg border theme-border theme-surface shadow-lg px-3 py-2 text-xs theme-text leading-relaxed opacity-0 group-hover/expand:opacity-100 transition-opacity duration-150">
+                                <p className="font-semibold theme-accent-text mb-1">深度分析可用</p>
+                                <p className="theme-text-muted">点击生成「{expandableTopic.topic}」的完整深度分析，内容将直接更新到文章中。</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
                     },
                     h3: ({ node, ...props }) => {
                       const text = String(props.children ?? "");

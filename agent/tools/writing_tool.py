@@ -3,14 +3,16 @@
 提供文章写作和审查相关的工具函数。
 """
 
-import logging
 import json
+import logging
 
 from agent.models import (
     WritingMaterial,
     AgentCriticResult,
 )
 from agent.prompts import (
+    PRIMARY_BRIEF_SYSTEM_PROMPT,
+    PRIMARY_BRIEF_USER_PROMPT,
     WRITER_FLASH_NEWS_PROMPT,
     WRITER_DEEP_DIVE_SYSTEM_PROMPT_TEMPLATE,
     WRITER_DEEP_DIVE_USER_PROMPT_TEMPLATE,
@@ -49,11 +51,24 @@ async def write_article(
     return result
 
 
-async def write_primary_brief(client: LLMClient, plan: dict) -> str:
+async def write_primary_brief(
+    client: LLMClient,
+    plan: dict,
+) -> str:
     prompt = _build_primary_brief_prompt(plan)
     return await client.completion(prompt)
 
 
+def _build_primary_brief_prompt(plan: dict) -> list[Message]:
+    system_prompt = Message.system(content=PRIMARY_BRIEF_SYSTEM_PROMPT)
+    user_prompt = Message.user(
+        content=PRIMARY_BRIEF_USER_PROMPT.format(
+            plan=json.dumps(plan, ensure_ascii=False, indent=2),
+        )
+    )
+    system_prompt.set_priority(0)
+    user_prompt.set_priority(0)
+    return [system_prompt, user_prompt]
 def _build_write_prompt(
     writing_material: WritingMaterial, review: AgentCriticResult | None = None
 ) -> str | list[Message]:
@@ -98,27 +113,6 @@ def _build_write_prompt(
         system_prompt,
         user_prompt,
     ]
-
-
-def _build_primary_brief_prompt(plan: dict) -> list[Message]:
-    system_prompt = Message(
-        role="system",
-        content=(
-            "You are a concise news editor. Write the user's primary brief first. "
-            "Start with # Today Brief and include What Happened and Today's Pattern."
-        ),
-    )
-    user_prompt = Message(
-        role="user",
-        content=(
-            "# Planner Agenda\n"
-            f"{json.dumps(plan, ensure_ascii=False, indent=2)}\n\n"
-            "Write the 1-minute brief."
-        ),
-    )
-    system_prompt.set_priority(0)
-    user_prompt.set_priority(0)
-    return [system_prompt, user_prompt]
 
 
 async def review_article(

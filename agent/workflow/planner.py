@@ -6,6 +6,7 @@ from agent.models import AgentPlanResult, AgentState, Article, RawArticle, log_s
 from agent.prompts import PLANNER_USER_PROMPT, PLANNER_SYSTEM_PROMPT
 from agent.utils import extract_json
 from agent.tools import find_keywords_with_llm, search_memory
+from agent.workflow.layered import normalize_plan_layers
 from core.llm_client import LLMClient
 from core.models.llm import Message
 
@@ -48,11 +49,13 @@ class AgentPlanner:
         log_step(state, f"🤖 规划完成：耗时 {elapsed} 秒")
         logger.info("[workflow:planner] LLM response received elapsed=%.2fs response_len=%d", elapsed, len(response) if isinstance(response, str) else 0)
         try:
-            result: AgentPlanResult = extract_json(response)
+            result: AgentPlanResult = normalize_plan_layers(extract_json(response))
             n_focal = len(result.get("focal_points", []))
             logger.info("[workflow:planner] plan() done focal_points=%d discarded=%d", n_focal, len(result.get("discarded_items", [])))
             for point in result["focal_points"]:
                 point["article_ids"] = [str(aid) for aid in point["article_ids"]]
+            for item in result.get("daily_brief_items", []):
+                item["article_ids"] = [str(aid) for aid in item.get("article_ids", [])]
             state["plan"] = result
             focal_points = result.get("focal_points", [])
             discarded = result.get("discarded_items", [])
@@ -61,7 +64,8 @@ class AgentPlanner:
                 f"📝 规划完成：识别出 {len(focal_points)} 个焦点话题，丢弃 {len(discarded)} 篇文章",
             )
             for i, point in enumerate(focal_points, 1):
-                log_step(state, f"   {i}. [{point['strategy']}] {point['topic']}")
+                generation_mode = point.get("generation_mode", "BRIEF_ONLY")
+                log_step(state, f"   {i}. [{generation_mode}/{point['strategy']}] {point['topic']}")
             return result
         except json.JSONDecodeError as e:
             log_step(state, "❌ 规划失败：无法解析LLM响应")

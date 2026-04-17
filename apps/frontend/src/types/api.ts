@@ -26,13 +26,19 @@ export interface FeedBrief {
   pubDate: string;
   groups: FeedGroup[];
   summary?: string; // 概要（二级标题列表）
-  overview?: string; // 日报概览（来自 plan 的 daily_overview），详情接口返回
+  overview?: string; // 日报概览（来自 plan 的 today_pattern），详情接口返回
   ext_info?: Array<{ // 外部搜索结果，列表接口不返回，详情接口返回
     title: string;
     url: string;
     content: string;
     score: number;
   }>;
+  expandableTopics?: ExpandableTopic[];
+}
+
+export interface ExpandableTopic {
+  topicId: string;
+  topic: string;
 }
 
 export interface ModelSetting {

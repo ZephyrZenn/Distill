@@ -52,10 +52,25 @@ async def get_brief_detail(brief_id: int):
     brief = brief_service.get_brief_by_id(brief_id)
     if not brief:
         raise HTTPException(status_code=404, detail="Brief not found")
-    
+
     group_ids = brief.group_ids
     groups = group_service.get_groups(group_ids)
     return success_with_data(brief.to_view_model(groups, include_content=True))
+
+
+@router.post("/{brief_id}/expand/{topic_id}", status_code=202)
+async def expand_optional_topic(brief_id: int, topic_id: str):
+    brief = brief_service.get_brief_by_id(brief_id)
+    if not brief:
+        raise HTTPException(status_code=404, detail="Brief not found")
+    topic = next(
+        (t for t in (brief.expandable_topics or []) if t.get("topic_id") == topic_id),
+        None,
+    )
+    if not topic:
+        raise HTTPException(status_code=404, detail="Expandable topic not found")
+    asyncio.create_task(brief_service.expand_optional_topic(brief_id, topic_id))
+    return {"message": "expansion started"}
 
 
 @router.post("/generate", response_model=GenerateBriefResponse)

@@ -5,6 +5,7 @@ import logging
 import re
 
 from core.db.pool import get_connection
+from core.llm_client import auto_build_client
 from core.models.feed import FeedBrief
 
 logger = logging.getLogger(__name__)
@@ -182,7 +183,7 @@ def get_briefs(
             if include_content:
                 # 包含完整内容
                 cur.execute(
-                    """SELECT id, content, created_at, group_ids, summary, overview, ext_info
+                    """SELECT id, content, created_at, group_ids, summary, overview, ext_info, expandable_topics
                        FROM feed_brief
                        WHERE created_at::date BETWEEN %s AND %s
                        ORDER BY id DESC""",
@@ -197,6 +198,7 @@ def get_briefs(
                         summary=row[4] or "",
                         overview=row[5] or "",
                         ext_info=row[6] if row[6] else [],
+                        expandable_topics=row[7] if row[7] else [],
                     )
                     for row in cur.fetchall()
                 ]
@@ -228,7 +230,7 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """SELECT id, content, created_at, group_ids, summary, overview, ext_info
+                """SELECT id, content, created_at, group_ids, summary, overview, ext_info, expandable_topics
                    FROM feed_brief
                    WHERE id = %s""",
                 (brief_id,),
@@ -244,6 +246,7 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
                 summary=row[4] or "",
                 overview=row[5] or "",
                 ext_info=row[6] if row[6] else [],
+                expandable_topics=row[7] if row[7] else [],
             )
 
 
@@ -273,27 +276,35 @@ async def generate_brief_for_groups_async(
     if len(result) == 2:
         brief, ext_info = result
         overview = ""
-    elif len(result) == 4:
-        brief, ext_info, overview, _expandable_topics = result
-    else:
+        expandable_topics = []
+    elif len(result) == 3:
         brief, ext_info, overview = result
+        expandable_topics = []
+    else:
+        brief, ext_info, overview, expandable_topics = result
 
     if not brief:
         logger.warning("No brief generated for groups %s", group_ids)
         return ""
-    _insert_brief(group_ids, brief, ext_info, overview)
+    _insert_brief(group_ids, brief, ext_info, overview, expandable_topics)
     logger.info("Brief generation completed for groups %s", group_ids)
     return brief
 
 
-def _insert_brief(group_ids: list[int], brief: str, ext_info: list = None, overview: str = ""):
+def _insert_brief(
+    group_ids: list[int],
+    brief: str,
+    ext_info: list = None,
+    overview: str = "",
+    expandable_topics: list[dict] | None = None,
+):
     """插入简报到数据库
 
     Args:
         group_ids: 分组ID列表
         brief: 简报内容
         ext_info: 外部搜索结果列表（SearchResult 对象或字典）
-        overview: 日报概览（来自 plan 的 daily_overview）
+        overview: 日报概览（来自 plan 的 today_pattern）
     """
     # 提取二级标题作为概要
     summary = _extract_h2_headings(brief)
@@ -326,10 +337,93 @@ def _insert_brief(group_ids: list[int], brief: str, ext_info: list = None, overv
                     }
                 )
 
+    expandable_topics_list = expandable_topics or []
+
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """INSERT INTO feed_brief (group_ids, content, summary, overview, ext_info)
-                   VALUES (%s::integer[], %s, %s, %s, %s::jsonb)""",
-                (group_ids, brief, summary, overview, json.dumps(ext_info_list)),
+                """INSERT INTO feed_brief (group_ids, content, summary, overview, ext_info, expandable_topics)
+                   VALUES (%s::integer[], %s, %s, %s, %s::jsonb, %s::jsonb)""",
+                (
+                    group_ids,
+                    brief,
+                    summary,
+                    overview,
+                    json.dumps(ext_info_list),
+                    json.dumps(expandable_topics_list),
+                ),
             )
+
+
+def _patch_brief_expansion(brief_id: int, topic_id: str, new_section: str) -> None:
+    """Replace the section under the matching ## heading and remove topic from expandable_topics."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT content, expandable_topics FROM feed_brief WHERE id = %s",
+                (brief_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return
+            content: str = row[0] or ""
+            expandable_topics: list[dict] = json.loads(row[1]) if isinstance(row[1], str) else (row[1] if row[1] else [])
+
+    topic_entry = next(
+        (t for t in expandable_topics if t.get("topic_id") == topic_id), None
+    )
+    topic_name = topic_entry["focal_point"]["topic"] if topic_entry else None
+
+    if topic_name:
+        # Match the heading with optional （可展开分析） suffix
+        heading_pattern = rf"## {re.escape(topic_name)}（可展开分析）|## {re.escape(topic_name)}"
+        pattern = rf"(?:{heading_pattern})\n(.*?)(?=\n## |\Z)"
+        replacement = new_section + "\n"
+        new_content, n = re.subn(pattern, replacement, content, flags=re.DOTALL)
+        if n == 0:
+            new_content = content.rstrip() + "\n\n" + new_section
+    else:
+        new_content = content.rstrip() + "\n\n" + new_section
+
+    new_expandable = [t for t in expandable_topics if t.get("topic_id") != topic_id]
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE feed_brief SET content = %s, expandable_topics = %s::jsonb WHERE id = %s",
+                (new_content, json.dumps(new_expandable), brief_id),
+            )
+
+
+async def expand_optional_topic(brief_id: int, topic_id: str) -> None:
+    from agent.tools import get_article_content
+    from agent.workflow.executor import AgentExecutor
+    from agent.workflow.expansion import build_expansion_state
+
+    brief = get_brief_by_id(brief_id)
+    if not brief:
+        raise LookupError("Brief not found")
+
+    topic = next(
+        (t for t in (brief.expandable_topics or []) if t.get("topic_id") == topic_id),
+        None,
+    )
+    if not topic:
+        raise LookupError("Expandable topic not found")
+
+    article_ids = list(topic["focal_point"].get("article_ids", []))
+    fetched_articles = await get_article_content(article_ids)
+
+    client = auto_build_client()
+    executor = AgentExecutor(client)
+    state = build_expansion_state(topic, fetched_articles)
+    point = state["plan"]["focal_points"][0]
+
+    if point["strategy"] == "SEARCH_ENHANCE":
+        content = await executor.handle_search_enhance(point, state)
+    elif point["strategy"] == "SUMMARIZE":
+        content = await executor.handle_summarize(point, state)
+    else:
+        content = await executor.handle_flash_news(point, state)
+
+    _patch_brief_expansion(brief_id, topic_id, content)

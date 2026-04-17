@@ -54,27 +54,49 @@ async def save_current_execution_records(state: AgentState) -> None:
     summary_results = state.get("summary_results", [])
     execution_status = state.get("execution_status", [])
 
-    if len(focal_points) != len(summary_results):
+    layered_single_report = (
+        len(focal_points) != len(summary_results)
+        and len(summary_results) == 1
+        and len(execution_status) == 1
+    )
+    if len(focal_points) != len(summary_results) and not layered_single_report:
         raise ValueError(
             f"focal_points 数量 ({len(focal_points)}) 与 summary_results 数量 ({len(summary_results)}) 不匹配"
         )
 
-    # 过滤出成功的 point 和 result
-    successful_items = [
-        (point, result, status)
-        for point, result, status in zip(
-            focal_points, summary_results, execution_status
+    if layered_single_report:
+        successful_items = (
+            [(point, summary_results[0], True) for point in focal_points]
+            if execution_status[0]
+            else []
         )
-        if status
-    ]
+        memory_items = []
+        if execution_status[0]:
+            plan = state.get("plan", {})
+            topic = (
+                plan.get("today_pattern")
+                or plan.get("daily_overview")
+                or "Today Brief"
+            )
+            reasoning = plan.get("today_pattern") or "Layered daily brief"
+            memory_items = [({"topic": topic, "reasoning": reasoning}, summary_results[0])]
+    else:
+        # 过滤出成功的 point 和 result
+        successful_items = [
+            (point, result, status)
+            for point, result, status in zip(
+                focal_points, summary_results, execution_status
+            )
+            if status
+        ]
+        memory_items = [(point, result) for point, result, _ in successful_items]
+
     used_article_ids = [
         aid for point, _, _ in successful_items for aid in point["article_ids"]
     ]
     failed_count = len(focal_points) - len(successful_items)
     if failed_count > 0:
         logger.info(f"清理 {failed_count} 个失败的 point 及其相关数据")
-        focal_points = [item[0] for item in successful_items]
-        summary_results = [item[1] for item in successful_items]
 
     # 只有旧workflow才保存到exclude表
     excluded_articles = []
@@ -90,7 +112,7 @@ async def save_current_execution_records(state: AgentState) -> None:
     summary_memories = []
     embeddings = None
 
-    if focal_points:
+    if memory_items:
         # 尝试生成 embeddings
         if is_embedding_configured():
             try:
@@ -98,7 +120,7 @@ async def save_current_execution_records(state: AgentState) -> None:
                 # 这样可以更好地捕捉完整语义
                 texts_to_embed = [
                     f"{point['topic']}: {point['reasoning']}\n\n{result[:SUMMARY_EMBEDDING_MAX_LENGTH]}"
-                    for point, result in zip(focal_points, summary_results)
+                    for point, result in memory_items
                 ]
                 embeddings = await embed_texts(texts_to_embed)
                 logger.info(
@@ -113,7 +135,7 @@ async def save_current_execution_records(state: AgentState) -> None:
             logger.debug("Embedding service not configured, skipping vector generation")
 
         # 构建记忆数据
-        for i, (point, result) in enumerate(zip(focal_points, summary_results)):
+        for i, (point, result) in enumerate(memory_items):
             embedding = embeddings[i] if embeddings else None
             # 截断以匹配数据库字段长度限制 (topic: VARCHAR(256), reasoning: VARCHAR(512))
             topic = point["topic"][:256]
