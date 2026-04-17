@@ -6,7 +6,15 @@ import { useToast } from "@/context/ToastContext";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import type { FeedBrief } from "@/types/api";
 import { formatDate } from "@/utils/date";
-import { Check, ChevronRight, Copy, FileText, List, Sparkles, X } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  Copy,
+  FileText,
+  List,
+  Sparkles,
+  X,
+} from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate, useParams } from "react-router-dom";
@@ -342,26 +350,31 @@ const SummaryPage = () => {
 
     return (
       <Layout showBackButton onBackClick={handleBackClick}>
-        <div className="h-full p-2 md:p-4 flex items-center justify-center theme-bg">
-          <div className="w-full max-w-7xl h-full flex flex-col theme-surface shadow-2xl rounded-sm overflow-hidden relative border theme-border">
-            <div className="p-4 md:p-12 pb-4 md:pb-6 border-b theme-border mx-2 md:mx-12 shrink-0">
-              <div className="flex justify-between items-start">
-                {/* Group tags */}
-                <div className="flex flex-wrap gap-2">
-                  {selectedBrief.groups && selectedBrief.groups.length > 0 ? (
-                    selectedBrief.groups.map((group) => (
-                      <span
-                        key={group.id}
-                        className="px-4 py-2 theme-surface theme-border border backdrop-blur-sm theme-text rounded-xl text-sm font-bold shadow-sm opacity-90"
-                      >
-                        {group.title}
+        <div className="h-full p-0 md:p-4 flex items-center justify-center theme-bg">
+          <div className="w-full max-w-6xl h-full flex flex-col theme-surface shadow-2xl md:rounded-sm overflow-hidden relative border theme-border">
+            <div className="px-5 py-4 md:px-10 md:py-5 border-b theme-border shrink-0">
+              <div className="flex justify-between items-start gap-4">
+                <div className="min-w-0">
+                  {/* Group tags */}
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBrief.groups && selectedBrief.groups.length > 0 ? (
+                      selectedBrief.groups.map((group) => (
+                        <span
+                          key={group.id}
+                          className="px-3 py-1.5 theme-surface theme-border border theme-text rounded-lg text-xs font-semibold opacity-90"
+                        >
+                          {group.title}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="px-3 py-1.5 theme-surface theme-border border theme-text-muted rounded-lg text-xs opacity-90">
+                        未分组
                       </span>
-                    ))
-                  ) : (
-                    <span className="px-4 py-2 theme-surface theme-border border backdrop-blur-sm theme-text-muted rounded-xl text-sm opacity-90">
-                      未分组
-                    </span>
-                  )}
+                    )}
+                  </div>
+                  <div className="mt-2 text-xs theme-text-muted font-mono-custom">
+                    {formatDate(selectedBrief.pubDate)}
+                  </div>
                 </div>
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 shrink-0 ml-4">
@@ -390,165 +403,170 @@ const SummaryPage = () => {
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
               {/* 主内容区域 */}
               <div
-                className="flex-1 overflow-y-auto px-4 md:px-12 py-6 md:py-10 text-sm md:text-md leading-[2.0] theme-text font-medium custom-scrollbar prose prose-slate max-w-none"
+                className="flex-1 overflow-y-auto px-5 py-6 md:px-10 md:py-10 theme-text custom-scrollbar"
                 id="brief-content"
               >
-                {/* 日报概览（放在正文容器内顶部） */}
-                <div className="mb-6 py-3 px-4 md:px-5 rounded-xl border theme-overview-border theme-overview-bg">
-                  <div className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-1">
-                    日报概览
+                <article className="summary-reader mx-auto w-full max-w-[72ch]">
+                  {/* 日报概览（放在正文容器内顶部） */}
+                  <div className="summary-reader-overview mb-8 rounded-lg border theme-overview-border theme-overview-bg">
+                    <div className="text-xs font-semibold theme-text-muted uppercase mb-2">
+                      日报概览
+                    </div>
+                    {selectedBrief.overview ? (
+                      <p className="theme-text">{selectedBrief.overview}</p>
+                    ) : (
+                      <p className="theme-text-muted italic">暂无日报概览</p>
+                    )}
                   </div>
-                  {selectedBrief.overview ? (
-                    <p className="text-sm theme-text leading-relaxed">
-                      {selectedBrief.overview}
-                    </p>
-                  ) : (
-                    <p className="text-sm theme-text-muted leading-relaxed italic">
-                      暂无日报概览
-                    </p>
-                  )}
-                </div>
 
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw]}
-                  components={{
-                    h1: ({ node, ...props }) => {
-                      const text = String(props.children ?? "");
-                      const id = `h1-${slugify(text)}`;
-                      return <h1 id={id} {...props} />;
-                    },
-                    h2: ({ node, ...props }) => {
-                      const text = String(props.children ?? "");
-                      const id = `h2-${slugify(text)}`;
-                      const expandableTopic = selectedBrief.expandableTopics?.find(
-                        (topic) =>
-                          text.includes(topic.topic) ||
-                          text.includes(topic.topicId),
-                      );
+                  <ReactMarkdown
+                    className="summary-reader-prose prose prose-slate max-w-none"
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw]}
+                    components={{
+                      h1: ({ node, ...props }) => {
+                        const text = String(props.children ?? "");
+                        const id = `h1-${slugify(text)}`;
+                        return <h1 id={id} {...props} />;
+                      },
+                      h2: ({ node, ...props }) => {
+                        const text = String(props.children ?? "");
+                        const id = `h2-${slugify(text)}`;
+                        const expandableTopic =
+                          selectedBrief.expandableTopics?.find(
+                            (topic) =>
+                              text.includes(topic.topic) ||
+                              text.includes(topic.topicId),
+                          );
 
-                      if (!expandableTopic) {
-                        return <h2 id={id} {...props} />;
-                      }
+                        if (!expandableTopic) {
+                          return <h2 id={id} {...props} />;
+                        }
 
-                      return (
-                        <div>
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <h2 id={id} {...props} />
-                            <div className="relative group/expand self-start shrink-0">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleExpandTopic(expandableTopic.topicId)
-                                }
-                                aria-label={`生成「${expandableTopic.topic}」的深度分析`}
-                                className="p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors"
-                              >
-                                <Sparkles size={16} />
-                              </button>
-                              <div className="pointer-events-none absolute right-0 top-full mt-1 z-50 w-56 rounded-lg border theme-border theme-surface shadow-lg px-3 py-2 text-xs theme-text leading-relaxed opacity-0 group-hover/expand:opacity-100 transition-opacity duration-150">
-                                <p className="font-semibold theme-accent-text mb-1">深度分析可用</p>
-                                <p className="theme-text-muted">点击生成「{expandableTopic.topic}」的完整深度分析，内容将直接更新到文章中。</p>
+                        return (
+                          <div className="summary-reader-heading-action">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <h2 id={id} {...props} />
+                              <div className="relative group/expand self-start shrink-0 sm:mt-8">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleExpandTopic(expandableTopic.topicId)
+                                  }
+                                  aria-label={`生成「${expandableTopic.topic}」的深度分析`}
+                                  className="p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors"
+                                >
+                                  <Sparkles size={16} />
+                                </button>
+                                <div className="pointer-events-none absolute right-0 top-full mt-1 z-50 w-56 rounded-lg border theme-border theme-surface shadow-lg px-3 py-2 text-xs theme-text leading-relaxed opacity-0 group-hover/expand:opacity-100 transition-opacity duration-150">
+                                  <p className="font-semibold theme-accent-text mb-1">
+                                    深度分析可用
+                                  </p>
+                                  <p className="theme-text-muted">
+                                    {`点击生成「${expandableTopic.topic}」的完整深度分析，内容将直接更新到文章中。`}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    },
-                    h3: ({ node, ...props }) => {
-                      const text = String(props.children ?? "");
-                      const id = `h3-${slugify(text)}`;
-                      return <h3 id={id} {...props} />;
-                    },
-                    // 自定义脚注引用渲染
-                    sup: ({ node, ...props }: any) => {
-                      // 检查是否是脚注引用
-                      const children = props.children;
-                      if (Array.isArray(children) && children.length > 0) {
-                        const firstChild = children[0];
-                        // 检查是否是脚注链接（指向 #ref- 或 #fn）
-                        if (
-                          typeof firstChild === "object" &&
-                          firstChild?.props?.href &&
-                          (firstChild.props.href.startsWith("#ref-") ||
-                            firstChild.props.href.startsWith("#fn"))
-                        ) {
-                          // 这是脚注引用，渲染为角标样式，并处理点击事件
+                        );
+                      },
+                      h3: ({ node, ...props }) => {
+                        const text = String(props.children ?? "");
+                        const id = `h3-${slugify(text)}`;
+                        return <h3 id={id} {...props} />;
+                      },
+                      // 自定义脚注引用渲染
+                      sup: ({ node, ...props }: any) => {
+                        // 检查是否是脚注引用
+                        const children = props.children;
+                        if (Array.isArray(children) && children.length > 0) {
+                          const firstChild = children[0];
+                          // 检查是否是脚注链接（指向 #ref- 或 #fn）
+                          if (
+                            typeof firstChild === "object" &&
+                            firstChild?.props?.href &&
+                            (firstChild.props.href.startsWith("#ref-") ||
+                              firstChild.props.href.startsWith("#fn"))
+                          ) {
+                            // 这是脚注引用，渲染为角标样式，并处理点击事件
+                            return (
+                              <sup className="theme-accent-text font-semibold text-xs ml-0.5">
+                                {React.cloneElement(firstChild, {
+                                  onClick: (
+                                    e: React.MouseEvent<HTMLAnchorElement>,
+                                  ) => {
+                                    e.preventDefault();
+                                    const href = firstChild.props.href;
+                                    const targetId = href.substring(1); // 去掉 #
+                                    const targetElement =
+                                      document.getElementById(targetId);
+                                    if (targetElement) {
+                                      targetElement.scrollIntoView({
+                                        behavior: "smooth",
+                                        block: "center",
+                                      });
+                                      // 高亮目标元素
+                                      targetElement.style.backgroundColor =
+                                        "rgba(99, 102, 241, 0.1)";
+                                      setTimeout(() => {
+                                        targetElement.style.backgroundColor =
+                                          "";
+                                      }, 2000);
+                                    }
+                                  },
+                                })}
+                              </sup>
+                            );
+                          }
+                        }
+                        return <sup {...props} />;
+                      },
+                      // 自定义链接处理，确保参考资料链接正常工作
+                      a: ({ node, ...props }: any) => {
+                        const href = props.href;
+                        // 如果是参考资料锚点链接，添加平滑滚动
+                        if (href && href.startsWith("#ref-")) {
                           return (
-                            <sup className="theme-accent-text font-semibold text-xs ml-0.5">
-                              {React.cloneElement(firstChild, {
-                                onClick: (
-                                  e: React.MouseEvent<HTMLAnchorElement>,
-                                ) => {
-                                  e.preventDefault();
-                                  const href = firstChild.props.href;
-                                  const targetId = href.substring(1); // 去掉 #
-                                  const targetElement =
-                                    document.getElementById(targetId);
-                                  if (targetElement) {
-                                    targetElement.scrollIntoView({
-                                      behavior: "smooth",
-                                      block: "center",
-                                    });
-                                    // 高亮目标元素
-                                    targetElement.style.backgroundColor =
-                                      "rgba(99, 102, 241, 0.1)";
-                                    setTimeout(() => {
-                                      targetElement.style.backgroundColor = "";
-                                    }, 2000);
-                                  }
-                                },
-                              })}
-                            </sup>
+                            <a
+                              {...props}
+                              onClick={(
+                                e: React.MouseEvent<HTMLAnchorElement>,
+                              ) => {
+                                e.preventDefault();
+                                const targetId = href.substring(1);
+                                const targetElement =
+                                  document.getElementById(targetId);
+                                if (targetElement) {
+                                  targetElement.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "center",
+                                  });
+                                  // 高亮目标元素
+                                  targetElement.style.backgroundColor =
+                                    "rgba(99, 102, 241, 0.1)";
+                                  setTimeout(() => {
+                                    targetElement.style.backgroundColor = "";
+                                  }, 2000);
+                                }
+                              }}
+                            />
                           );
                         }
-                      }
-                      return <sup {...props} />;
-                    },
-                    // 自定义链接处理，确保参考资料链接正常工作
-                    a: ({ node, ...props }: any) => {
-                      const href = props.href;
-                      // 如果是参考资料锚点链接，添加平滑滚动
-                      if (href && href.startsWith("#ref-")) {
-                        return (
-                          <a
-                            {...props}
-                            onClick={(
-                              e: React.MouseEvent<HTMLAnchorElement>,
-                            ) => {
-                              e.preventDefault();
-                              const targetId = href.substring(1);
-                              const targetElement =
-                                document.getElementById(targetId);
-                              if (targetElement) {
-                                targetElement.scrollIntoView({
-                                  behavior: "smooth",
-                                  block: "center",
-                                });
-                                // 高亮目标元素
-                                targetElement.style.backgroundColor =
-                                  "rgba(99, 102, 241, 0.1)";
-                                setTimeout(() => {
-                                  targetElement.style.backgroundColor = "";
-                                }, 2000);
-                              }
-                            }}
-                          />
-                        );
-                      }
-                      return <a {...props} />;
-                    },
-                  }}
-                >
-                  {selectedBrief.content || ""}
-                </ReactMarkdown>
+                        return <a {...props} />;
+                      },
+                    }}
+                  >
+                    {selectedBrief.content || ""}
+                  </ReactMarkdown>
+                </article>
               </div>
 
               {/* 大纲侧边栏 - 只在展开时渲染 */}
               {headings.length > 0 && showOutline && (
-                <div className="w-full md:w-64 border-t md:border-t-0 md:border-l theme-border theme-surface shrink-0 max-h-[40vh] md:max-h-none opacity-95 backdrop-blur-sm">
-                  <div className="sticky top-0 p-4 md:p-6 max-h-full overflow-y-auto custom-scrollbar">
-                    <div className="flex items-center justify-between mb-4">
+                <div className="w-full md:w-72 border-t md:border-t-0 md:border-l theme-border theme-surface shrink-0 max-h-[40vh] md:max-h-none opacity-95 backdrop-blur-sm">
+                  <div className="sticky top-0 p-4 md:p-5 max-h-full overflow-y-auto custom-scrollbar">
+                    <div className="flex items-center justify-between gap-3 mb-4">
                       <h3 className="text-xs font-bold theme-text uppercase tracking-wider flex items-center gap-2">
                         <List size={14} />
                         文章大纲
@@ -565,7 +583,7 @@ const SummaryPage = () => {
                         <a
                           key={index}
                           href={`#${heading.id}`}
-                          className={`block py-1.5 px-3 rounded-md text-xs transition-colors theme-surface-hover ${
+                          className={`block py-1.5 px-2 rounded-md text-xs leading-relaxed transition-colors theme-surface-hover line-clamp-2 ${
                             heading.level === 1
                               ? "font-bold theme-text"
                               : heading.level === 2
@@ -714,7 +732,9 @@ const SummaryPage = () => {
                   <div className="relative z-10 flex flex-col h-full">
                     {/* 标题行：分组 + 日期 */}
                     <div className="flex justify-between items-center mb-4 text-xs font-semibold theme-text-muted">
-                      <span className="truncate font-display tracking-wide uppercase">{groupTitle}</span>
+                      <span className="truncate font-display tracking-wide uppercase">
+                        {groupTitle}
+                      </span>
                       <span className="text-[11px] shrink-0 ml-2 font-mono-custom">
                         {formatDate(brief.pubDate)}
                       </span>
@@ -732,8 +752,13 @@ const SummaryPage = () => {
 
                     {/* 进入箭头 */}
                     <div className="mt-5 pt-4 border-t theme-border-subtle flex justify-end items-center theme-text-muted group-hover:theme-accent-text transition-colors">
-                      <span className="text-xs font-medium mr-2 font-body-medium">查看全文</span>
-                      <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                      <span className="text-xs font-medium mr-2 font-body-medium">
+                        查看全文
+                      </span>
+                      <ChevronRight
+                        size={16}
+                        className="group-hover:translate-x-1 transition-transform"
+                      />
                     </div>
                   </div>
                 </button>

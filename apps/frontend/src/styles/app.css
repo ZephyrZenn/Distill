@@ -505,6 +505,130 @@
   border-color: var(--theme-border) !important;
 }
 
+/* Summary detail reader layout */
+.summary-reader {
+  color: var(--theme-text);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  line-height: 1.8;
+}
+
+.summary-reader-overview {
+  padding: 1rem 1.125rem;
+}
+
+.summary-reader-overview p {
+  margin: 0;
+  line-height: 1.75;
+}
+
+.summary-reader .prose {
+  max-width: none;
+  color: var(--theme-text);
+  font-family: var(--font-body) !important;
+  font-size: 1em !important;
+  font-weight: 400;
+  line-height: 1.82 !important;
+}
+
+.summary-reader .prose > :first-child {
+  margin-top: 0 !important;
+}
+
+.summary-reader .prose p {
+  max-width: none !important;
+  margin-top: 0 !important;
+  margin-bottom: 1.25em !important;
+  font-weight: 400 !important;
+}
+
+.summary-reader .prose h1 {
+  font-size: 2rem !important;
+  line-height: 1.25 !important;
+  margin-top: 0 !important;
+  margin-bottom: 1.1em !important;
+  padding-bottom: 0.55em !important;
+}
+
+.summary-reader .prose h2 {
+  font-size: 1.55rem !important;
+  line-height: 1.35 !important;
+  margin-top: 2.25em !important;
+  margin-bottom: 0.85em !important;
+  padding-bottom: 0.45em !important;
+}
+
+.summary-reader .prose h3 {
+  font-size: 1.25rem !important;
+  line-height: 1.4 !important;
+  margin-top: 1.75em !important;
+  margin-bottom: 0.7em !important;
+}
+
+.summary-reader .prose h4,
+.summary-reader .prose h5,
+.summary-reader .prose h6 {
+  margin-top: 1.45em !important;
+}
+
+.summary-reader .prose ul,
+.summary-reader .prose ol {
+  margin-top: 0 !important;
+  margin-bottom: 1.35em !important;
+  padding-left: 1.4em !important;
+}
+
+.summary-reader .prose li {
+  margin-bottom: 0.55em !important;
+  padding-left: 0.15em !important;
+}
+
+.summary-reader .prose blockquote {
+  margin: 1.5em 0 !important;
+  padding: 0.1em 0 0.1em 1em !important;
+  border-left-width: 3px !important;
+}
+
+.summary-reader .prose pre {
+  margin: 1.4em 0 !important;
+  max-width: 100%;
+}
+
+.summary-reader .prose table {
+  display: block !important;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.summary-reader-heading-action h2 {
+  flex: 1;
+}
+
+@media (min-width: 768px) {
+  .summary-reader {
+    font-size: 1rem;
+  }
+
+  .summary-reader-overview {
+    padding: 1.125rem 1.25rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .summary-reader .prose h1 {
+    font-size: 1.75rem !important;
+  }
+
+  .summary-reader .prose h2 {
+    font-size: 1.35rem !important;
+  }
+
+  .summary-reader .prose h3 {
+    font-size: 1.15rem !important;
+  }
+}
+
 /* Date input custom styles */
 .date-input::-webkit-calendar-picker-indicator {
   cursor: pointer;
