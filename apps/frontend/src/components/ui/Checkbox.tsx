@@ -1,14 +1,17 @@
-import { forwardRef } from 'react';
-import { Check } from 'lucide-react';
+import { forwardRef } from "react";
+import { Check } from "lucide-react";
 
 export interface CheckboxProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
+  extends Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    "type" | "onChange"
+  > {
   checked: boolean;
   onCheckedChange?: (checked: boolean) => void;
 }
 
 const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ checked, onCheckedChange, className = '', ...props }, ref) => {
+  ({ checked, onCheckedChange, className = "", ...props }, ref) => {
     return (
       <>
         <input
@@ -21,22 +24,24 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
         />
         <span
           className={`
-            pointer-events-none inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-lg border-2 transition-colors
-            border-slate-300 bg-white
-            peer-checked:bg-amber-600 peer-checked:border-amber-600
-            peer-focus-visible:ring-2 peer-focus-visible:ring-amber-500/30 peer-focus-visible:ring-offset-1
-            peer-disabled:opacity-50
-            ${className}
-          `}
+ pointer-events-none inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-lg border-2 transition-colors
+ border-slate-300 bg-white
+ peer-checked:bg-amber-600 peer-checked:border-amber-600
+ peer-focus-visible:ring-2 peer-focus-visible:ring-amber-500/30 peer-focus-visible:ring-offset-1
+ peer-disabled:opacity-50
+ ${className}
+ `}
           aria-hidden
         >
-          {checked && <Check size={12} strokeWidth={3} className="text-white" />}
+          {checked && (
+            <Check size={12} strokeWidth={3} className="text-white" />
+          )}
         </span>
       </>
     );
-  }
+  },
 );
 
-Checkbox.displayName = 'Checkbox';
+Checkbox.displayName = "Checkbox";
 
 export { Checkbox };

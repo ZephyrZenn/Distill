@@ -1,5 +1,5 @@
-import type { PropsWithChildren } from 'react';
-import { X } from 'lucide-react';
+import type { PropsWithChildren } from "react";
+import { X } from "lucide-react";
 
 interface ModalProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ export const Modal = ({
   title,
   children,
   onConfirm,
-  confirmText = '保存',
+  confirmText = "保存",
   confirmDisabled = false,
 }: PropsWithChildren<ModalProps>) => {
   if (!isOpen) return null;
@@ -25,12 +25,12 @@ export const Modal = ({
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 md:p-4">
       <div
         className="absolute inset-0 backdrop-blur-sm"
-        style={{ backgroundColor: 'var(--theme-overlay)' }}
+        style={{ backgroundColor: "var(--theme-overlay)" }}
         onClick={onClose}
       />
       <div className="theme-surface w-full max-w-lg rounded-2xl md:rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col border theme-border">
         <div className="px-4 md:px-8 pt-6 md:pt-8 pb-4 flex justify-between items-center border-b theme-border shrink-0">
-          <h3 className="text-lg md:text-xl font-black theme-text tracking-tight pr-2">
+          <h3 className="text-lg md:text-xl font-semibold theme-text pr-2">
             {title}
           </h3>
           <button
@@ -47,14 +47,14 @@ export const Modal = ({
         <div className="px-4 md:px-8 pb-4 md:pb-8 pt-4 flex gap-2 md:gap-3 border-t theme-border shrink-0">
           <button
             onClick={onClose}
-            className="flex-1 py-3 rounded-2xl font-bold theme-text-muted theme-surface-hover transition-all min-h-[44px]"
+            className="flex-1 py-3 rounded-2xl font-semibold theme-text-muted theme-surface-hover transition-all min-h-[44px]"
           >
             取消
           </button>
           <button
             onClick={onConfirm}
             disabled={confirmDisabled}
-            className="flex-1 py-3 rounded-2xl font-bold theme-btn-primary theme-on-primary shadow-lg transition-all min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-3 rounded-2xl font-semibold theme-btn-primary theme-on-primary shadow-lg transition-all min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {confirmText}
           </button>

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Zap,
   PlayCircle,
@@ -9,15 +9,15 @@ import {
   CheckCircle,
   XCircle,
   Loader,
-} from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import { api } from '@/api/client';
-import { queryKeys } from '@/api/queryKeys';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { Layout } from '@/components/Layout';
-import { useToast } from '@/context/ToastContext';
-import { useTaskPolling } from '@/hooks/useTaskPolling';
-import type { FeedGroup } from '@/types/api';
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/api/client";
+import { queryKeys } from "@/api/queryKeys";
+import { useApiQuery } from "@/hooks/useApiQuery";
+import { Layout } from "@/components/Layout";
+import { useToast } from "@/context/ToastContext";
+import { useTaskPolling } from "@/hooks/useTaskPolling";
+import type { FeedGroup } from "@/types/api";
 
 interface LogEntry {
   text: string;
@@ -27,30 +27,36 @@ interface LogEntry {
 interface HistoryTask {
   taskId: string;
   createdAt: string;
-  status?: 'pending' | 'running' | 'completed' | 'failed' | 'deleted';
+  status?: "pending" | "running" | "completed" | "failed" | "deleted";
   focus?: string;
   agentMode?: boolean;
 }
 
-const TASK_STORAGE_KEY = 'instant_lab_active_task';
-const HISTORY_STORAGE_KEY = 'instant_lab_history_tasks';
+const TASK_STORAGE_KEY = "instant_lab_active_task";
+const HISTORY_STORAGE_KEY = "instant_lab_history_tasks";
 const MAX_HISTORY_COUNT = 50; // 最多保存50条历史记录
 
 const InstantLabPage = () => {
   const queryClient = useQueryClient();
-  const { data: groups } = useApiQuery<FeedGroup[]>(queryKeys.groups, api.getGroups);
+  const { data: groups } = useApiQuery<FeedGroup[]>(
+    queryKeys.groups,
+    api.getGroups,
+  );
   const { showToast } = useToast();
 
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [agentLogs, setAgentLogs] = useState<LogEntry[]>([]);
-  const [generationFocus, setGenerationFocus] = useState('');
-  const [selectedGroupsForGen, setSelectedGroupsForGen] = useState<number[]>([]);
+  const [generationFocus, setGenerationFocus] = useState("");
+  const [selectedGroupsForGen, setSelectedGroupsForGen] = useState<number[]>(
+    [],
+  );
   const [agentMode, setAgentMode] = useState(false);
   const [isRecovering, setIsRecovering] = useState(true); // 标记是否正在恢复状态
   const [historyTasks, setHistoryTasks] = useState<HistoryTask[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [selectedHistoryTask, setSelectedHistoryTask] = useState<HistoryTask | null>(null);
+  const [selectedHistoryTask, setSelectedHistoryTask] =
+    useState<HistoryTask | null>(null);
   const [loadingHistoryTask, setLoadingHistoryTask] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
   const focusInputRef = useRef<HTMLTextAreaElement>(null);
@@ -61,7 +67,7 @@ const InstantLabPage = () => {
   useEffect(() => {
     const el = focusInputRef.current;
     if (!el) return;
-    el.style.height = 'auto';
+    el.style.height = "auto";
     const min = 40; // ~2.5rem
     const max = 112; // max-h-28
     const h = Math.min(max, Math.max(min, el.scrollHeight));
@@ -78,7 +84,7 @@ const InstantLabPage = () => {
           setHistoryTasks(parsed);
         }
       } catch (error) {
-        console.error('Failed to load history:', error);
+        console.error("Failed to load history:", error);
       }
     };
     loadHistory();
@@ -90,7 +96,7 @@ const InstantLabPage = () => {
       setHistoryTasks((existing) => {
         const updated = [...existing];
         // 检查是否已存在，如果存在则更新，否则添加到开头
-        const index = updated.findIndex(t => t.taskId === task.taskId);
+        const index = updated.findIndex((t) => t.taskId === task.taskId);
         if (index >= 0) {
           updated[index] = task;
         } else {
@@ -102,51 +108,54 @@ const InstantLabPage = () => {
         return limited;
       });
     } catch (error) {
-      console.error('Failed to save history:', error);
+      console.error("Failed to save history:", error);
     }
   }, []);
 
   // 加载历史任务详情
-  const loadHistoryTaskDetail = useCallback(async (task: HistoryTask) => {
-    setLoadingHistoryTask(true);
-    try {
-      const status = await api.getBriefGenerationStatus(task.taskId);
-      const updatedTask: HistoryTask = {
-        ...task,
-        status: status.status,
-      };
-      saveHistoryTask(updatedTask);
-      setSelectedHistoryTask(updatedTask);
-      // 显示日志
-      if (status.logs.length > 0) {
-        setAgentLogs(
-          status.logs.map(log => ({
-            text: log.text,
-            time: new Date(log.time).toLocaleTimeString(),
-          }))
-        );
-        // 关闭侧边栏，显示日志视图
-        setIsHistoryOpen(false);
-      } else {
-        showToast('该任务暂无日志');
-      }
-    } catch (error: any) {
-      // 如果是 404，标记为已删除
-      if (error?.response?.status === 404) {
-        const deletedTask: HistoryTask = {
+  const loadHistoryTaskDetail = useCallback(
+    async (task: HistoryTask) => {
+      setLoadingHistoryTask(true);
+      try {
+        const status = await api.getBriefGenerationStatus(task.taskId);
+        const updatedTask: HistoryTask = {
           ...task,
-          status: 'deleted',
+          status: status.status,
         };
-        saveHistoryTask(deletedTask);
-        setSelectedHistoryTask(deletedTask);
-        showToast('该记录已从服务器删除', { type: 'error' });
-      } else {
-        showToast('加载任务详情失败', { type: 'error' });
+        saveHistoryTask(updatedTask);
+        setSelectedHistoryTask(updatedTask);
+        // 显示日志
+        if (status.logs.length > 0) {
+          setAgentLogs(
+            status.logs.map((log) => ({
+              text: log.text,
+              time: new Date(log.time).toLocaleTimeString(),
+            })),
+          );
+          // 关闭侧边栏，显示日志视图
+          setIsHistoryOpen(false);
+        } else {
+          showToast("该任务暂无日志");
+        }
+      } catch (error: any) {
+        // 如果是 404，标记为已删除
+        if (error?.response?.status === 404) {
+          const deletedTask: HistoryTask = {
+            ...task,
+            status: "deleted",
+          };
+          saveHistoryTask(deletedTask);
+          setSelectedHistoryTask(deletedTask);
+          showToast("该记录已从服务器删除", { type: "error" });
+        } else {
+          showToast("加载任务详情失败", { type: "error" });
+        }
+      } finally {
+        setLoadingHistoryTask(false);
       }
-    } finally {
-      setLoadingHistoryTask(false);
-    }
-  }, [saveHistoryTask, showToast]);
+    },
+    [saveHistoryTask, showToast],
+  );
 
   // 组件挂载时检查是否有正在运行的任务
   useEffect(() => {
@@ -156,25 +165,29 @@ const InstantLabPage = () => {
         try {
           // 从后端获取任务状态
           const status = await api.getBriefGenerationStatus(savedTaskId);
-          if (status.status === 'pending' || status.status === 'running') {
+          if (status.status === "pending" || status.status === "running") {
             // 任务仍在运行，恢复状态
             setTaskId(savedTaskId);
             setIsGenerating(true);
             // 恢复已有的日志
             if (status.logs.length > 0) {
               setAgentLogs(
-                status.logs.map(log => ({
+                status.logs.map((log) => ({
                   text: log.text,
                   time: new Date(log.time).toLocaleTimeString(),
-                }))
+                })),
               );
             }
             // 更新历史记录中的任务状态
             setHistoryTasks((existing) => {
-              const existingTask = existing.find(t => t.taskId === savedTaskId);
+              const existingTask = existing.find(
+                (t) => t.taskId === savedTaskId,
+              );
               if (existingTask) {
                 const updated = [...existing];
-                const index = updated.findIndex(t => t.taskId === savedTaskId);
+                const index = updated.findIndex(
+                  (t) => t.taskId === savedTaskId,
+                );
                 updated[index] = {
                   ...existingTask,
                   status: status.status,
@@ -188,10 +201,14 @@ const InstantLabPage = () => {
             localStorage.removeItem(TASK_STORAGE_KEY);
             // 更新历史记录中的任务状态
             setHistoryTasks((existing) => {
-              const existingTask = existing.find(t => t.taskId === savedTaskId);
+              const existingTask = existing.find(
+                (t) => t.taskId === savedTaskId,
+              );
               if (existingTask) {
                 const updated = [...existing];
-                const index = updated.findIndex(t => t.taskId === savedTaskId);
+                const index = updated.findIndex(
+                  (t) => t.taskId === savedTaskId,
+                );
                 updated[index] = {
                   ...existingTask,
                   status: status.status,
@@ -216,7 +233,7 @@ const InstantLabPage = () => {
   // 自动滚动到底部
   useEffect(() => {
     if (logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [agentLogs]);
 
@@ -226,60 +243,76 @@ const InstantLabPage = () => {
     const completedTask: HistoryTask = {
       taskId: taskId!,
       createdAt: new Date().toISOString(),
-      status: 'completed',
+      status: "completed",
       focus: generationFocus,
       agentMode: agentMode,
     };
     saveHistoryTask(completedTask);
     setTaskId(null);
     localStorage.removeItem(TASK_STORAGE_KEY);
-    showToast('简报生成成功！');
+    showToast("简报生成成功！");
     queryClient.invalidateQueries({ queryKey: queryKeys.briefs() });
     queryClient.invalidateQueries({ queryKey: queryKeys.defaultBriefs });
-  }, [showToast, queryClient, taskId, generationFocus, agentMode, saveHistoryTask]);
+  }, [
+    showToast,
+    queryClient,
+    taskId,
+    generationFocus,
+    agentMode,
+    saveHistoryTask,
+  ]);
 
   // 任务失败时的处理
-  const handleTaskError = useCallback((error: string) => {
-    setIsGenerating(false);
-    const failedTask: HistoryTask = {
-      taskId: taskId!,
-      createdAt: new Date().toISOString(),
-      status: 'failed',
-      focus: generationFocus,
-      agentMode: agentMode,
-    };
-    saveHistoryTask(failedTask);
-    setTaskId(null);
-    localStorage.removeItem(TASK_STORAGE_KEY);
-    showToast(`生成失败: ${error}`, { type: 'error' });
-  }, [showToast, taskId, generationFocus, agentMode, saveHistoryTask]);
+  const handleTaskError = useCallback(
+    (error: string) => {
+      setIsGenerating(false);
+      const failedTask: HistoryTask = {
+        taskId: taskId!,
+        createdAt: new Date().toISOString(),
+        status: "failed",
+        focus: generationFocus,
+        agentMode: agentMode,
+      };
+      saveHistoryTask(failedTask);
+      setTaskId(null);
+      localStorage.removeItem(TASK_STORAGE_KEY);
+      showToast(`生成失败: ${error}`, { type: "error" });
+    },
+    [showToast, taskId, generationFocus, agentMode, saveHistoryTask],
+  );
 
   // 日志更新处理
-  const handleLogUpdate = useCallback((logs: Array<{ text: string; time: string }>) => {
-    setAgentLogs(
-      logs.map(log => ({
-        text: log.text,
-        time: new Date(log.time).toLocaleTimeString(),
-      }))
-    );
-    // 更新历史记录中的任务状态为 running
-    if (taskId) {
-      setHistoryTasks((existing) => {
-        const existingTask = existing.find(t => t.taskId === taskId);
-        if (existingTask && existingTask.status === 'pending') {
-          const updated = [...existing];
-          const index = updated.findIndex(t => t.taskId === taskId);
-          updated[index] = {
-            ...existingTask,
-            status: 'running',
-          };
-          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated.slice(0, MAX_HISTORY_COUNT)));
-          return updated.slice(0, MAX_HISTORY_COUNT);
-        }
-        return existing;
-      });
-    }
-  }, [taskId]);
+  const handleLogUpdate = useCallback(
+    (logs: Array<{ text: string; time: string }>) => {
+      setAgentLogs(
+        logs.map((log) => ({
+          text: log.text,
+          time: new Date(log.time).toLocaleTimeString(),
+        })),
+      );
+      // 更新历史记录中的任务状态为 running
+      if (taskId) {
+        setHistoryTasks((existing) => {
+          const existingTask = existing.find((t) => t.taskId === taskId);
+          if (existingTask && existingTask.status === "pending") {
+            const updated = [...existing];
+            const index = updated.findIndex((t) => t.taskId === taskId);
+            updated[index] = {
+              ...existingTask,
+              status: "running",
+            };
+            localStorage.setItem(
+              HISTORY_STORAGE_KEY,
+              JSON.stringify(updated.slice(0, MAX_HISTORY_COUNT)),
+            );
+            return updated.slice(0, MAX_HISTORY_COUNT);
+          }
+          return existing;
+        });
+      }
+    },
+    [taskId],
+  );
 
   // 使用轮询 hook 获取任务状态
   useTaskPolling({
@@ -294,15 +327,15 @@ const InstantLabPage = () => {
   const startGeneration = async () => {
     // Agent Mode 需要填写 focus，Workflow Mode 需要至少选择一个分组
     if (agentMode && !generationFocus.trim()) {
-      showToast('Agent Mode 下必须填写用户关注点', { type: 'error' });
+      showToast("Agent Mode 下必须填写用户关注点", { type: "error" });
       return;
     }
     if (!agentMode && selectedGroupsForGen.length === 0) return;
-    
+
     try {
       setIsGenerating(true);
       setAgentLogs([]);
-      
+
       // 创建brief生成任务并获取任务ID
       // AgentMode 时传递空数组，后端会忽略 group_ids
       const { task_id } = await api.generateBrief(
@@ -310,16 +343,16 @@ const InstantLabPage = () => {
         generationFocus.trim(),
         agentMode,
       );
-      
+
       // 保存到 localStorage，以便页面切换后恢复
       localStorage.setItem(TASK_STORAGE_KEY, task_id);
       setTaskId(task_id);
-      
+
       // 保存到历史记录
       const newTask: HistoryTask = {
         taskId: task_id,
         createdAt: new Date().toISOString(),
-        status: 'pending',
+        status: "pending",
         focus: generationFocus.trim(),
         agentMode: agentMode,
       };
@@ -327,8 +360,9 @@ const InstantLabPage = () => {
     } catch (error: any) {
       setIsGenerating(false);
       // FastAPI 返回的错误格式是 { detail: "error message" }
-      const errorMessage = error?.response?.data?.detail || error?.message || '启动任务失败';
-      showToast(errorMessage, { type: 'error' });
+      const errorMessage =
+        error?.response?.data?.detail || error?.message || "启动任务失败";
+      showToast(errorMessage, { type: "error" });
     }
   };
 
@@ -336,7 +370,7 @@ const InstantLabPage = () => {
     setIsGenerating(false);
     setAgentLogs([]);
     setTaskId(null);
-    setGenerationFocus('');
+    setGenerationFocus("");
     setSelectedGroupsForGen([]);
     setAgentMode(false);
     localStorage.removeItem(TASK_STORAGE_KEY);
@@ -346,7 +380,7 @@ const InstantLabPage = () => {
     setSelectedGroupsForGen((prev) =>
       prev.includes(groupId)
         ? prev.filter((id) => id !== groupId)
-        : [...prev, groupId]
+        : [...prev, groupId],
     );
   };
 
@@ -365,7 +399,7 @@ const InstantLabPage = () => {
   const HistorySidebar = () => (
     <div
       className={`fixed right-0 top-0 h-full w-80 theme-surface border-l theme-border theme-shadow-modal z-50 transform transition-transform duration-300 ease-in-out ${
-        isHistoryOpen ? 'translate-x-0' : 'translate-x-full'
+        isHistoryOpen ? "translate-x-0" : "translate-x-full"
       }`}
     >
       <div className="h-full flex flex-col">
@@ -373,7 +407,7 @@ const InstantLabPage = () => {
         <div className="p-4 border-b theme-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History size={20} className="theme-accent-text" />
-            <h3 className="font-bold theme-text">生成历史</h3>
+            <h3 className="font-semibold theme-text">生成历史</h3>
           </div>
           <button
             onClick={() => setIsHistoryOpen(false)}
@@ -393,44 +427,61 @@ const InstantLabPage = () => {
             <div className="p-2">
               {historyTasks.map((task, index) => {
                 const date = new Date(task.createdAt);
-                const StatusIcon = 
-                  task.status === 'completed' ? CheckCircle :
-                  task.status === 'failed' ? XCircle :
-                  task.status === 'deleted' ? X :
-                  task.status === 'running' ? Loader :
-                  Clock;
+                const StatusIcon =
+                  task.status === "completed"
+                    ? CheckCircle
+                    : task.status === "failed"
+                      ? XCircle
+                      : task.status === "deleted"
+                        ? X
+                        : task.status === "running"
+                          ? Loader
+                          : Clock;
                 const statusColor =
-                  task.status === 'completed' ? 'text-emerald-500' :
-                  task.status === 'failed' ? 'text-rose-500' :
-                  task.status === 'deleted' ? 'text-slate-400' :
-                  task.status === 'running' ? 'text-amber-500' :
-                  'text-slate-400';
+                  task.status === "completed"
+                    ? "text-emerald-500"
+                    : task.status === "failed"
+                      ? "text-rose-500"
+                      : task.status === "deleted"
+                        ? "text-slate-400"
+                        : task.status === "running"
+                          ? "text-amber-500"
+                          : "text-slate-400";
 
                 return (
-                    <button
-                      key={task.taskId}
-                      onClick={() => loadHistoryTaskDetail(task)}
-                      disabled={loadingHistoryTask}
-                      className={`w-full p-3 mb-2 rounded-lg border theme-transition text-left theme-text card-hover-subtle ${
-                        selectedHistoryTask?.taskId === task.taskId
-                          ? 'nav-active theme-border'
-                          : 'theme-surface theme-border theme-surface-hover theme-accent-text-hover'
-                      } ${loadingHistoryTask ? 'opacity-50 cursor-wait' : 'cursor-pointer'} animate-entrance`}
-                      style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
-                    >
+                  <button
+                    key={task.taskId}
+                    onClick={() => loadHistoryTaskDetail(task)}
+                    disabled={loadingHistoryTask}
+                    className={`w-full p-3 mb-2 rounded-lg border theme-transition text-left theme-text card-hover-subtle ${
+                      selectedHistoryTask?.taskId === task.taskId
+                        ? "nav-active theme-border"
+                        : "theme-surface theme-border theme-surface-hover theme-accent-text-hover"
+                    } ${loadingHistoryTask ? "opacity-50 cursor-wait" : "cursor-pointer"} animate-entrance`}
+                    style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <StatusIcon size={14} className={`${statusColor} shrink-0`} />
-                          <span className={`text-xs font-medium ${statusColor}`}>
-                            {task.status === 'completed' ? '已完成' :
-                             task.status === 'failed' ? '失败' :
-                             task.status === 'deleted' ? '已删除' :
-                             task.status === 'running' ? '运行中' :
-                             '等待中'}
+                          <StatusIcon
+                            size={14}
+                            className={`${statusColor} shrink-0`}
+                          />
+                          <span
+                            className={`text-xs font-medium ${statusColor}`}
+                          >
+                            {task.status === "completed"
+                              ? "已完成"
+                              : task.status === "failed"
+                                ? "失败"
+                                : task.status === "deleted"
+                                  ? "已删除"
+                                  : task.status === "running"
+                                    ? "运行中"
+                                    : "等待中"}
                           </span>
                           {task.agentMode && (
-                            <span className="text-[10px] theme-accent-bg theme-on-accent px-1.5 py-0.5 rounded font-bold">
+                            <span className="text-[10px] theme-accent-bg theme-on-accent px-1.5 py-0.5 rounded font-semibold">
                               AGENT
                             </span>
                           )}
@@ -441,11 +492,11 @@ const InstantLabPage = () => {
                           </p>
                         )}
                         <p className="text-[10px] theme-text-muted">
-                          {date.toLocaleString('zh-CN', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
+                          {date.toLocaleString("zh-CN", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
                           })}
                         </p>
                       </div>
@@ -469,10 +520,12 @@ const InstantLabPage = () => {
           <button
             onClick={() => setIsHistoryOpen(true)}
             className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl theme-shadow-ambient theme-surface-hover theme-transition flex items-center gap-2 theme-text theme-accent-text-hover animate-entrance"
-            style={{ animationDelay: '100ms' }}
+            style={{ animationDelay: "100ms" }}
           >
             <History size={18} className="theme-accent-text" />
-            <span className="text-xs font-bold hidden sm:inline font-body-medium">历史</span>
+            <span className="text-xs font-semibold hidden sm:inline font-body-medium">
+              历史
+            </span>
           </button>
 
           {/* History Sidebar */}
@@ -482,32 +535,36 @@ const InstantLabPage = () => {
           {isHistoryOpen && (
             <div
               className="fixed inset-0 backdrop-blur-sm z-40 animate-in fade-in duration-300"
-              style={{ backgroundColor: 'var(--theme-overlay)' }}
+              style={{ backgroundColor: "var(--theme-overlay)" }}
               onClick={() => setIsHistoryOpen(false)}
             />
           )}
 
-          <div className="w-full max-w-4xl flex flex-col h-full animate-entrance" style={{ animationDelay: '200ms' }}>
+          <div
+            className="w-full max-w-4xl flex flex-col h-full animate-entrance"
+            style={{ animationDelay: "200ms" }}
+          >
             {/* Console header */}
             <div className="bg-slate-900 rounded-t-2xl md:rounded-t-[3rem] p-4 md:p-8 text-white flex items-center justify-between shadow-2xl border-b border-white/5">
               <div className="flex items-center gap-4">
                 <div
                   className={`w-3 h-3 rounded-full ${
                     isGenerating
-                      ? 'bg-amber-400 animate-pulse'
-                      : 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)]'
+                      ? "bg-amber-400 animate-pulse"
+                      : "bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)]"
                   }`}
                 />
-                <div className="font-mono text-xs md:text-sm tracking-widest font-black uppercase">
+                <div className="font-mono text-xs md:text-sm font-semibold uppercase">
                   Agent Logic Console
                 </div>
               </div>
               {!isGenerating && (
                 <button
                   onClick={resetGeneration}
-                  className="flex items-center gap-1 md:gap-2 bg-white/10 hover:bg-white/20 px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-bold border border-white/10 transition-all min-h-[44px]"
+                  className="flex items-center gap-1 md:gap-2 bg-white/10 hover:bg-white/20 px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-semibold border border-white/10 transition-all min-h-[44px]"
                 >
-                  <RotateCcw size={14} /> <span className="hidden sm:inline">开启新总结</span>
+                  <RotateCcw size={14} />{" "}
+                  <span className="hidden sm:inline">开启新总结</span>
                 </button>
               )}
             </div>
@@ -527,8 +584,8 @@ const InstantLabPage = () => {
                     <span
                       className={
                         i === agentLogs.length - 1
-                          ? 'text-amber-300 font-bold border-l-2 border-amber-500 pl-3 ml-2'
-                          : 'text-slate-400 ml-3 pl-3 border-l border-white/5'
+                          ? "text-amber-300 font-semibold border-l-2 border-amber-500 pl-3 ml-2"
+                          : "text-slate-400 ml-3 pl-3 border-l border-white/5"
                       }
                     >
                       {log.text}
@@ -552,10 +609,12 @@ const InstantLabPage = () => {
         <button
           onClick={() => setIsHistoryOpen(true)}
           className="fixed right-4 top-24 md:right-8 md:top-28 z-40 p-3 theme-surface border theme-border rounded-xl theme-shadow-ambient theme-surface-hover theme-transition flex items-center gap-2 theme-text theme-accent-text-hover animate-entrance"
-          style={{ animationDelay: '100ms' }}
+          style={{ animationDelay: "100ms" }}
         >
           <History size={18} className="theme-accent-text" />
-          <span className="text-xs font-bold hidden sm:inline font-body-medium">历史</span>
+          <span className="text-xs font-semibold hidden sm:inline font-body-medium">
+            历史
+          </span>
         </button>
 
         {/* History Sidebar */}
@@ -565,7 +624,7 @@ const InstantLabPage = () => {
         {isHistoryOpen && (
           <div
             className="fixed inset-0 backdrop-blur-sm z-40 animate-in fade-in duration-300"
-            style={{ backgroundColor: 'var(--theme-overlay)' }}
+            style={{ backgroundColor: "var(--theme-overlay)" }}
             onClick={() => setIsHistoryOpen(false)}
           />
         )}
@@ -581,7 +640,7 @@ const InstantLabPage = () => {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg md:text-xl font-display font-bold theme-text">
+                <h3 className="type-section-title theme-text">
                   实时 Agent 总结
                 </h3>
                 <p className="theme-text-muted text-xs md:text-sm font-body-medium">
@@ -591,7 +650,10 @@ const InstantLabPage = () => {
             </div>
 
             {/* Mode container: both modes shown, click to select */}
-            <div className="mb-3 md:mb-4 rounded-xl theme-surface p-3 md:p-4 theme-border border theme-shadow-ambient animate-entrance" style={{ animationDelay: '200ms' }}>
+            <div
+              className="mb-3 md:mb-4 rounded-xl theme-surface p-3 md:p-4 theme-border border theme-shadow-ambient animate-entrance"
+              style={{ animationDelay: "200ms" }}
+            >
               <div className="flex flex-col sm:flex-row items-stretch gap-2 md:gap-3">
                 {/* Workflow 模式 - card */}
                 <button
@@ -604,15 +666,23 @@ const InstantLabPage = () => {
                   }}
                   className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 theme-text ${
                     !agentMode
-                      ? 'nav-active theme-border'
-                      : 'theme-border theme-surface theme-surface-hover'
+                      ? "nav-active theme-border"
+                      : "theme-border theme-surface theme-surface-hover"
                   }`}
                 >
                   <div className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 overflow-hidden shrink-0">
-                    <img src="/workflow.svg" alt="" className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain" />
+                    <img
+                      src="/workflow.svg"
+                      alt=""
+                      className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain"
+                    />
                   </div>
-                  <p className="mt-1.5 text-xs font-bold theme-text">Workflow</p>
-                  <p className="mt-0.5 text-[11px] theme-text-muted">仅根据分组内订阅源的信息生成总结</p>
+                  <p className="mt-1.5 text-xs font-semibold theme-text">
+                    Workflow
+                  </p>
+                  <p className="mt-0.5 text-[11px] theme-text-muted">
+                    仅根据分组内订阅源的信息生成总结
+                  </p>
                 </button>
 
                 {/* PS Agent 模式 - card */}
@@ -624,38 +694,53 @@ const InstantLabPage = () => {
                       const check = await api.getAgentConfigCheck();
                       if (!check.ready) {
                         showToast(
-                          `Agent 模式配置不完整：${check.missing.join('；')}`,
-                          { type: 'error' }
+                          `Agent 模式配置不完整：${check.missing.join("；")}`,
+                          { type: "error" },
                         );
                         return;
                       }
                       setAgentMode(true);
                     } catch (e) {
-                      showToast('检查 Agent 配置失败，请稍后重试', { type: 'error' });
+                      showToast("检查 Agent 配置失败，请稍后重试", {
+                        type: "error",
+                      });
                     }
                   }}
                   className={`flex-1 flex flex-col items-center p-3 md:p-4 rounded-lg border-2 transition-all text-left min-w-0 theme-text ${
                     agentMode
-                      ? 'nav-active theme-border'
-                      : 'theme-border theme-surface theme-surface-hover'
+                      ? "nav-active theme-border"
+                      : "theme-border theme-surface theme-surface-hover"
                   }`}
                 >
                   <div className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 overflow-hidden shrink-0">
-                    <img src="/bot.svg" alt="" className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain" />
+                    <img
+                      src="/bot.svg"
+                      alt=""
+                      className="w-full h-full max-w-[56px] max-h-[56px] md:max-w-[64px] md:max-h-[64px] object-contain"
+                    />
                   </div>
-                  <p className="mt-1.5 text-xs font-bold theme-text">Agent</p>
-                  <p className="mt-0.5 text-[11px] theme-text-muted">根据关注点自主搜索信息，生成总结。<br/>注意：此模式会消耗较多Token。</p>
+                  <p className="mt-1.5 text-xs font-semibold theme-text">
+                    Agent
+                  </p>
+                  <p className="mt-0.5 text-[11px] theme-text-muted">
+                    根据关注点自主搜索信息，生成总结。
+                    <br />
+                    注意：此模式会消耗较多Token。
+                  </p>
                 </button>
               </div>
             </div>
 
             {/* Main content area - height follows content */}
-            <div className="flex flex-col theme-surface rounded-2xl md:rounded-3xl border theme-border theme-shadow-ambient overflow-hidden w-full animate-entrance" style={{ animationDelay: '300ms' }}>
+            <div
+              className="flex flex-col theme-surface rounded-2xl md:rounded-3xl border theme-border theme-shadow-ambient overflow-hidden w-full animate-entrance"
+              style={{ animationDelay: "300ms" }}
+            >
               {/* Top section - Group selection (standard mode only) */}
               {!agentMode && (
                 <div className="border-b theme-border theme-surface-hover p-3 md:p-4">
                   <div className="flex items-start gap-3">
-                    <div className="pt-1 text-xs font-bold theme-text whitespace-nowrap">
+                    <div className="pt-1 text-xs font-semibold theme-text whitespace-nowrap">
                       目标分组 <span className="text-rose-400">*</span>
                     </div>
                     <div className="flex-1">
@@ -664,10 +749,10 @@ const InstantLabPage = () => {
                           <button
                             key={group.id}
                             onClick={() => toggleGroupForGen(group.id)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border whitespace-nowrap ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border whitespace-nowrap ${
                               selectedGroupsForGen.includes(group.id)
-                                ? 'theme-primary-bg theme-on-primary theme-border'
-                                : 'theme-surface theme-text theme-border theme-accent-text-hover'
+                                ? "theme-primary-bg theme-on-primary theme-border"
+                                : "theme-surface theme-text theme-border theme-accent-text-hover"
                             }`}
                           >
                             {group.title}
@@ -687,15 +772,21 @@ const InstantLabPage = () => {
               {/* Chat-like input row: input + send icon in one bar */}
               <div className="px-3 md:px-4 py-3 theme-text">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <label className="text-xs font-bold theme-text shrink-0">用户关注点</label>
-                  {agentMode && <span className="text-rose-400 text-xs">*</span>}
-                  {!agentMode && <span className="theme-text-muted text-xs">(可选)</span>}
+                  <label className="text-xs font-semibold theme-text shrink-0">
+                    用户关注点
+                  </label>
+                  {agentMode && (
+                    <span className="text-rose-400 text-xs">*</span>
+                  )}
+                  {!agentMode && (
+                    <span className="theme-text-muted text-xs">(可选)</span>
+                  )}
                 </div>
                 <div
                   className={`flex items-start rounded-lg md:rounded-xl theme-surface border overflow-hidden theme-border ${
                     agentMode && !generationFocus.trim()
-                      ? 'ring-2 ring-rose-300 border-rose-200'
-                      : 'focus-within:ring-2 focus-within:ring-[var(--theme-primary)]/30 focus-within:border-[var(--theme-primary)]'
+                      ? "ring-2 ring-rose-300 border-rose-200"
+                      : "focus-within:ring-2 focus-within:ring-[var(--theme-primary)]/30 focus-within:border-[var(--theme-primary)]"
                   }`}
                 >
                   <textarea
@@ -703,7 +794,7 @@ const InstantLabPage = () => {
                     value={generationFocus}
                     onChange={(e) => setGenerationFocus(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         if (
                           !(agentMode && !generationFocus.trim()) &&
@@ -713,7 +804,11 @@ const InstantLabPage = () => {
                         }
                       }
                     }}
-                    placeholder={agentMode ? "请输入您的关注点..." : "例如：关注 AI 在移动端的应用..."}
+                    placeholder={
+                      agentMode
+                        ? "请输入您的关注点..."
+                        : "例如：关注 AI 在移动端的应用..."
+                    }
                     rows={1}
                     className="flex-1 min-w-0 min-h-[2.25rem] md:min-h-10 max-h-28 py-2.5 px-3 md:px-4 bg-transparent border-none text-sm outline-none resize-none overflow-x-hidden overflow-y-auto break-words"
                   />
@@ -729,7 +824,9 @@ const InstantLabPage = () => {
                   </button>
                 </div>
                 {agentMode && !generationFocus.trim() && (
-                  <p className="text-xs text-rose-400 mt-1 ml-1">Agent Mode 下必须填写用户关注点</p>
+                  <p className="text-xs text-rose-400 mt-1 ml-1">
+                    Agent Mode 下必须填写用户关注点
+                  </p>
                 )}
               </div>
             </div>

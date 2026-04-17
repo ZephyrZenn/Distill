@@ -1,25 +1,23 @@
-import { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  Plus,
-  Trash2,
-  Edit3,
-  FolderPlus,
-} from 'lucide-react';
-import { api } from '@/api/client';
-import { queryKeys } from '@/api/queryKeys';
-import { useApiQuery } from '@/hooks/useApiQuery';
-import { useApiMutation } from '@/hooks/useApiMutation';
-import { Layout } from '@/components/Layout';
-import { Modal } from '@/components/Modal';
-import { Select } from '@/components/ui/Select';
-import type { Feed, FeedGroup } from '@/types/api';
-import { useToast } from '@/context/ToastContext';
-import { useConfirm } from '@/context/ConfirmDialogContext';
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2, Edit3, FolderPlus } from "lucide-react";
+import { api } from "@/api/client";
+import { queryKeys } from "@/api/queryKeys";
+import { useApiQuery } from "@/hooks/useApiQuery";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { Layout } from "@/components/Layout";
+import { Modal } from "@/components/Modal";
+import { Select } from "@/components/ui/Select";
+import type { Feed, FeedGroup } from "@/types/api";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmDialogContext";
 
 const GroupsPage = () => {
   const queryClient = useQueryClient();
-  const { data: groups } = useApiQuery<FeedGroup[]>(queryKeys.groups, api.getGroups);
+  const { data: groups } = useApiQuery<FeedGroup[]>(
+    queryKeys.groups,
+    api.getGroups,
+  );
   const { data: feeds } = useApiQuery<Feed[]>(queryKeys.feeds, api.getFeeds);
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -36,53 +34,62 @@ const GroupsPage = () => {
   const allFeeds = feeds ?? [];
   const allGroups = groups ?? [];
 
-  const createMutation = useApiMutation(async () => {
-    if (!editingGroup) return;
-    await api.createGroup({
-      title: editingGroup.name,
-      desc: editingGroup.description,
-      feedIds: editingGroup.sources,
-    });
-  }, {
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.groups });
-      setIsModalOpen(false);
-      showToast('分组创建成功');
+  const createMutation = useApiMutation(
+    async () => {
+      if (!editingGroup) return;
+      await api.createGroup({
+        title: editingGroup.name,
+        desc: editingGroup.description,
+        feedIds: editingGroup.sources,
+      });
     },
-    onError: (error) => {
-      showToast(error.message || '创建分组失败', { type: 'error' });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.groups });
+        setIsModalOpen(false);
+        showToast("分组创建成功");
+      },
+      onError: (error) => {
+        showToast(error.message || "创建分组失败", { type: "error" });
+      },
     },
-  });
+  );
 
-  const updateMutation = useApiMutation(async () => {
-    if (!editingGroup?.id) return;
-    await api.updateGroup(editingGroup.id, {
-      title: editingGroup.name,
-      desc: editingGroup.description,
-      feedIds: editingGroup.sources,
-    });
-  }, {
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.groups });
-      setIsModalOpen(false);
-      showToast('分组更新成功');
+  const updateMutation = useApiMutation(
+    async () => {
+      if (!editingGroup?.id) return;
+      await api.updateGroup(editingGroup.id, {
+        title: editingGroup.name,
+        desc: editingGroup.description,
+        feedIds: editingGroup.sources,
+      });
     },
-    onError: (error) => {
-      showToast(error.message || '更新分组失败', { type: 'error' });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.groups });
+        setIsModalOpen(false);
+        showToast("分组更新成功");
+      },
+      onError: (error) => {
+        showToast(error.message || "更新分组失败", { type: "error" });
+      },
     },
-  });
+  );
 
-  const deleteMutation = useApiMutation(async (groupId: number) => {
-    await api.deleteGroup(groupId);
-  }, {
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.groups });
-      showToast('分组删除成功');
+  const deleteMutation = useApiMutation(
+    async (groupId: number) => {
+      await api.deleteGroup(groupId);
     },
-    onError: (error) => {
-      showToast(error.message || '删除分组失败', { type: 'error' });
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.groups });
+        showToast("分组删除成功");
+      },
+      onError: (error) => {
+        showToast(error.message || "删除分组失败", { type: "error" });
+      },
     },
-  });
+  );
 
   const handleOpenModal = (group?: FeedGroup) => {
     if (group) {
@@ -93,7 +100,7 @@ const GroupsPage = () => {
         sources: group.feeds.map((f) => f.id),
       });
     } else {
-      setEditingGroup({ name: '', description: '', sources: [] });
+      setEditingGroup({ name: "", description: "", sources: [] });
     }
     setSelectedSourceIds([]);
     setIsModalOpen(true);
@@ -102,11 +109,11 @@ const GroupsPage = () => {
   const handleDeleteGroup = async (groupId: number) => {
     const group = allGroups.find((g) => g.id === groupId);
     const confirmed = await confirm({
-      title: '删除分组',
-      description: `确定要删除"${group?.title ?? '此分组'}"吗？此操作无法撤销。`,
-      confirmLabel: '删除',
-      cancelLabel: '取消',
-      tone: 'danger',
+      title: "删除分组",
+      description: `确定要删除"${group?.title ?? "此分组"}"吗？此操作无法撤销。`,
+      confirmLabel: "删除",
+      cancelLabel: "取消",
+      tone: "danger",
     });
     if (confirmed) {
       deleteMutation.mutate(groupId);
@@ -135,9 +142,7 @@ const GroupsPage = () => {
     const sourceIds = selectedSourceIds
       .map((id) => parseInt(id))
       .filter((id) => !Number.isNaN(id));
-    const merged = Array.from(
-      new Set([...editingGroup.sources, ...sourceIds])
-    );
+    const merged = Array.from(new Set([...editingGroup.sources, ...sourceIds]));
     setEditingGroup({
       ...editingGroup,
       sources: merged,
@@ -167,15 +172,15 @@ const GroupsPage = () => {
               <Trash2 size={18} />
             </button>
             <div className="flex-1 min-w-0 pr-4 md:pr-6 relative z-10">
-              <h3 className="text-lg md:text-xl font-display font-bold theme-text mb-3 truncate leading-tight">
+              <h3 className="type-card-title theme-text mb-3 truncate leading-tight">
                 {group.title}
               </h3>
               <p className="text-xs theme-text-muted leading-relaxed line-clamp-3 mb-4 font-body">
-                {group.desc || '暂无描述信息'}
+                {group.desc || "暂无描述信息"}
               </p>
             </div>
             <div className="mt-auto pt-5 border-t theme-border-subtle flex items-center justify-between shrink-0 relative z-10">
-              <span className="text-[10px] font-black theme-accent-text uppercase tracking-widest italic font-display">
+              <span className="type-caption theme-accent-text italic">
                 {group.feeds?.length || 0} 个订阅源
               </span>
               <button
@@ -195,9 +200,13 @@ const GroupsPage = () => {
         >
           <div className="relative">
             <div className="absolute inset-0 theme-accent-subtle rounded-full blur-xl opacity-50" />
-            <FolderPlus size={32} className="md:w-9 md:h-9 mb-3 relative" strokeWidth={1.5} />
+            <FolderPlus
+              size={32}
+              className="md:w-9 md:h-9 mb-3 relative"
+              strokeWidth={1.5}
+            />
           </div>
-          <span className="text-xs md:text-sm font-black uppercase tracking-wider font-display">新建分组</span>
+          <span className="type-label uppercase">新建分组</span>
         </button>
       </div>
 
@@ -205,35 +214,35 @@ const GroupsPage = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingGroup?.id ? '编辑分组' : '新建订阅分组'}
+        title={editingGroup?.id ? "编辑分组" : "新建订阅分组"}
         onConfirm={handleSaveGroup}
       >
         <div className="space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-[12px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
+              <label className="block text-[12px] font-semibold theme-text-muted uppercase mb-2 ml-1">
                 分组名称
               </label>
               <input
                 type="text"
-                value={editingGroup?.name || ''}
+                value={editingGroup?.name || ""}
                 onChange={(e) =>
                   setEditingGroup((prev) =>
-                    prev ? { ...prev, name: e.target.value } : null
+                    prev ? { ...prev, name: e.target.value } : null,
                   )
                 }
                 className="w-full theme-surface theme-text theme-border border rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none"
               />
             </div>
             <div>
-              <label className="block text-[12px] font-black theme-text-muted uppercase tracking-widest mb-2 ml-1">
+              <label className="block text-[12px] font-semibold theme-text-muted uppercase mb-2 ml-1">
                 描述
               </label>
               <textarea
-                value={editingGroup?.description || ''}
+                value={editingGroup?.description || ""}
                 onChange={(e) =>
                   setEditingGroup((prev) =>
-                    prev ? { ...prev, description: e.target.value } : null
+                    prev ? { ...prev, description: e.target.value } : null,
                   )
                 }
                 rows={2}
@@ -243,7 +252,7 @@ const GroupsPage = () => {
           </div>
 
           <div className="pt-4 border-t theme-border">
-            <label className="text-[12px] font-black theme-text-muted uppercase tracking-widest ml-1 mb-4 block">
+            <label className="text-[12px] font-semibold theme-text-muted uppercase ml-1 mb-4 block">
               下属源管理
             </label>
             <div className="space-y-1.5 mb-4 max-h-64 overflow-y-auto custom-scrollbar">
@@ -275,7 +284,7 @@ const GroupsPage = () => {
                   value={selectedSourceIds}
                   onChange={(value) =>
                     setSelectedSourceIds(
-                      Array.isArray(value) ? value : value ? [value] : []
+                      Array.isArray(value) ? value : value ? [value] : [],
                     )
                   }
                   multiple
@@ -283,7 +292,9 @@ const GroupsPage = () => {
                   direction="up"
                   options={[
                     ...allFeeds
-                      .filter((f) => !(editingGroup?.sources || []).includes(f.id))
+                      .filter(
+                        (f) => !(editingGroup?.sources || []).includes(f.id),
+                      )
                       .map((f) => ({
                         value: f.id.toString(),
                         label: f.title,

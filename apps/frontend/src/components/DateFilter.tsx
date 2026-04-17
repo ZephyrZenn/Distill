@@ -1,9 +1,9 @@
-import { Calendar, X } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
-import { DayPicker, DateRange } from 'react-day-picker';
-import { format, isAfter, isBefore, startOfDay, subDays } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
-import 'react-day-picker/style.css';
+import { Calendar, X } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { DayPicker, DateRange } from "react-day-picker";
+import { format, isAfter, isBefore, startOfDay, subDays } from "date-fns";
+import { zhCN } from "date-fns/locale";
+import "react-day-picker/style.css";
 
 interface DateFilterProps {
   startDate?: string;
@@ -14,15 +14,15 @@ interface DateFilterProps {
 
 const getTodayString = () => {
   const today = new Date();
-  return format(today, 'yyyy-MM-dd');
+  return format(today, "yyyy-MM-dd");
 };
 
 const parseDate = (dateStr: string): Date => {
-  return new Date(dateStr + 'T00:00:00');
+  return new Date(dateStr + "T00:00:00");
 };
 
 const formatDateString = (date: Date): string => {
-  return format(date, 'yyyy-MM-dd');
+  return format(date, "yyyy-MM-dd");
 };
 
 export const DateFilter = ({
@@ -32,7 +32,7 @@ export const DateFilter = ({
   onEndDateChange,
 }: DateFilterProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // 默认设置为今天
@@ -50,29 +50,32 @@ export const DateFilter = ({
       const start = parseDate(startDate);
       const end = parseDate(endDate);
       if (isAfter(start, end)) {
-        setError('开始日期不能晚于结束日期');
+        setError("开始日期不能晚于结束日期");
       } else {
-        setError('');
+        setError("");
       }
     } else {
-      setError('');
+      setError("");
     }
   }, [startDate, endDate]);
 
   // 点击外部关闭
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
 
@@ -88,14 +91,16 @@ export const DateFilter = ({
     }
   };
 
-  const selectedRange: DateRange | undefined = startDate && endDate ? {
-    from: parseDate(startDate),
-    to: parseDate(endDate),
-  } : undefined;
+  const selectedRange: DateRange | undefined =
+    startDate && endDate
+      ? {
+          from: parseDate(startDate),
+          to: parseDate(endDate),
+        }
+      : undefined;
 
-  const displayText = startDate && endDate 
-    ? `${startDate} → ${endDate}`
-    : '选择日期范围';
+  const displayText =
+    startDate && endDate ? `${startDate} → ${endDate}` : "选择日期范围";
 
   // 快捷选项处理函数
   const handleToday = () => {
@@ -114,8 +119,9 @@ export const DateFilter = ({
   };
 
   // 判断当前是否选中了"当日"
-  const isTodaySelected = startDate === getTodayString() && endDate === getTodayString();
-  
+  const isTodaySelected =
+    startDate === getTodayString() && endDate === getTodayString();
+
   // 判断当前是否选中了"最近一周"
   const isLastWeekSelected = (() => {
     if (!startDate || !endDate) return false;
@@ -129,35 +135,35 @@ export const DateFilter = ({
       <div className="flex items-center gap-6 flex-wrap">
         <div className="flex items-center gap-3 theme-accent-bg px-4 py-2 rounded-2xl border theme-border theme-on-accent">
           <Calendar size={16} className="theme-on-accent" />
-          <span className="text-[11px] font-black uppercase tracking-widest theme-on-accent">
+          <span className="text-[11px] font-semibold uppercase theme-on-accent">
             时间筛选
           </span>
         </div>
-        
+
         {/* 快捷选项按钮 */}
         <div className="flex items-center gap-2">
           <button
             onClick={handleToday}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               isTodaySelected
-                ? 'theme-primary-bg theme-on-primary shadow-md'
-                : 'theme-surface border theme-border theme-text theme-accent-text-hover'
+                ? "theme-primary-bg theme-on-primary shadow-md"
+                : "theme-surface border theme-border theme-text theme-accent-text-hover"
             }`}
           >
             当日
           </button>
           <button
             onClick={handleLastWeek}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               isLastWeekSelected
-                ? 'theme-primary-bg theme-on-primary shadow-md'
-                : 'theme-surface border theme-border theme-text theme-accent-text-hover'
+                ? "theme-primary-bg theme-on-primary shadow-md"
+                : "theme-surface border theme-border theme-text theme-accent-text-hover"
             }`}
           >
             最近一周
           </button>
         </div>
-        
+
         <div className="relative" ref={popoverRef}>
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -166,8 +172,8 @@ export const DateFilter = ({
             <Calendar size={16} className="theme-text-muted" />
             <span className="flex-1 text-left">{displayText}</span>
             {selectedRange && (
-              <X 
-                size={16} 
+              <X
+                size={16}
                 className="text-slate-400 hover:text-red-500 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -190,28 +196,35 @@ export const DateFilter = ({
                   locale={zhCN}
                   numberOfMonths={1}
                   classNames={{
-                    root: 'day-picker-custom',
-                    months: 'flex gap-4',
-                    month: 'space-y-4',
-                    month_caption: 'flex justify-center pt-1 relative items-center mb-4',
-                    caption_label: 'text-sm font-bold theme-text',
-                    nav: 'flex gap-1 absolute right-0',
-                    button_previous: 'h-7 w-7 bg-transparent theme-surface-hover rounded-lg transition-colors',
-                    button_next: 'h-7 w-7 bg-transparent theme-surface-hover rounded-lg transition-colors',
-                    month_grid: 'border-collapse',
-                    weekdays: 'flex',
-                    weekday: 'theme-text-muted rounded-lg w-9 font-bold text-[10px] uppercase tracking-widest',
-                    week: 'flex w-full mt-2',
-                    day: 'h-9 w-9 text-center text-sm p-0 relative rounded-lg theme-surface-hover transition-colors',
-                    day_button: 'h-9 w-9 p-0 font-medium rounded-lg theme-text transition-all',
-                    selected: 'theme-primary-bg theme-on-primary theme-btn-primary font-bold',
-                    range_start: 'theme-primary-bg theme-on-primary',
-                    range_end: 'theme-primary-bg theme-on-primary',
-                    range_middle: 'theme-accent-bg theme-accent-text',
-                    today: 'theme-border border font-bold',
-                    disabled: 'theme-text-muted opacity-50 cursor-not-allowed hover:bg-transparent',
-                    outside: 'theme-text-muted',
-                    hidden: 'invisible',
+                    root: "day-picker-custom",
+                    months: "flex gap-4",
+                    month: "space-y-4",
+                    month_caption:
+                      "flex justify-center pt-1 relative items-center mb-4",
+                    caption_label: "text-sm font-semibold theme-text",
+                    nav: "flex gap-1 absolute right-0",
+                    button_previous:
+                      "h-7 w-7 bg-transparent theme-surface-hover rounded-lg transition-colors",
+                    button_next:
+                      "h-7 w-7 bg-transparent theme-surface-hover rounded-lg transition-colors",
+                    month_grid: "border-collapse",
+                    weekdays: "flex",
+                    weekday:
+                      "theme-text-muted rounded-lg w-9 font-semibold text-[10px] uppercase ",
+                    week: "flex w-full mt-2",
+                    day: "h-9 w-9 text-center text-sm p-0 relative rounded-lg theme-surface-hover transition-colors",
+                    day_button:
+                      "h-9 w-9 p-0 font-medium rounded-lg theme-text transition-all",
+                    selected:
+                      "theme-primary-bg theme-on-primary theme-btn-primary font-semibold",
+                    range_start: "theme-primary-bg theme-on-primary",
+                    range_end: "theme-primary-bg theme-on-primary",
+                    range_middle: "theme-accent-bg theme-accent-text",
+                    today: "theme-border border font-semibold",
+                    disabled:
+                      "theme-text-muted opacity-50 cursor-not-allowed hover:bg-transparent",
+                    outside: "theme-text-muted",
+                    hidden: "invisible",
                   }}
                 />
               </div>
@@ -219,10 +232,10 @@ export const DateFilter = ({
           )}
         </div>
       </div>
-      
+
       {error && (
         <div className="flex items-center gap-2 ml-32 px-4 py-2 bg-red-50 border border-red-100 rounded-xl">
-          <span className="text-xs font-bold text-red-600">⚠️ {error}</span>
+          <span className="text-xs font-semibold text-red-600">⚠️ {error}</span>
         </div>
       )}
     </div>

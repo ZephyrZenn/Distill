@@ -1,7 +1,7 @@
-import type { FC } from 'react';
-import { Check, AlertCircle, X, type LucideIcon } from 'lucide-react';
+import type { FC } from "react";
+import { Check, AlertCircle, X, type LucideIcon } from "lucide-react";
 
-export type ToastType = 'success' | 'error';
+export type ToastType = "success" | "error";
 
 export type ToastItem = {
   id: number;
@@ -19,7 +19,10 @@ const IconForType: Record<ToastType, LucideIcon> = {
   error: AlertCircle,
 };
 
-export const ToastContainer: FC<ToastContainerProps> = ({ toasts, onDismiss }) => {
+export const ToastContainer: FC<ToastContainerProps> = ({
+  toasts,
+  onDismiss,
+}) => {
   if (toasts.length === 0) {
     return null;
   }
@@ -28,15 +31,13 @@ export const ToastContainer: FC<ToastContainerProps> = ({ toasts, onDismiss }) =
     <div className="fixed bottom-8 right-8 z-[200] space-y-3">
       {toasts.map((toast) => {
         const Icon = IconForType[toast.type];
-        const isSuccess = toast.type === 'success';
-        
+        const isSuccess = toast.type === "success";
+
         return (
           <div
             key={toast.id}
             className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-xl animate-in slide-in-from-bottom-4 duration-300 ${
-              isSuccess
-                ? 'bg-emerald-500 text-white'
-                : 'bg-rose-500 text-white'
+              isSuccess ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
             }`}
             role="status"
           >

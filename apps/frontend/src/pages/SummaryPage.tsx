@@ -372,7 +372,7 @@ const SummaryPage = () => {
                       </span>
                     )}
                   </div>
-                  <div className="mt-2 text-xs theme-text-muted font-mono-custom">
+                  <div className="mt-2 text-xs theme-text-muted type-mono">
                     {formatDate(selectedBrief.pubDate)}
                   </div>
                 </div>
@@ -567,7 +567,7 @@ const SummaryPage = () => {
                 <div className="w-full md:w-72 border-t md:border-t-0 md:border-l theme-border theme-surface shrink-0 max-h-[40vh] md:max-h-none opacity-95 backdrop-blur-sm">
                   <div className="sticky top-0 p-4 md:p-5 max-h-full overflow-y-auto custom-scrollbar">
                     <div className="flex items-center justify-between gap-3 mb-4">
-                      <h3 className="text-xs font-bold theme-text uppercase tracking-wider flex items-center gap-2">
+                      <h3 className="text-xs font-semibold theme-text uppercase flex items-center gap-2">
                         <List size={14} />
                         文章大纲
                       </h3>
@@ -585,7 +585,7 @@ const SummaryPage = () => {
                           href={`#${heading.id}`}
                           className={`block py-1.5 px-2 rounded-md text-xs leading-relaxed transition-colors theme-surface-hover line-clamp-2 ${
                             heading.level === 1
-                              ? "font-bold theme-text"
+                              ? "font-semibold theme-text"
                               : heading.level === 2
                                 ? "font-semibold theme-text ml-2"
                                 : "theme-text-muted ml-4"
@@ -678,7 +678,7 @@ const SummaryPage = () => {
                   />
                 </div>
               </div>
-              <h2 className="text-2xl md:text-3xl font-black theme-text mb-3 px-4">
+              <h2 className="text-2xl md:text-3xl font-semibold theme-text mb-3 px-4">
                 {emptyMessage}
               </h2>
               <p className="theme-text-muted max-w-md leading-relaxed px-4 text-sm md:text-base">
@@ -732,10 +732,10 @@ const SummaryPage = () => {
                   <div className="relative z-10 flex flex-col h-full">
                     {/* 标题行：分组 + 日期 */}
                     <div className="flex justify-between items-center mb-4 text-xs font-semibold theme-text-muted">
-                      <span className="truncate font-display tracking-wide uppercase">
+                      <span className="truncate type-label uppercase">
                         {groupTitle}
                       </span>
-                      <span className="text-[11px] shrink-0 ml-2 font-mono-custom">
+                      <span className="text-[11px] shrink-0 ml-2 type-mono">
                         {formatDate(brief.pubDate)}
                       </span>
                     </div>
