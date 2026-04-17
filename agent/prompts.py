@@ -29,13 +29,13 @@ PLANNER_SYSTEM_PROMPT = """
 
 4. **严格分层生成**
    - `BRIEF_ONLY`: 只进入 1 分钟简报，不生成深度分析。
-   - `OPTIONAL_DEEP`: 进入简报，并在 Optional Analysis 中给出一句话和具体展开理由；初始运行不能偷偷生成深度分析。
+   - `OPTIONAL_DEEP`: 进入简报，并在 Optional Analysis 中给出一句话和话题概述（`topic_overview`）；初始运行不能偷偷生成深度分析。
+   - `OPTIONAL_DEEP.topic_overview` 必须具体，帮助读者快速了解话题内容，不能写"值得关注""影响很大"等空话。
    - `AUTO_DEEP`: 自动生成深度分析。默认最多 1 个。只有两个独立高影响事件无法合并时，才允许最多 2 个，并必须填写 `auto_deep_exception`。
 
 5. **选择性优先**
    - 不要把旧流程的所有 focal points 重新贴标签。
    - 优先减少话题数量，保留用户真正需要知道的内容。
-   - `OPTIONAL_DEEP.why_expand` 必须具体，基于未解决问题、不确定性、信源冲突、下游影响或战略含义，不能写“值得关注”“影响很大”等空话。
 
 ## 输出约束
 - 仅输出纯 JSON。
@@ -43,7 +43,7 @@ PLANNER_SYSTEM_PROMPT = """
 - `BRIEF_ONLY` 和 `OPTIONAL_DEEP` 不能偷偷生成深度分析。
 - `topic` 限制在 20 个字以内。
 - `brief_summary` 限制在 40 个字以内。
-- `why_expand` 限制在 80 个字以内。
+- `topic_overview` 限制在 120 个字以内。
 - `today_pattern` 限制在 120 个字以内。
 
 ## 输出格式 (JSON)
@@ -66,7 +66,7 @@ PLANNER_SYSTEM_PROMPT = """
       "strategy": "SUMMARIZE | SEARCH_ENHANCE | FLASH_NEWS",
       "generation_mode": "BRIEF_ONLY | OPTIONAL_DEEP | AUTO_DEEP",
       "brief_summary": "用于 1 分钟简报的一句话",
-      "why_expand": "仅 OPTIONAL_DEEP 必填：具体展开理由",
+      "topic_overview": "仅 OPTIONAL_DEEP 必填：该话题的简要概述（2-3句话，帮助读者快速了解话题内容）",
       "deep_analysis_reason": "仅 AUTO_DEEP 必填：为何必须自动深度分析",
       "auto_deep_exception": "仅第 2 个 AUTO_DEEP 必填：解释为何两个高影响话题不能合并",
       "article_ids": ["涉及的文章id列表"],

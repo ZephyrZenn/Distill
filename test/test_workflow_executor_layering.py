@@ -31,7 +31,7 @@ def _point(topic: str, priority: int, generation_mode: str, strategy: str = "SUM
         "history_memory_id": [],
         "generation_mode": generation_mode,
         "brief_summary": f"{topic} happened.",
-        "why_expand": "Unresolved downstream impact affects roadmap decisions.",
+        "topic_overview": "Downstream roadmap impact remains unresolved across key planning cycles.",
         "deep_analysis_reason": "Major strategic impact.",
     }
 
@@ -80,8 +80,7 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
             self.assertEqual(deep_point["generation_mode"], "AUTO_DEEP")
             self.assertNotIn("## Deep Analysis", results[0][0])
             self.assertIn("Deep analysis.", results[0][0])
-            self.assertIn("## Optional（可展开分析）", results[0][0])
-            self.assertIn("Optional happened.", results[0][0])
+            self.assertIn("## Optional\nOptional happened.", results[0][0])
 
         asyncio.run(_run_test())
 
@@ -123,7 +122,7 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
             write_primary_brief_mock.assert_awaited_once_with(client, state["plan"])
             executor.handle_summarize.assert_not_called()
             self.assertNotIn("## Optional Analysis", results[0][0])
-            self.assertIn("## Optional（可展开分析）", results[0][0])
+            self.assertIn("## Optional\nOptional happened.", results[0][0])
 
         asyncio.run(_run_test())
 

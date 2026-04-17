@@ -22,7 +22,7 @@ def _expandable_topic(strategy: str = "SUMMARIZE"):
             "history_memory_id": [],
             "generation_mode": "OPTIONAL_DEEP",
             "brief_summary": "AI pricing changed.",
-            "why_expand": "Unresolved budget impact affects roadmap decisions.",
+            "topic_overview": "Enterprise budget planning faces uncertainty from unresolved AI pricing changes.",
         },
     }
 

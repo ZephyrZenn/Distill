@@ -14,7 +14,7 @@ class OptionalExpansionPersistenceTest(unittest.TestCase):
             {
                 "topic_id": "1-ai-pricing",
                 "topic": "AI Pricing",
-                "why_expand": "Unresolved budget impact affects roadmap decisions.",
+                "topic_overview": "Enterprise budget planning faces uncertainty from unresolved AI pricing changes.",
                 "strategy": "SUMMARIZE",
                 "search_query": "",
                 "history_memory_id": [],

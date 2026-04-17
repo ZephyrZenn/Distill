@@ -57,7 +57,7 @@ class FocalPoint(TypedDict):
     history_memory_id: list[int]
     generation_mode: NotRequired[GenerationMode]
     brief_summary: NotRequired[str]
-    why_expand: NotRequired[str]
+    topic_overview: NotRequired[str]
     deep_analysis_reason: NotRequired[str]
     auto_deep_exception: NotRequired[str]
 

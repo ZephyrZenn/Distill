@@ -12,7 +12,7 @@ def _point(topic: str, priority: int, generation_mode: str):
         "strategy": "SUMMARIZE",
         "generation_mode": generation_mode,
         "brief_summary": f"{topic} happened.",
-        "why_expand": "Unresolved downstream impact affects budget planning.",
+        "topic_overview": "Downstream budget impact remains uncertain across enterprise planning cycles.",
         "article_ids": [str(priority)],
         "reasoning": "Strategic implication remains unresolved.",
         "search_query": "",
@@ -44,7 +44,7 @@ class ExpandableTopicsTest(unittest.TestCase):
         topic = topics[0]
         self.assertEqual(topic["focal_point"]["topic"], "Optional Topic")
         self.assertEqual(topic["topic_id"], "2-optional-topic")
-        self.assertEqual(topic["focal_point"]["why_expand"], "Unresolved downstream impact affects budget planning.")
+        self.assertEqual(topic["focal_point"]["topic_overview"], "Downstream budget impact remains uncertain across enterprise planning cycles.")
         self.assertEqual(topic["focal_point"]["generation_mode"], "OPTIONAL_DEEP")
         self.assertNotIn("articles", topic)
 
@@ -72,7 +72,7 @@ class ExpandableTopicsTest(unittest.TestCase):
             ],
             "discarded_items": [],
         }
-        plan["focal_points"][0]["why_expand"] = "Worth watching."
+        plan["focal_points"][0]["topic_overview"] = "Worth watching."
 
         topics = build_expandable_topics(plan)
 
@@ -104,7 +104,7 @@ class ExpandableTopicsTest(unittest.TestCase):
                     **_point("Platform Pricing", 6, "OPTIONAL_DEEP"),
                     "article_ids": ["1", "2", "3"],
                     "reasoning": "Pricing and platform changes overlap.",
-                    "why_expand": "Unresolved pricing and platform impact affects budget planning.",
+                    "topic_overview": "Platform pricing shifts create downstream uncertainty for enterprise budget allocation.",
                 },
             ],
             "discarded_items": [],

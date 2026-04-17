@@ -11,41 +11,6 @@ OPTIONAL_DEEP: GenerationMode = "OPTIONAL_DEEP"
 AUTO_DEEP: GenerationMode = "AUTO_DEEP"
 
 _VALID_GENERATION_MODES = {BRIEF_ONLY, OPTIONAL_DEEP, AUTO_DEEP}
-_VAGUE_REASONS = {
-    "important topic",
-    "worth watching",
-    "has impact",
-    "值得关注",
-    "很重要",
-    "影响很大",
-}
-_CONCRETE_MARKERS = (
-    "uncertainty",
-    "uncertain",
-    "unresolved",
-    "conflict",
-    "conflicting",
-    "timing",
-    "downstream",
-    "strategic",
-    "impact",
-    "budget",
-    "cost",
-    "risk",
-    "roadmap",
-    "不确定",
-    "未解决",
-    "冲突",
-    "时机",
-    "时间",
-    "下游",
-    "战略",
-    "影响",
-    "预算",
-    "成本",
-    "风险",
-    "路线图",
-)
 _MODE_RANK = {BRIEF_ONLY: 0, OPTIONAL_DEEP: 1, AUTO_DEEP: 2}
 _OVERLAP_STOP_WORDS = {
     "the",
@@ -111,18 +76,18 @@ def normalize_plan_layers(plan: AgentPlanResult) -> AgentPlanResult:
             ):
                 auto_deep_count += 1
             else:
-                why_expand = _concrete_auto_demotion_reason(point)
-                if why_expand:
+                overview = _fallback_overview(point)
+                if overview:
                     point["generation_mode"] = OPTIONAL_DEEP
-                    point["why_expand"] = why_expand
+                    point["topic_overview"] = overview
                 else:
                     point["generation_mode"] = BRIEF_ONLY
-                    point["why_expand"] = ""
+                    point["topic_overview"] = ""
 
         if point["generation_mode"] == OPTIONAL_DEEP:
-            if not _is_concrete_why_expand(_optional_text(point, "why_expand")):
+            if not _is_substantive_overview(_optional_text(point, "topic_overview")):
                 point["generation_mode"] = BRIEF_ONLY
-                point["why_expand"] = ""
+                point["topic_overview"] = ""
 
     return normalized
 
@@ -168,7 +133,7 @@ def _merge_point(target: FocalPoint, source: FocalPoint) -> None:
     if _MODE_RANK[source_mode] > _MODE_RANK[target_mode]:
         target["generation_mode"] = source_mode
 
-    for field in ("why_expand", "deep_analysis_reason", "auto_deep_exception"):
+    for field in ("topic_overview", "deep_analysis_reason", "auto_deep_exception"):
         if not _optional_text(target, field) and _optional_text(source, field):
             target[field] = source[field]
 
@@ -285,11 +250,11 @@ def build_optional_analysis_section(points: list[FocalPoint]) -> str:
     for point in points:
         topic = _optional_text(point, "topic") or "Optional Topic"
         brief_summary = _optional_text(point, "brief_summary") or point["topic"]
-        why_expand = _optional_text(point, "why_expand")
+        topic_overview = _optional_text(point, "topic_overview")
         lines.append(f"## {topic}")
         lines.append(brief_summary)
-        if why_expand:
-            lines.append(f"\nWhy expand: {why_expand}")
+        if topic_overview:
+            lines.append(f"\n{topic_overview}")
     return "\n".join(lines)
 
 
@@ -352,13 +317,16 @@ def _validate_priority(priority: object, index: int) -> int:
     return priority
 
 
-def _concrete_auto_demotion_reason(point: FocalPoint) -> str:
-    for reason in (
+def _fallback_overview(point: FocalPoint) -> str:
+    overview = _optional_text(point, "topic_overview")
+    if _is_substantive_overview(overview):
+        return overview
+    for text in (
         _optional_text(point, "deep_analysis_reason"),
         _optional_text(point, "reasoning"),
     ):
-        if _is_concrete_why_expand(reason):
-            return reason
+        if _is_substantive_overview(text):
+            return text
     return ""
 
 
@@ -369,17 +337,8 @@ def _optional_text(point: FocalPoint, field: str) -> str:
     return ""
 
 
-def _is_concrete_why_expand(reason: object) -> bool:
-    if not isinstance(reason, str):
+def _is_substantive_overview(text: object) -> bool:
+    if not isinstance(text, str):
         return False
-
-    text = reason.strip()
-    if not text or len(text) < 20:
-        return False
-
-    lowered = text.lower()
-    normalized = lowered.strip(" .。!！,，")
-    if normalized in _VAGUE_REASONS:
-        return False
-
-    return any(marker in lowered for marker in _CONCRETE_MARKERS)
+    stripped = text.strip()
+    return len(stripped) >= 20
