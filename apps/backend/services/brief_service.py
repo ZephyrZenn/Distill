@@ -48,8 +48,9 @@ def _replace_reference(brief_id: int, content: str) -> str:
     """
 
     # --- 1. 提取所有引用并分类 ---
-    # 匹配格式: [type:id]
-    ref_pattern = r"\[(rss|ext|memory):([^\]]+)\]"
+    # 匹配格式: [type:id] 或 `[type:id]`（被反引号包裹）
+    # 允许可选反引号，避免 LLM 把引用写成 inline code 时无法替换
+    ref_pattern = r"`?\[(rss|ext|memory):([^\]]+)\]`?"
     found_refs = re.findall(ref_pattern, content)
     if not found_refs:
         return content
