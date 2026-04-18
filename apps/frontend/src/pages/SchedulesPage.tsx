@@ -258,7 +258,7 @@ const SchedulesPage = () => {
                       {task.autoExpand && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
                           <Sparkles size={11} />
-                          自动扩写
+                          自动分析
                         </span>
                       )}
                     </div>

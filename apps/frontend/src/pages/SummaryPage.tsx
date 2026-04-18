@@ -444,28 +444,31 @@ const SummaryPage = () => {
                         }
 
                         return (
-                          <div className="summary-reader-heading-action">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                              <h2 id={id} {...props} />
-                              <div className="relative group/expand self-start shrink-0 sm:mt-8">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleExpandTopic(expandableTopic.topicId)
-                                  }
-                                  aria-label={`生成「${expandableTopic.topic}」的深度分析`}
-                                  className="p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors"
-                                >
-                                  <Sparkles size={16} />
-                                </button>
-                                <div className="pointer-events-none absolute right-0 top-full mt-1 z-50 w-56 rounded-lg border theme-border theme-surface shadow-lg px-3 py-2 text-xs theme-text leading-relaxed opacity-0 group-hover/expand:opacity-100 transition-opacity duration-150">
-                                  <p className="font-semibold theme-accent-text mb-1">
-                                    深度分析可用
-                                  </p>
-                                  <p className="theme-text-muted">
-                                    {`点击生成「${expandableTopic.topic}」的完整深度分析，内容将直接更新到文章中。`}
-                                  </p>
-                                </div>
+                          <div className="summary-reader-heading-action flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                            <h2 id={id} {...props} />
+                            <div className="relative group/expand shrink-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleExpandTopic(expandableTopic.topicId)
+                                }
+                                aria-label={`生成「${expandableTopic.topic}」的深度分析`}
+                                className="summary-reader-expand-pill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-interactive)]"
+                              >
+                                <Sparkles
+                                  size={14}
+                                  strokeWidth={2}
+                                  className="summary-reader-expand-pill-icon shrink-0"
+                                />
+                                <span>分析</span>
+                              </button>
+                              <div className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-56 rounded-lg border theme-border theme-surface shadow-lg px-3 py-2 text-xs theme-text leading-relaxed opacity-0 group-hover/expand:opacity-100 transition-opacity duration-150">
+                                <p className="font-semibold theme-accent-text mb-1">
+                                  深度分析可用
+                                </p>
+                                <p className="theme-text-muted">
+                                  {`点击生成「${expandableTopic.topic}」的完整深度分析，内容将直接更新到文章中。`}
+                                </p>
                               </div>
                             </div>
                           </div>
