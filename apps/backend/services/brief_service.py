@@ -403,7 +403,7 @@ def _patch_brief_expansion(
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT content, expandable_topics, ext_info FROM feed_brief WHERE id = %s",
+                "SELECT content, expandable_topics, ext_info FROM feed_brief WHERE id = %s FOR UPDATE",
                 (brief_id,),
             )
             row = cur.fetchone()
@@ -422,31 +422,29 @@ def _patch_brief_expansion(
             else:
                 prior_ext = []
 
-    topic_entry = next(
-        (t for t in expandable_topics if t.get("topic_id") == topic_id), None
-    )
-    topic_name = topic_entry["focal_point"]["topic"] if topic_entry else None
+        topic_entry = next(
+            (t for t in expandable_topics if t.get("topic_id") == topic_id), None
+        )
+        topic_name = topic_entry["focal_point"]["topic"] if topic_entry else None
 
-    if topic_name:
-        # Match the heading with optional （可展开分析） suffix
-        heading_pattern = rf"## {re.escape(topic_name)}（可展开分析）|## {re.escape(topic_name)}"
-        pattern = rf"(?:{heading_pattern})\n(.*?)(?=\n## |\Z)"
-        replacement = new_section + "\n"
-        new_content, n = re.subn(pattern, replacement, content, flags=re.DOTALL)
-        if n == 0:
+        if topic_name:
+            heading_pattern = rf"## {re.escape(topic_name)}（可展开分析）|## {re.escape(topic_name)}"
+            pattern = rf"(?:{heading_pattern})\n(.*?)(?=\n## |\Z)"
+            replacement = new_section + "\n"
+            new_content, n = re.subn(pattern, replacement, content, flags=re.DOTALL)
+            if n == 0:
+                new_content = content.rstrip() + "\n\n" + new_section
+        else:
             new_content = content.rstrip() + "\n\n" + new_section
-    else:
-        new_content = content.rstrip() + "\n\n" + new_section
 
-    new_expandable = [t for t in expandable_topics if t.get("topic_id") != topic_id]
+        new_expandable = [t for t in expandable_topics if t.get("topic_id") != topic_id]
 
-    merged_ext = (
-        _merge_ext_info_for_brief(prior_ext, extra_ext_info)
-        if extra_ext_info
-        else prior_ext
-    )
+        merged_ext = (
+            _merge_ext_info_for_brief(prior_ext, extra_ext_info)
+            if extra_ext_info
+            else prior_ext
+        )
 
-    with get_connection() as conn:
         with conn.cursor() as cur:
             if extra_ext_info:
                 cur.execute(

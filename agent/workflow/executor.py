@@ -33,6 +33,31 @@ from core.models.search import SearchResult
 logger = logging.getLogger(__name__)
 
 
+def _ext_info_dedupe_key(item: dict) -> str:
+    title = str(item.get("title") or "").strip()
+    url = str(item.get("url") or "").strip()
+    return (url or f"title::{title}").lower()
+
+
+def _append_ext_info_deduped(state: AgentState, new_results: list[SearchResult]) -> None:
+    """将搜索结果并入 state['ext_info']，与已有条目按 URL / 标题去重（多 focal SEARCH_ENHANCE 时避免重复）。"""
+    if "ext_info" not in state:
+        state["ext_info"] = []
+    seen = {
+        _ext_info_dedupe_key(x)
+        for x in state["ext_info"]
+        if isinstance(x, dict)
+    }
+    for r in new_results:
+        if not isinstance(r, dict):
+            continue
+        key = _ext_info_dedupe_key(r)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        state["ext_info"].append(r)
+
+
 class AgentExecutor:
     def __init__(self, client: LLMClient, max_retries: int = 3):
         self.client = client
@@ -163,10 +188,8 @@ class AgentExecutor:
             success = len(search_results)
             failed = total - success
             log_step(state, f"📊 抓取统计: 成功 {success}/{total}, 失败 {failed} 条")
-            # 收集外部搜索结果到 state
-            if "ext_info" not in state:
-                state["ext_info"] = []
-            state["ext_info"].extend(search_results)
+            # 收集外部搜索结果到 state（与已有 ext_info 去重）
+            _append_ext_info_deduped(state, search_results)
         else:
             log_step(state, "   ↳ 搜索引擎不可用，跳过搜索扩展")
             search_results = []

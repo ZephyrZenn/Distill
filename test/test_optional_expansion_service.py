@@ -34,6 +34,9 @@ class PatchBriefExpansionTest(unittest.TestCase):
         cursor.fetchone.return_value = (content, json.dumps(expandable_topics), ext_blob)
         conn = MagicMock()
         conn.__enter__.return_value.cursor.return_value.__enter__.return_value = cursor
+        # Reuse the same cursor for both with-blocks inside the single connection
+        conn.__enter__.return_value.cursor.__iter__ = lambda self: iter([MagicMock(__enter__=MagicMock(return_value=cursor))])
+        conn.__enter__.return_value.cursor.__next__ = MagicMock(side_effect=StopIteration)
         return conn, cursor
 
     def test_replaces_section_under_matching_heading(self):
