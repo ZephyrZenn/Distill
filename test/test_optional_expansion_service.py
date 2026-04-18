@@ -28,9 +28,10 @@ def _expandable_topic(strategy: str = "SUMMARIZE"):
 
 
 class PatchBriefExpansionTest(unittest.TestCase):
-    def _make_conn(self, content, expandable_topics):
+    def _make_conn(self, content, expandable_topics, ext_info=None):
         cursor = MagicMock()
-        cursor.fetchone.return_value = (content, json.dumps(expandable_topics))
+        ext_blob = json.dumps(ext_info if ext_info is not None else [])
+        cursor.fetchone.return_value = (content, json.dumps(expandable_topics), ext_blob)
         conn = MagicMock()
         conn.__enter__.return_value.cursor.return_value.__enter__.return_value = cursor
         return conn, cursor
@@ -90,6 +91,30 @@ class PatchBriefExpansionTest(unittest.TestCase):
         self.assertNotIn("可展开分析", new_content)
         self.assertIn("## Other Topic", new_content)
 
+    def test_merges_ext_info_when_extra_provided(self):
+        content = "## AI Pricing\n\nOld."
+        expandable_topics = [_expandable_topic()]
+        prior = [{"title": "Existing", "url": "https://a.example", "content": "c", "score": 0.5}]
+        conn, cursor = self._make_conn(content, expandable_topics, ext_info=prior)
+        extra = [
+            {
+                "title": "New Hit",
+                "url": "https://b.example",
+                "content": "body",
+                "score": 0.9,
+            }
+        ]
+
+        with patch("apps.backend.services.brief_service.get_connection", return_value=conn):
+            _patch_brief_expansion(12, "1-ai-pricing", "## AI Pricing\n\nNew.", extra_ext_info=extra)
+
+        update_call = cursor.execute.call_args_list[-1]
+        self.assertIn("ext_info", update_call.args[0])
+        merged = json.loads(update_call.args[1][2])
+        self.assertEqual(len(merged), 2)
+        self.assertEqual(merged[0]["title"], "Existing")
+        self.assertEqual(merged[1]["title"], "New Hit")
+
 
 class ExpandOptionalTopicTest(unittest.TestCase):
     def test_fetches_articles_and_patches_brief(self):
@@ -107,7 +132,12 @@ class ExpandOptionalTopicTest(unittest.TestCase):
 
             fetch.assert_awaited_once_with(["1"])
             writer.assert_awaited_once()
-            patch_fn.assert_called_once_with(12, "1-ai-pricing", "## AI Pricing\n\nDeep analysis.")
+            patch_fn.assert_called_once_with(
+                12,
+                "1-ai-pricing",
+                "## AI Pricing\n\nDeep analysis.",
+                extra_ext_info=None,
+            )
 
         asyncio.run(_run())
 

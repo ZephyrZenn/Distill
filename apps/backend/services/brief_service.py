@@ -358,12 +358,52 @@ def _insert_brief(
             return cur.fetchone()[0]
 
 
-def _patch_brief_expansion(brief_id: int, topic_id: str, new_section: str) -> None:
-    """Replace the section under the matching ## heading and remove topic from expandable_topics."""
+def _merge_ext_info_for_brief(
+    existing: list | None, incoming: list | None
+) -> list[dict]:
+    """合并扩写等流程产生的外部素材；先保留已有顺序，再追加 incoming，按 URL/标题去重。"""
+    out: list[dict] = []
+    seen: set[str] = set()
+    for bucket in (existing or [], incoming or []):
+        for item in bucket:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or "").strip()
+            url = str(item.get("url") or "").strip()
+            content = str(item.get("content") or "").strip()
+            try:
+                score = float(item.get("score", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                score = 0.0
+            dedupe_key = (url or f"title::{title}").lower()
+            if not dedupe_key or dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            out.append(
+                {
+                    "title": title,
+                    "url": url,
+                    "content": content,
+                    "score": score,
+                }
+            )
+    return out
+
+
+def _patch_brief_expansion(
+    brief_id: int,
+    topic_id: str,
+    new_section: str,
+    extra_ext_info: list | None = None,
+) -> None:
+    """Replace the section under the matching ## heading and remove topic from expandable_topics.
+
+    若提供 extra_ext_info（通常为扩写 SEARCH_ENHANCE 后 state 中的条目），会与当前行的 ext_info 合并去重后写回。
+    """
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT content, expandable_topics FROM feed_brief WHERE id = %s",
+                "SELECT content, expandable_topics, ext_info FROM feed_brief WHERE id = %s",
                 (brief_id,),
             )
             row = cur.fetchone()
@@ -371,6 +411,16 @@ def _patch_brief_expansion(brief_id: int, topic_id: str, new_section: str) -> No
                 return
             content: str = row[0] or ""
             expandable_topics: list[dict] = json.loads(row[1]) if isinstance(row[1], str) else (row[1] if row[1] else [])
+            if len(row) >= 3:
+                raw_ext = row[2]
+                if isinstance(raw_ext, str):
+                    prior_ext: list = json.loads(raw_ext) if raw_ext else []
+                elif raw_ext is None:
+                    prior_ext = []
+                else:
+                    prior_ext = list(raw_ext) if isinstance(raw_ext, list) else []
+            else:
+                prior_ext = []
 
     topic_entry = next(
         (t for t in expandable_topics if t.get("topic_id") == topic_id), None
@@ -390,12 +440,29 @@ def _patch_brief_expansion(brief_id: int, topic_id: str, new_section: str) -> No
 
     new_expandable = [t for t in expandable_topics if t.get("topic_id") != topic_id]
 
+    merged_ext = (
+        _merge_ext_info_for_brief(prior_ext, extra_ext_info)
+        if extra_ext_info
+        else prior_ext
+    )
+
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "UPDATE feed_brief SET content = %s, expandable_topics = %s::jsonb WHERE id = %s",
-                (new_content, json.dumps(new_expandable), brief_id),
-            )
+            if extra_ext_info:
+                cur.execute(
+                    """UPDATE feed_brief SET content = %s, expandable_topics = %s::jsonb, ext_info = %s::jsonb WHERE id = %s""",
+                    (
+                        new_content,
+                        json.dumps(new_expandable),
+                        json.dumps(merged_ext),
+                        brief_id,
+                    ),
+                )
+            else:
+                cur.execute(
+                    "UPDATE feed_brief SET content = %s, expandable_topics = %s::jsonb WHERE id = %s",
+                    (new_content, json.dumps(new_expandable), brief_id),
+                )
 
 
 async def expand_optional_topic(brief_id: int, topic_id: str) -> None:
@@ -429,4 +496,10 @@ async def expand_optional_topic(brief_id: int, topic_id: str) -> None:
     else:
         content = await executor.handle_flash_news(point, state)
 
-    _patch_brief_expansion(brief_id, topic_id, content)
+    expansion_ext = list(state.get("ext_info") or [])
+    _patch_brief_expansion(
+        brief_id,
+        topic_id,
+        content,
+        extra_ext_info=expansion_ext if expansion_ext else None,
+    )
