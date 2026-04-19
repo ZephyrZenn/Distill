@@ -1,6 +1,13 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Edit3, Power, Activity, Sparkles } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Edit3,
+  Power,
+  Activity,
+  Sparkles,
+} from "lucide-react";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/queryKeys";
 import { useApiQuery } from "@/hooks/useApiQuery";
@@ -10,6 +17,222 @@ import { Modal } from "@/components/Modal";
 import type { Schedule, FeedGroup } from "@/types/api";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmDialogContext";
+
+const TIME_VALUE_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+type TimePeriod = "AM" | "PM";
+
+const parseTimeValue = (value: string) => {
+  if (!TIME_VALUE_PATTERN.test(value)) {
+    return { hour: "08", minute: "00" };
+  }
+
+  const [hour, minute] = value.split(":");
+  return { hour, minute };
+};
+
+const toDisplayHour = (hour: string) => {
+  const parsed = Number.parseInt(hour, 10);
+  const normalized = parsed % 12 || 12;
+  return normalized.toString().padStart(2, "0");
+};
+
+const getTimePeriod = (hour: string): TimePeriod =>
+  Number.parseInt(hour, 10) >= 12 ? "PM" : "AM";
+
+const toStoredHour = (displayHour: string, period: TimePeriod) => {
+  const parsed = Number.parseInt(displayHour, 10);
+  const normalized = Number.isFinite(parsed)
+    ? Math.min(Math.max(parsed, 1), 12)
+    : 8;
+
+  if (period === "AM") {
+    return (normalized === 12 ? 0 : normalized).toString().padStart(2, "0");
+  }
+
+  return (normalized === 12 ? 12 : normalized + 12).toString().padStart(2, "0");
+};
+
+const clampMinute = (value: string) => {
+  const parsed = Number.parseInt(value, 10);
+  const normalized = Number.isFinite(parsed)
+    ? Math.min(Math.max(parsed, 0), 59)
+    : 0;
+
+  return normalized.toString().padStart(2, "0");
+};
+
+interface TimePickerFieldProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const TimePickerField = ({ value, onChange }: TimePickerFieldProps) => {
+  const [activePart, setActivePart] = useState<"hour" | "minute" | null>(null);
+  const [draftHour, setDraftHour] = useState(() =>
+    toDisplayHour(parseTimeValue(value).hour),
+  );
+  const [draftMinute, setDraftMinute] = useState(
+    () => parseTimeValue(value).minute,
+  );
+  const hourInputRef = useRef<HTMLInputElement>(null);
+  const minuteInputRef = useRef<HTMLInputElement>(null);
+  const selected = parseTimeValue(value);
+
+  useEffect(() => {
+    if (activePart !== "hour") {
+      setDraftHour(toDisplayHour(selected.hour));
+    }
+    if (activePart !== "minute") {
+      setDraftMinute(selected.minute);
+    }
+  }, [activePart, selected.hour, selected.minute]);
+
+  const commitTimePart = (part: "hour" | "minute", rawValue: string) => {
+    const period = getTimePeriod(selected.hour);
+    const nextHour =
+      part === "hour" ? toStoredHour(rawValue, period) : selected.hour;
+    const nextMinute =
+      part === "minute" ? clampMinute(rawValue) : selected.minute;
+    onChange(`${nextHour}:${nextMinute}`);
+
+    if (part === "hour") {
+      setDraftHour(toDisplayHour(nextHour));
+    } else {
+      setDraftMinute(nextMinute);
+    }
+  };
+
+  const handlePartChange = (part: "hour" | "minute", rawValue: string) => {
+    const nextValue = rawValue.replace(/\D/g, "").slice(0, 2);
+    const setDraft = part === "hour" ? setDraftHour : setDraftMinute;
+    setDraft(nextValue);
+
+    if (nextValue.length === 2) {
+      commitTimePart(part, nextValue);
+      if (part === "hour") {
+        minuteInputRef.current?.focus();
+        minuteInputRef.current?.select();
+      }
+    }
+  };
+
+  const stepPart = (part: "hour" | "minute", direction: 1 | -1) => {
+    const current = Number.parseInt(
+      part === "hour" ? toDisplayHour(selected.hour) : selected.minute,
+      10,
+    );
+    const min = part === "hour" ? 1 : 0;
+    const max = part === "hour" ? 12 : 59;
+    const next =
+      current === max && direction === 1
+        ? min
+        : current === min && direction === -1
+          ? max
+          : current + direction;
+    commitTimePart(part, next.toString());
+  };
+
+  const updatePeriod = (period: TimePeriod) => {
+    onChange(
+      `${toStoredHour(toDisplayHour(selected.hour), period)}:${selected.minute}`,
+    );
+  };
+
+  const handlePartKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    part: "hour" | "minute",
+  ) => {
+    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      event.preventDefault();
+      stepPart(part, event.key === "ArrowUp" ? 1 : -1);
+    }
+    if (event.key === "ArrowRight" && part === "hour") {
+      minuteInputRef.current?.focus();
+      minuteInputRef.current?.select();
+    }
+    if (event.key === "ArrowLeft" && part === "minute") {
+      hourInputRef.current?.focus();
+      hourInputRef.current?.select();
+    }
+  };
+
+  return (
+    <div className="time-input-card theme-surface theme-border border shadow-sm">
+      <div className="time-input-row" aria-label="执行时间">
+        <label
+          className={`time-input-segment ${
+            activePart === "hour" ? "is-active" : ""
+          }`}
+        >
+          <span className="time-input-segment-label">小时</span>
+          <input
+            ref={hourInputRef}
+            type="text"
+            inputMode="numeric"
+            value={draftHour}
+            onChange={(event) => handlePartChange("hour", event.target.value)}
+            onFocus={(event) => {
+              setActivePart("hour");
+              event.currentTarget.select();
+            }}
+            onBlur={(event) => {
+              commitTimePart("hour", event.currentTarget.value);
+              setActivePart((current) => (current === "hour" ? null : current));
+            }}
+            onKeyDown={(event) => handlePartKeyDown(event, "hour")}
+            className="time-input"
+            aria-label="小时"
+            maxLength={2}
+          />
+        </label>
+        <span className="time-input-separator theme-text-muted">:</span>
+        <label
+          className={`time-input-segment ${
+            activePart === "minute" ? "is-active" : ""
+          }`}
+        >
+          <span className="time-input-segment-label">分钟</span>
+          <input
+            ref={minuteInputRef}
+            type="text"
+            inputMode="numeric"
+            value={draftMinute}
+            onChange={(event) => handlePartChange("minute", event.target.value)}
+            onFocus={(event) => {
+              setActivePart("minute");
+              event.currentTarget.select();
+            }}
+            onBlur={(event) => {
+              commitTimePart("minute", event.currentTarget.value);
+              setActivePart((current) =>
+                current === "minute" ? null : current,
+              );
+            }}
+            onKeyDown={(event) => handlePartKeyDown(event, "minute")}
+            className="time-input"
+            aria-label="分钟"
+            maxLength={2}
+          />
+        </label>
+        <div className="time-period-toggle theme-border" aria-label="上下午">
+          {(["AM", "PM"] as const).map((period) => (
+            <button
+              key={period}
+              type="button"
+              onClick={() => updatePeriod(period)}
+              className={`time-period-option ${
+                getTimePeriod(selected.hour) === period ? "is-selected" : ""
+              }`}
+              aria-pressed={getTimePeriod(selected.hour) === period}
+            >
+              {period}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SchedulesPage = () => {
   const queryClient = useQueryClient();
@@ -155,6 +378,10 @@ const SchedulesPage = () => {
   const handleSaveSchedule = () => {
     if (!editingSchedule || !editingSchedule.time) {
       showToast("请输入执行时间", { type: "error" });
+      return;
+    }
+    if (!TIME_VALUE_PATTERN.test(editingSchedule.time)) {
+      showToast("请输入有效执行时间（HH:mm）", { type: "error" });
       return;
     }
     if (editingSchedule.groupIds.length === 0) {
@@ -344,15 +571,13 @@ const SchedulesPage = () => {
               <label className="block text-[10px] font-semibold theme-text-muted uppercase mb-2 ml-1">
                 执行时间
               </label>
-              <input
-                type="time"
+              <TimePickerField
                 value={editingSchedule?.time || ""}
-                onChange={(e) =>
+                onChange={(time) =>
                   setEditingSchedule((prev) =>
-                    prev ? { ...prev, time: e.target.value } : null,
+                    prev ? { ...prev, time } : null,
                   )
                 }
-                className="w-full theme-surface theme-text theme-border border rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none"
               />
             </div>
           </div>

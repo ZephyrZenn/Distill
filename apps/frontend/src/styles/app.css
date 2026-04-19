@@ -848,6 +848,138 @@
   opacity: 1;
 }
 
+/* Time input custom styles */
+.time-input-card {
+  padding: 1rem;
+  border-radius: 1rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.time-input-card:focus-within {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px var(--theme-primary-subtle);
+}
+
+.time-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.time-input-segment {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.75rem;
+  background-color: var(--theme-surface-hover);
+  cursor: text;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.time-input-segment.is-active {
+  border-color: var(--theme-primary);
+  background-color: var(--theme-primary-subtle);
+  box-shadow: inset 0 -2px 0 var(--theme-primary);
+}
+
+.time-input-segment-label {
+  color: var(--theme-text-muted);
+  font-size: 0.625rem;
+  font-weight: 700;
+}
+
+.time-input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--theme-text);
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.time-input::selection {
+  background-color: var(--theme-selection);
+}
+
+.time-input-separator {
+  align-self: center;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.time-period-toggle {
+  display: grid;
+  align-self: stretch;
+  min-width: 4rem;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.75rem;
+}
+
+.time-period-option {
+  min-height: 2.625rem;
+  padding: 0 0.875rem;
+  color: var(--theme-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.time-period-option + .time-period-option {
+  border-top: 1px solid var(--theme-border);
+}
+
+.time-period-option:hover,
+.time-period-option:focus-visible {
+  outline: none;
+  background-color: var(--theme-surface-hover);
+  color: var(--theme-text);
+}
+
+.time-period-option.is-selected {
+  background-color: var(--theme-primary);
+  color: var(--theme-on-primary);
+}
+
+.time-period-option.is-selected:hover,
+.time-period-option.is-selected:focus-visible {
+  background-color: var(--theme-primary-hover);
+  color: var(--theme-on-primary);
+}
+
+@media (max-width: 480px) {
+  .time-input-card {
+    padding: 0.875rem;
+  }
+
+  .time-input-row {
+    gap: 0.5rem;
+  }
+
+  .time-input {
+    font-size: 2rem;
+  }
+
+  .time-period-toggle {
+    min-width: 3.5rem;
+  }
+}
+
 /* ============================================
    Micro-Interactions & Hover Effects
    ============================================ */
