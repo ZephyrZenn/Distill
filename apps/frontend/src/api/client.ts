@@ -85,6 +85,8 @@ export const api = {
     }>>(`/briefs/generate/${taskId}`)),
   expandOptionalTopic: (briefId: number, topicId: string) =>
     client.post(`/briefs/${briefId}/expand/${topicId}`),
+  getExpandingTopics: (briefId: number) =>
+    unwrap<string[]>(client.get<ApiResponse<string[]>>(`/briefs/${briefId}/expanding`)),
 
   // Groups
   getGroups: () => unwrap<FeedGroup[]>(client.get<FeedGroupListResponse>('/groups/')),

@@ -73,6 +73,11 @@ async def expand_optional_topic(brief_id: int, topic_id: str):
     return {"message": "expansion started"}
 
 
+@router.get("/{brief_id}/expanding")
+async def get_expanding_topics(brief_id: int):
+    return success_with_data(brief_service.get_expanding_topic_ids(brief_id))
+
+
 @router.post("/generate", response_model=GenerateBriefResponse)
 async def generate_brief(request: GenerateBriefRequest):
     """

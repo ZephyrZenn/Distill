@@ -4,6 +4,7 @@ import { DateFilter } from "@/components/DateFilter";
 import { Layout } from "@/components/Layout";
 import { useToast } from "@/context/ToastContext";
 import { useApiQuery } from "@/hooks/useApiQuery";
+import { useQueryClient } from "@tanstack/react-query";
 import type { FeedBrief } from "@/types/api";
 import { formatDate } from "@/utils/date";
 import {
@@ -12,10 +13,11 @@ import {
   Copy,
   FileText,
   List,
+  Loader2,
   Sparkles,
   X,
 } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate, useParams } from "react-router-dom";
 import rehypeRaw from "rehype-raw";
@@ -113,6 +115,7 @@ const SummaryPage = () => {
   const { id: briefIdParam } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedBrief, setSelectedBrief] = useState<FeedBrief | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -268,6 +271,42 @@ const SummaryPage = () => {
     }
   }, [briefIdParam, navigate, showToast]);
 
+  // 轮询当前正在扩展的主题（仅在有选中简报时启用）
+  const { data: expandingTopicIds = [] } = useApiQuery<string[]>(
+    ["briefs", "expanding", selectedBrief?.id],
+    () => api.getExpandingTopics(selectedBrief!.id),
+    { enabled: !!selectedBrief?.id, refetchInterval: 3000 },
+  );
+  const expandingTopicSet = useMemo(() => new Set(expandingTopicIds), [expandingTopicIds]);
+  const prevExpandingTopicIdsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (!selectedBrief?.id) {
+      prevExpandingTopicIdsRef.current = [];
+      return;
+    }
+
+    const prevExpandingTopicIds = prevExpandingTopicIdsRef.current;
+    const completedTopicIds = prevExpandingTopicIds.filter(
+      (topicId) => !expandingTopicIds.includes(topicId),
+    );
+
+    // 发现有 topic 从「分析中」变为「已完成」后，自动刷新详情和列表。
+    if (completedTopicIds.length > 0) {
+      api
+        .getBriefDetail(selectedBrief.id)
+        .then((brief) => {
+          setSelectedBrief(brief);
+          queryClient.invalidateQueries({ queryKey: queryKeys.briefs(startDate, endDate) });
+        })
+        .catch((error: any) => {
+          console.error("Failed to refresh brief detail after topic expansion:", error);
+        });
+    }
+
+    prevExpandingTopicIdsRef.current = expandingTopicIds;
+  }, [expandingTopicIds, queryClient, selectedBrief, startDate, endDate]);
+
   // 处理简报点击，如果简报没有完整内容则加载详情
   const handleBriefClick = async (brief: FeedBrief) => {
     try {
@@ -316,6 +355,7 @@ const SummaryPage = () => {
     if (!selectedBrief?.id) return;
     try {
       await api.expandOptionalTopic(selectedBrief.id, topicId);
+      queryClient.invalidateQueries({ queryKey: ["briefs", "expanding", selectedBrief.id] });
       showToast("正在生成深度分析，完成后将自动更新");
     } catch {
       showToast("触发失败，请稍后重试");
@@ -452,15 +492,24 @@ const SummaryPage = () => {
                                 onClick={() =>
                                   handleExpandTopic(expandableTopic.topicId)
                                 }
+                                disabled={expandingTopicSet.has(expandableTopic.topicId)}
                                 aria-label={`生成「${expandableTopic.topic}」的深度分析`}
-                                className="summary-reader-expand-pill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-interactive)]"
+                                className="summary-reader-expand-pill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-interactive)] disabled:opacity-60 disabled:cursor-not-allowed"
                               >
-                                <Sparkles
-                                  size={14}
-                                  strokeWidth={2}
-                                  className="summary-reader-expand-pill-icon shrink-0"
-                                />
-                                <span>分析</span>
+                                {expandingTopicSet.has(expandableTopic.topicId) ? (
+                                  <Loader2
+                                    size={14}
+                                    strokeWidth={2}
+                                    className="shrink-0 animate-spin"
+                                  />
+                                ) : (
+                                  <Sparkles
+                                    size={14}
+                                    strokeWidth={2}
+                                    className="summary-reader-expand-pill-icon shrink-0"
+                                  />
+                                )}
+                                <span>{expandingTopicSet.has(expandableTopic.topicId) ? "分析中…" : "分析"}</span>
                               </button>
                               <div className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-56 rounded-lg border theme-border theme-surface shadow-lg px-3 py-2 text-xs theme-text leading-relaxed opacity-0 group-hover/expand:opacity-100 transition-opacity duration-150">
                                 <p className="font-semibold theme-accent-text mb-1">

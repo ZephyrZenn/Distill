@@ -10,6 +10,12 @@ from core.models.feed import FeedBrief
 
 logger = logging.getLogger(__name__)
 
+_expanding_topics: set[tuple[int, str]] = set()
+
+
+def get_expanding_topic_ids(brief_id: int) -> list[str]:
+    return [tid for bid, tid in _expanding_topics if bid == brief_id]
+
 
 def _extract_h2_headings(content: str) -> str:
     """从内容中提取所有二级标题（## 开头的行）作为概要"""
@@ -468,36 +474,45 @@ async def expand_optional_topic(brief_id: int, topic_id: str) -> None:
     from agent.workflow.executor import AgentExecutor
     from agent.workflow.expansion import build_expansion_state
 
-    brief = get_brief_by_id(brief_id)
-    if not brief:
-        raise LookupError("Brief not found")
+    key = (brief_id, topic_id)
+    if key in _expanding_topics:
+        logger.info("Skipping duplicate expansion for brief %d topic %s", brief_id, topic_id)
+        return
+    _expanding_topics.add(key)
 
-    topic = next(
-        (t for t in (brief.expandable_topics or []) if t.get("topic_id") == topic_id),
-        None,
-    )
-    if not topic:
-        raise LookupError("Expandable topic not found")
+    try:
+        brief = get_brief_by_id(brief_id)
+        if not brief:
+            raise LookupError("Brief not found")
 
-    article_ids = list(topic["focal_point"].get("article_ids", []))
-    fetched_articles = await get_article_content(article_ids)
+        topic = next(
+            (t for t in (brief.expandable_topics or []) if t.get("topic_id") == topic_id),
+            None,
+        )
+        if not topic:
+            raise LookupError("Expandable topic not found")
 
-    client = auto_build_client()
-    executor = AgentExecutor(client)
-    state = build_expansion_state(topic, fetched_articles)
-    point = state["plan"]["focal_points"][0]
+        article_ids = list(topic["focal_point"].get("article_ids", []))
+        fetched_articles = await get_article_content(article_ids)
 
-    if point["strategy"] == "SEARCH_ENHANCE":
-        content = await executor.handle_search_enhance(point, state)
-    elif point["strategy"] == "SUMMARIZE":
-        content = await executor.handle_summarize(point, state)
-    else:
-        content = await executor.handle_flash_news(point, state)
+        client = auto_build_client()
+        executor = AgentExecutor(client)
+        state = build_expansion_state(topic, fetched_articles)
+        point = state["plan"]["focal_points"][0]
 
-    expansion_ext = list(state.get("ext_info") or [])
-    _patch_brief_expansion(
-        brief_id,
-        topic_id,
-        content,
-        extra_ext_info=expansion_ext if expansion_ext else None,
-    )
+        if point["strategy"] == "SEARCH_ENHANCE":
+            content = await executor.handle_search_enhance(point, state)
+        elif point["strategy"] == "SUMMARIZE":
+            content = await executor.handle_summarize(point, state)
+        else:
+            content = await executor.handle_flash_news(point, state)
+
+        expansion_ext = list(state.get("ext_info") or [])
+        _patch_brief_expansion(
+            brief_id,
+            topic_id,
+            content,
+            extra_ext_info=expansion_ext if expansion_ext else None,
+        )
+    finally:
+        _expanding_topics.discard(key)
