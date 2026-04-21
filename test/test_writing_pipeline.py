@@ -134,13 +134,14 @@ class WritingPipelineTest(unittest.TestCase):
             structure_response = """
             {
                 "daily_overview": "2025年1月AI行业动态：OpenAI发布GPT-5预览版，DeepSeek推出低成本推理模型，Google发布Gemini 2.0支持更长上下文。",
-                "narrative_logic": "本报告从技术突破入手，分析各公司最新模型发布，然后探讨市场竞争格局的变化，最后展望行业发展趋势。",
+                "analysis_logic": "本报告从技术突破入手，分析各公司最新模型发布，然后探讨市场竞争格局的变化，最后展望行业发展趋势。",
                 "chapters": [
                     {
                         "chapter_id": "ch_001",
                         "title": "技术突破：新一代AI模型",
                         "priority": 1,
-                        "key_thesis": "2025年初，各大AI公司相继发布新一代模型，在推理能力、成本控制和上下文长度方面取得显著突破。",
+                        "chapter_goal": "2025年初，各大AI公司相继发布新一代模型，在推理能力、成本控制和上下文长度方面取得显著突破。",
+                        "certainty_level": "high",
                         "writing_guide": {
                             "tone": "客观、专业",
                             "key_points": ["GPT-5的推理能力提升", "DeepSeek的成本优化", "Gemini 2.0的长上下文"],
@@ -187,13 +188,14 @@ class WritingPipelineTest(unittest.TestCase):
             # 模拟 structure 的输出
             structure_plan: StructurePlan = {
                 "daily_overview": "2025年1月AI行业动态：各大公司发布新一代AI模型。",
-                "narrative_logic": "从技术突破到市场竞争的分析",
+                "analysis_logic": "从技术突破到市场竞争的分析",
                 "chapters": [
                     {
                         "chapter_id": "ch_001",
                         "title": "技术突破：新一代AI模型",
                         "priority": 1,
-                        "key_thesis": "各大AI公司在推理能力和成本控制方面取得突破",
+                        "chapter_goal": "各大AI公司在推理能力和成本控制方面取得突破",
+                        "certainty_level": "high",
                         "writing_guide": {
                             "tone": "客观",
                             "key_points": ["推理能力", "成本优化"],
@@ -258,7 +260,8 @@ GPT-5在复杂推理任务中表现出色，特别是在数学和编程领域...
                     "chapter_id": "ch_001",
                     "title": "技术突破：新一代AI模型",
                     "priority": 1,
-                    "key_thesis": "各大AI公司在推理能力上取得突破",
+                    "chapter_goal": "各大AI公司在推理能力上取得突破",
+                    "certainty_level": "high",
                     "writing_guide": {},
                     "referenced_doc_ids": ["item_001", "item_002"],
                     "conflict_alert": "",
@@ -270,7 +273,7 @@ GPT-5在复杂推理任务中表现出色，特别是在数学和编程领域...
 2025年初，AI行业迎来新一轮技术突破。OpenAI发布GPT-5预览版...
 """,
                 "context": WritingContext(
-                    global_outline="概览:2025年1月AI行业动态\n叙事主线:技术突破分析",
+                    global_outline="概览:2025年1月AI行业动态\n分析逻辑:技术突破分析",
                     previous_summary="",
                     section_number=1,
                 ),
@@ -338,7 +341,8 @@ GPT-5在复杂推理任务中表现出色，特别是在数学和编程领域...
                     "chapter_id": "ch_001",
                     "title": "技术突破：新一代AI模型",
                     "priority": 1,
-                    "key_thesis": "各大AI公司在推理能力上取得突破",
+                    "chapter_goal": "各大AI公司在推理能力上取得突破",
+                    "certainty_level": "high",
                     "writing_guide": {},
                     "referenced_doc_ids": ["item_001", "item_002"],
                     "conflict_alert": "",
@@ -350,7 +354,7 @@ GPT-5在复杂推理任务中表现出色，特别是在数学和编程领域...
 2025年初，AI行业迎来新一轮技术突破...
 """,
                 "context": WritingContext(
-                    global_outline="概览:2025年1月AI行业动态\n叙事主线:技术突破分析",
+                    global_outline="概览:2025年1月AI行业动态\n分析逻辑:技术突破分析",
                     previous_summary="",
                     section_number=1,
                 ),
@@ -411,13 +415,14 @@ GPT-5在复杂推理任务中表现出色，特别是在数学和编程领域...
             structure_response = """
             {
                 "daily_overview": "2025年1月AI行业动态：各大公司发布新一代AI模型。",
-                "narrative_logic": "从技术突破到市场竞争的分析",
+                "analysis_logic": "从技术突破到市场竞争的分析",
                 "chapters": [
                     {
                         "chapter_id": "ch_001",
                         "title": "技术突破：新一代AI模型",
                         "priority": 1,
-                        "key_thesis": "各大AI公司在推理能力上取得突破",
+                        "chapter_goal": "各大AI公司在推理能力上取得突破",
+                        "certainty_level": "high",
                         "writing_guide": {"tone": "客观"},
                         "referenced_doc_ids": ["item_001", "item_002"],
                         "conflict_alert": "",

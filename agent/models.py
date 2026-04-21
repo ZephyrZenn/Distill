@@ -128,7 +128,16 @@ def log_step(state: "AgentState", message: str) -> None:
 
 class AgentCriticFinding(TypedDict):
     severity: Literal["CRITICAL", "ADVISORY"]
-    type: Literal["FACT_ERROR", "MISSING_INFO", "HALLUCINATION"]
+    type: Literal[
+        "FACT_ERROR",
+        "MISSING_INFO",
+        "HALLUCINATION",
+        "INTENT_MISMATCH",
+        "LAZY_REWRITE",
+        "LOGIC_WEAKNESS",
+        "OVER_SPECULATION",
+        "REFERENCE_ERROR",
+    ]
     location: str
     correction_suggestion: str
 
