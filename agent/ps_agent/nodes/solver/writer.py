@@ -57,7 +57,7 @@ class DeepWriterNode:
             }
 
         daily_overview = plan.get("daily_overview", "")
-        narrative_logic = plan.get("narrative_logic", "")
+        analysis_logic = plan.get("analysis_logic", "")
         research_items = state.get("research_items", [])
         item_map = {item.get("id"): item for item in research_items}
         chapters = plan.get("chapters", [])
@@ -74,7 +74,7 @@ class DeepWriterNode:
                 if not item:
                     continue
                 chapter_articles[chapter.get("chapter_id")].append(item)
-        outline = f"概览:{daily_overview}\n\n叙事主线:{narrative_logic}"
+        outline = f"概览:{daily_overview}\n\n分析逻辑:{analysis_logic}"
         context = WritingContext(
             global_outline=outline,
             previous_summary="",
