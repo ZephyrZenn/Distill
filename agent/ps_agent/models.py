@@ -192,7 +192,8 @@ class StructureChapter(TypedDict):
     chapter_id: str  # 章节ID
     title: str  # 章节名称
     priority: int  # 章节优先级
-    key_thesis: str  # 本章试图证明的核心论点
+    chapter_goal: str  # 本章要回答的问题、解释的现象，或要建立的有限判断
+    certainty_level: Literal["high", "medium", "low"]  # 本章判断确定性
     writing_guide: dict  # 写作指南
     referenced_doc_ids: list[str]  # 指定该章节使用的素材ID
     conflict_alert: (
@@ -203,9 +204,7 @@ class StructureChapter(TypedDict):
 
 class StructurePlan(TypedDict):
     daily_overview: str
-    narrative_logic: (
-        str  # 简述本报告的叙事主线（例如：从供应链瓶颈推导至终端价格波动的因果链条）
-    )
+    analysis_logic: str  # 简述本报告的分析组织逻辑
     chapters: list[StructureChapter]  # 章节列表
 
 
