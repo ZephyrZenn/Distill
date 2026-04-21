@@ -277,7 +277,7 @@ CRITIC_SYSTEM_PROMPT_TEMPLATE = """
   "findings": [
     {{
       "severity": "CRITICAL | ADVISORY",
-      "type": "FACT_ERROR | INTENT_MISMATCH | LAZY_REWRITE | LOGIC_WEAKNESS | OVER_SPECULATION",
+      "type": "FACT_ERROR | INTENT_MISMATCH | LAZY_REWRITE | LOGIC_WEAKNESS | OVER_SPECULATION | REFERENCE_ERROR",
       "location": "原文位置",
       "issue": "详细描述问题点，限制30字以内",
       "correction_suggestion": "具体的修改方案，限制50字以内"
