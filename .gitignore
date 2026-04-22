@@ -37,5 +37,5 @@ dist-ssr
 **/hf_cache
 
 schedules.json
-CLAUDE.md
 docs/superpowers
+.codex
