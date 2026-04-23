@@ -7,6 +7,7 @@ from agent.models import AgentState, RawArticle, StepCallback, log_step
 from agent.tools import get_recent_group_update, save_current_execution_records
 from agent.tools.constants import DEFAULT_FEED_CANDIDATE_LIMIT
 from agent.workflow.executor import AgentExecutor
+from agent.workflow.language import detect_focus_language
 from agent.workflow.planner import AgentPlanner
 from core.llm_client import auto_build_client
 from core.models.feed import FeedGroup
@@ -112,9 +113,16 @@ class SummarizeAgenticWorkflow:
             # 返回简报内容、外部搜索结果和日报概览
             ext_info = state.get("ext_info", [])
             overview = self._extract_overview(plan)
+            target_language = str(state.get("target_language") or "zh")
             state["status"] = "COMPLETED"
             expandable_topics = state.get("expandable_topics", [])
-            return "\n\n".join(result_strings), ext_info, overview, expandable_topics
+            return (
+                "\n\n".join(result_strings),
+                ext_info,
+                overview,
+                expandable_topics,
+                target_language,
+            )
         except Exception as e:
             state["status"] = "FAILED"
             logger.exception(
@@ -140,6 +148,7 @@ class SummarizeAgenticWorkflow:
             raw_articles=articles,
             log_history=[],
             focus=focus,
+            target_language=detect_focus_language(focus),
             created_at=datetime.now(),
             status="PENDING",
         )

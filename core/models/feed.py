@@ -90,6 +90,7 @@ class FeedBrief:
         group_ids: list[int] = None,
         summary: str = "",
         overview: str = "",
+        target_language: str = "zh",
         ext_info: list[dict] = None,
         expandable_topics: list[dict] = None,
     ):
@@ -99,6 +100,7 @@ class FeedBrief:
         self.group_ids = group_ids if group_ids is not None else []
         self.summary = summary
         self.overview = overview
+        self.target_language = target_language or "zh"
         self.ext_info = ext_info if ext_info is not None else []
         self.expandable_topics = (
             expandable_topics if expandable_topics is not None else []

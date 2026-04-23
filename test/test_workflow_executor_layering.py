@@ -69,18 +69,25 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
             with patch("agent.workflow.executor.get_article_content", AsyncMock(return_value={})), patch(
                 "agent.workflow.executor.write_primary_brief",
                 write_primary_brief_mock,
+            ), patch(
+                "agent.workflow.executor.write_optional_section",
+                AsyncMock(return_value="## Optional\nOptional overview in target language."),
             ):
                 executor.handle_summarize = AsyncMock(return_value="## Auto\nDeep analysis.")
                 results = await executor.execute(state)
 
-            write_primary_brief_mock.assert_awaited_once_with(client, state["plan"])
+            write_primary_brief_mock.assert_awaited_once_with(
+                client,
+                state["plan"],
+                target_language="zh",
+            )
             executor.handle_summarize.assert_awaited_once()
             deep_point = executor.handle_summarize.await_args.args[0]
             self.assertEqual(deep_point["topic"], "Auto")
             self.assertEqual(deep_point["generation_mode"], "AUTO_DEEP")
             self.assertNotIn("## Deep Analysis", results[0][0])
             self.assertIn("Deep analysis.", results[0][0])
-            self.assertIn("## Optional\nOptional happened.", results[0][0])
+            self.assertIn("## Optional\nOptional overview in target language.", results[0][0])
 
         asyncio.run(_run_test())
 
@@ -115,14 +122,21 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
             with patch("agent.workflow.executor.get_article_content", AsyncMock(return_value={})), patch(
                 "agent.workflow.executor.write_primary_brief",
                 write_primary_brief_mock,
+            ), patch(
+                "agent.workflow.executor.write_optional_section",
+                AsyncMock(return_value="## Optional\nOptional overview in target language."),
             ):
                 executor.handle_summarize = AsyncMock(return_value="This must not be called.")
                 results = await executor.execute(state)
 
-            write_primary_brief_mock.assert_awaited_once_with(client, state["plan"])
+            write_primary_brief_mock.assert_awaited_once_with(
+                client,
+                state["plan"],
+                target_language="zh",
+            )
             executor.handle_summarize.assert_not_called()
             self.assertNotIn("## Optional Analysis", results[0][0])
-            self.assertIn("## Optional\nOptional happened.", results[0][0])
+            self.assertIn("## Optional\nOptional overview in target language.", results[0][0])
 
         asyncio.run(_run_test())
 
@@ -157,6 +171,9 @@ class WorkflowExecutorLayeringTest(unittest.TestCase):
             with patch("agent.workflow.executor.get_article_content", AsyncMock(return_value={})), patch(
                 "agent.workflow.executor.write_primary_brief",
                 write_primary_brief_mock,
+            ), patch(
+                "agent.workflow.executor.write_optional_section",
+                AsyncMock(return_value="## Optional\nOptional overview in target language."),
             ):
                 executor.handle_summarize = AsyncMock(return_value="This must not be called.")
                 await executor.execute(state)

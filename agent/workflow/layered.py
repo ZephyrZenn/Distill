@@ -62,7 +62,6 @@ def normalize_plan_layers(plan: AgentPlanResult) -> AgentPlanResult:
 
     auto_deep_count = 0
     for point in focal_points:
-        point["brief_summary"] = _optional_text(point, "brief_summary") or point["topic"]
         generation_mode = _normalize_generation_mode(point)
         point["generation_mode"] = generation_mode
 
@@ -191,7 +190,6 @@ def _implication_text(point: FocalPoint) -> str:
             "relevance_description",
             "reasoning",
             "writing_guide",
-            "brief_summary",
         )
     )
 
@@ -248,19 +246,17 @@ def build_optional_analysis_section(points: list[FocalPoint]) -> str:
     lines: list[str] = []
     for point in points:
         topic = _optional_text(point, "topic") or "Optional Topic"
-        brief_summary = _optional_text(point, "brief_summary") or point["topic"]
         topic_overview = _optional_text(point, "topic_overview")
         lines.append(f"## {topic}")
-        lines.append(brief_summary)
-        if topic_overview:
-            lines.append(f"\n{topic_overview}")
+        lines.append(topic_overview or _optional_text(point, "reasoning") or topic)
     return "\n".join(lines)
 
 
 def assemble_layered_report(
     primary_brief: str,
     deep_sections: list[str],
-    optional_points: list[FocalPoint],
+    optional_points: list[FocalPoint] | None = None,
+    optional_sections: list[str] | None = None,
 ) -> str:
     sections = [primary_brief.rstrip()]
 
@@ -268,9 +264,16 @@ def assemble_layered_report(
     if cleaned_deep_sections:
         sections.append("\n\n".join(cleaned_deep_sections))
 
-    optional_section = build_optional_analysis_section(optional_points)
-    if optional_section:
-        sections.append(optional_section)
+    if optional_sections is not None:
+        cleaned_optional_sections = [
+            section.strip() for section in optional_sections if section and section.strip()
+        ]
+        if cleaned_optional_sections:
+            sections.append("\n\n".join(cleaned_optional_sections))
+    else:
+        optional_section = build_optional_analysis_section(optional_points or [])
+        if optional_section:
+            sections.append(optional_section)
 
     return "\n\n".join(section for section in sections if section).rstrip()
 
@@ -316,6 +319,13 @@ def _validate_priority(priority: object, index: int) -> int:
     return priority
 
 
+def _optional_text(point: FocalPoint, field: str) -> str:
+    value = point.get(field, "")
+    if isinstance(value, str):
+        return value
+    return ""
+
+
 def _fallback_overview(point: FocalPoint) -> str:
     overview = _optional_text(point, "topic_overview")
     if _is_substantive_overview(overview):
@@ -329,15 +339,10 @@ def _fallback_overview(point: FocalPoint) -> str:
     return ""
 
 
-def _optional_text(point: FocalPoint, field: str) -> str:
-    value = point.get(field, "")
-    if isinstance(value, str):
-        return value
-    return ""
-
-
 def _is_substantive_overview(text: object) -> bool:
     if not isinstance(text, str):
         return False
     stripped = text.strip()
     return len(stripped) >= 20
+
+

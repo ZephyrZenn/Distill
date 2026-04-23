@@ -18,7 +18,7 @@ def _point(
     topic: str,
     priority: int,
     generation_mode: str,
-    topic_overview: str = "",
+    topic_overview: str = "Downstream impact remains uncertain across enterprise planning cycles.",
     deep_analysis_reason: str = "",
     auto_deep_exception: str = "",
 ):
@@ -34,7 +34,6 @@ def _point(
         "writing_guide": "Explain the impact.",
         "history_memory_id": [],
         "generation_mode": generation_mode,
-        "brief_summary": f"{topic} happened.",
         "topic_overview": topic_overview,
         "deep_analysis_reason": deep_analysis_reason,
         "auto_deep_exception": auto_deep_exception,
@@ -60,7 +59,6 @@ class LayeredWorkflowTest(unittest.TestCase):
             [p["generation_mode"] for p in normalized["focal_points"]],
             [AUTO_DEEP, OPTIONAL_DEEP],
         )
-        self.assertIn("strategic impact", normalized["focal_points"][1]["topic_overview"])
 
     def test_normalize_allows_second_auto_deep_with_exception(self):
         plan = {
@@ -87,23 +85,7 @@ class LayeredWorkflowTest(unittest.TestCase):
             [AUTO_DEEP, AUTO_DEEP],
         )
 
-    def test_optional_with_short_overview_downgrades_to_brief_only(self):
-        plan = {
-            "daily_overview": "Quiet day.",
-            "today_pattern": "Small updates dominated.",
-            "daily_brief_items": [],
-            "focal_points": [
-                _point("Minor Update", 1, OPTIONAL_DEEP, topic_overview="Worth watching."),
-            ],
-            "discarded_items": [],
-        }
-
-        normalized = normalize_plan_layers(plan)
-
-        self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
-        self.assertEqual(normalized["focal_points"][0]["topic_overview"], "")
-
-    def test_optional_with_missing_overview_downgrades_to_brief_only(self):
+    def test_optional_with_short_overview_stays_optional(self):
         plan = {
             "daily_overview": "Quiet day.",
             "today_pattern": "Small updates dominated.",
@@ -116,8 +98,22 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         normalized = normalize_plan_layers(plan)
 
-        self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
-        self.assertEqual(normalized["focal_points"][0]["topic_overview"], "")
+        self.assertEqual(normalized["focal_points"][0]["generation_mode"], OPTIONAL_DEEP)
+
+    def test_optional_with_missing_overview_stays_optional(self):
+        plan = {
+            "daily_overview": "Quiet day.",
+            "today_pattern": "Small updates dominated.",
+            "daily_brief_items": [],
+            "focal_points": [
+                _point("Minor Update", 1, OPTIONAL_DEEP),
+            ],
+            "discarded_items": [],
+        }
+
+        normalized = normalize_plan_layers(plan)
+
+        self.assertEqual(normalized["focal_points"][0]["generation_mode"], OPTIONAL_DEEP)
 
     def test_optional_with_substantive_overview_survives(self):
         plan = {
@@ -129,7 +125,6 @@ class LayeredWorkflowTest(unittest.TestCase):
                     "Enterprise Pricing",
                     1,
                     OPTIONAL_DEEP,
-                    topic_overview="Sources conflict on pricing timing, which affects enterprise budget planning.",
                 ),
             ],
             "discarded_items": [],
@@ -139,7 +134,7 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         self.assertEqual(normalized["focal_points"][0]["generation_mode"], OPTIONAL_DEEP)
 
-    def test_extra_auto_deep_with_short_reason_downgrades_to_brief_only(self):
+    def test_extra_auto_deep_with_short_reason_downgrades_to_optional(self):
         second_point = _point(
             "Topic B",
             2,
@@ -162,15 +157,14 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         self.assertEqual(
             [p["generation_mode"] for p in normalized["focal_points"]],
-            [AUTO_DEEP, BRIEF_ONLY],
+            [AUTO_DEEP, OPTIONAL_DEEP],
         )
-        self.assertEqual(normalized["focal_points"][1]["topic_overview"], "")
 
     def test_get_auto_deep_points_filters_strictly(self):
         plan = {
             "focal_points": [
                 _point("Auto", 1, AUTO_DEEP),
-                _point("Optional", 2, OPTIONAL_DEEP, topic_overview="Unresolved question affects roadmap decisions and planning cycles."),
+                _point("Optional", 2, OPTIONAL_DEEP),
                 _point("Brief", 3, BRIEF_ONLY),
             ]
         }
@@ -185,7 +179,6 @@ class LayeredWorkflowTest(unittest.TestCase):
                     "Optional",
                     2,
                     OPTIONAL_DEEP,
-                    topic_overview="Unresolved question affects roadmap decisions and planning cycles.",
                 ),
                 _point("Brief", 3, BRIEF_ONLY),
             ]
@@ -333,9 +326,8 @@ class LayeredWorkflowTest(unittest.TestCase):
             "Concrete",
             2,
             "INVALID",
-            topic_overview="Unresolved timing affects downstream roadmap decisions.",
         )
-        vague_point = _point("Vague", 3, "INVALID", topic_overview="Worth watching.")
+        vague_point = _point("Vague", 3, "INVALID")
         plan = {
             "daily_overview": "Market day.",
             "today_pattern": "Markets favored infrastructure over demos.",
@@ -352,7 +344,7 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         self.assertEqual(
             [p["generation_mode"] for p in normalized["focal_points"]],
-            [BRIEF_ONLY, OPTIONAL_DEEP, BRIEF_ONLY],
+            [BRIEF_ONLY, OPTIONAL_DEEP, OPTIONAL_DEEP],
         )
 
     def test_non_string_generation_mode_with_flash_news_becomes_brief_only(self):
@@ -371,7 +363,7 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
 
-    def test_non_string_generation_mode_without_concrete_reason_becomes_brief_only(self):
+    def test_non_string_generation_mode_without_concrete_reason_becomes_optional(self):
         point = _point("Summary", 1, "INVALID")
         point["generation_mode"] = []
         plan = {
@@ -384,12 +376,10 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         normalized = normalize_plan_layers(plan)
 
-        self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
-        self.assertEqual(normalized["focal_points"][0]["topic_overview"], "")
+        self.assertEqual(normalized["focal_points"][0]["generation_mode"], OPTIONAL_DEEP)
 
-    def test_optional_with_non_string_overview_downgrades_to_brief_only(self):
+    def test_optional_with_non_string_overview_stays_optional(self):
         point = _point("Malformed Optional", 1, OPTIONAL_DEEP)
-        point["topic_overview"] = []
         plan = {
             "daily_overview": "Quiet day.",
             "today_pattern": "Small updates dominated.",
@@ -400,8 +390,7 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         normalized = normalize_plan_layers(plan)
 
-        self.assertEqual(normalized["focal_points"][0]["generation_mode"], BRIEF_ONLY)
-        self.assertEqual(normalized["focal_points"][0]["topic_overview"], "")
+        self.assertEqual(normalized["focal_points"][0]["generation_mode"], OPTIONAL_DEEP)
 
     def test_non_string_auto_deep_exception_does_not_allow_second_auto(self):
         second_point = _point(
@@ -429,7 +418,7 @@ class LayeredWorkflowTest(unittest.TestCase):
             [AUTO_DEEP, OPTIONAL_DEEP],
         )
 
-    def test_extra_auto_with_non_string_reasons_downgrades_to_brief_only(self):
+    def test_extra_auto_with_non_string_reasons_downgrades_to_optional(self):
         second_point = _point("Topic B", 2, AUTO_DEEP)
         second_point["deep_analysis_reason"] = []
         second_point["reasoning"] = []
@@ -448,23 +437,23 @@ class LayeredWorkflowTest(unittest.TestCase):
 
         self.assertEqual(
             [p["generation_mode"] for p in normalized["focal_points"]],
-            [AUTO_DEEP, BRIEF_ONLY],
+            [AUTO_DEEP, OPTIONAL_DEEP],
         )
-        self.assertEqual(normalized["focal_points"][1]["topic_overview"], "")
 
     def test_optional_section_uses_topic_overview(self):
         point = _point(
             "Chip Supply",
             1,
             OPTIONAL_DEEP,
-            topic_overview="Global chip supply chains remain uncertain, with key foundries reporting mixed demand signals that could shift AI hardware pricing.",
         )
 
         section = build_optional_analysis_section([point])
 
         self.assertIn("## Chip Supply", section)
-        self.assertIn("Chip Supply happened.", section)
-        self.assertIn("Global chip supply chains remain uncertain", section)
+        self.assertIn(
+            "Downstream impact remains uncertain across enterprise planning cycles.",
+            section,
+        )
 
     def test_assemble_report_keeps_brief_first(self):
         report = assemble_layered_report(
@@ -484,15 +473,12 @@ class LayeredWorkflowTest(unittest.TestCase):
             deep_analysis_reason="Strategic platform impact changes enterprise roadmap decisions.",
         )
         platform_point["article_ids"] = ["1", "2", "3"]
-        platform_point["brief_summary"] = "AI platforms changed pricing and access."
         pricing_point = _point(
             "Platform Pricing",
             2,
             OPTIONAL_DEEP,
-            topic_overview="Pricing timing uncertainty affects enterprise budget planning across major cloud providers.",
         )
         pricing_point["article_ids"] = ["2", "3", "4"]
-        pricing_point["brief_summary"] = "AI platform pricing changed."
         plan = {
             "daily_overview": "Platform competition intensified.",
             "today_pattern": "AI platforms moved toward enterprise pricing pressure.",
@@ -521,7 +507,6 @@ class LayeredWorkflowTest(unittest.TestCase):
             "Cloud Capex",
             2,
             OPTIONAL_DEEP,
-            topic_overview="Downstream budget impact uncertainty affects enterprise AI roadmap decisions and capital allocation.",
         )
         capital_point["article_ids"] = ["2"]
         capital_point["relevance_description"] = "Cloud capital spending raises AI infrastructure costs."
@@ -542,7 +527,7 @@ class LayeredWorkflowTest(unittest.TestCase):
     def test_normalize_applies_article_count_budget_ceiling(self):
         points = []
         for index in range(1, 6):
-            point = _point(f"Topic {index}", index, OPTIONAL_DEEP, topic_overview="Unresolved impact affects roadmap decisions and capital allocation.")
+            point = _point(f"Topic {index}", index, OPTIONAL_DEEP)
             point["article_ids"] = [str(article_id) for article_id in range(index * 3 - 2, index * 3 + 1)]
             points.append(point)
         points[-1]["article_ids"] = ["13", "14", "15", "16", "17"]
@@ -658,7 +643,6 @@ class AgentPlannerNormalizationTest(unittest.TestCase):
                       "writing_guide": "Explain impact.",
                       "history_memory_id": [],
                       "generation_mode": "AUTO_DEEP",
-                      "brief_summary": "Policy changed.",
                       "deep_analysis_reason": "Regulation changes deployment strategy."
                     },
                     {
@@ -673,7 +657,6 @@ class AgentPlannerNormalizationTest(unittest.TestCase):
                       "writing_guide": "Explain platform impact.",
                       "history_memory_id": [],
                       "generation_mode": "AUTO_DEEP",
-                      "brief_summary": "Platform changed.",
                       "deep_analysis_reason": "Platform changes developer roadmap."
                     }
                   ],
@@ -762,7 +745,6 @@ class ReadingBurdenRegressionTest(unittest.TestCase):
                     "Secondary Topic",
                     2,
                     OPTIONAL_DEEP,
-                    topic_overview="Customer adoption patterns are shifting, with early adopters showing hesitation on new pricing models.",
                 )
             ],
         )

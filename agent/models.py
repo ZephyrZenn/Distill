@@ -56,7 +56,6 @@ class FocalPoint(TypedDict):
     # 历史记忆的 id 列表（如果延续自历史记忆，则给出历史记忆的 id，否则为空列表）
     history_memory_id: list[int]
     generation_mode: NotRequired[GenerationMode]
-    brief_summary: NotRequired[str]
     topic_overview: NotRequired[str]
     deep_analysis_reason: NotRequired[str]
     auto_deep_exception: NotRequired[str]
@@ -97,10 +96,12 @@ class WritingMaterial(TypedDict):
     articles: list[Article]
     ext_info: NotRequired[list[SearchResult]]
     history_memory: NotRequired[list[SummaryMemory]]
+    target_language: NotRequired[Literal["zh", "en"]]
 
 
 class AgentState(TypedDict):
     focus: str
+    target_language: NotRequired[Literal["zh", "en"]]
     groups: list[FeedGroup]
     raw_articles: list[RawArticle]
     scored_articles: list[Article]

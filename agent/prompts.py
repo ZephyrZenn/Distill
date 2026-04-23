@@ -29,7 +29,7 @@ PLANNER_SYSTEM_PROMPT = """
 
 4. **严格分层生成**
    - `BRIEF_ONLY`: 只进入 1 分钟简报，不生成深度分析。
-   - `OPTIONAL_DEEP`: 进入简报，并在 Optional Analysis 中给出一句话和话题概述（`topic_overview`）；初始运行不能偷偷生成深度分析。
+   - `OPTIONAL_DEEP`: 进入简报，并在 Optional Analysis 中给出话题概述（`topic_overview`）；初始运行不能偷偷生成深度分析。
    - `OPTIONAL_DEEP.topic_overview` 必须具体，帮助读者快速了解话题内容，不能写"值得关注""影响很大"等空话。
    - `AUTO_DEEP`: 自动生成深度分析。默认最多 1 个。只有两个独立高影响事件无法合并时，才允许最多 2 个，并必须填写 `auto_deep_exception`。
 
@@ -42,7 +42,6 @@ PLANNER_SYSTEM_PROMPT = """
 - `AUTO_DEEP` 正常情况下最多 1 个。
 - `BRIEF_ONLY` 和 `OPTIONAL_DEEP` 不能偷偷生成深度分析。
 - `topic` 限制在 20 个字以内。
-- `brief_summary` 限制在 40 个字以内。
 - `topic_overview` 限制在 120 个字以内。
 - `today_pattern` 限制在 120 个字以内。
 
@@ -65,7 +64,6 @@ PLANNER_SYSTEM_PROMPT = """
       "relevance_description": "入选原因",
       "strategy": "SUMMARIZE | SEARCH_ENHANCE | FLASH_NEWS",
       "generation_mode": "BRIEF_ONLY | OPTIONAL_DEEP | AUTO_DEEP",
-      "brief_summary": "用于 1 分钟简报的一句话",
       "topic_overview": "仅 OPTIONAL_DEEP 必填：该话题的简要概述（2-3句话，帮助读者快速了解话题内容）",
       "deep_analysis_reason": "仅 AUTO_DEEP 必填：为何必须自动深度分析",
       "auto_deep_exception": "仅第 2 个 AUTO_DEEP 必填：解释为何两个高影响话题不能合并",
@@ -137,11 +135,14 @@ WRITER_DEEP_DIVE_SYSTEM_PROMPT_TEMPLATE = """
 
 ## 输出规范
 - 必须使用 Markdown 格式。
+- 必须严格使用 `target_language` 对应语言输出全文：`zh` 全中文、`en` 全英文；专有名词可保留原文。
+- 若其他风格要求与语言要求冲突，以 `target_language` 为最高优先级。
 """
 
 WRITER_DEEP_DIVE_USER_PROMPT_TEMPLATE = """
 # 待处理任务包
 - **专题标题**: {topic}
+- **目标语言**: {target_language}
 - **匹配类型**: {match_type} 
 - **价值锚点 (Why it matters)**: {relevance_description}
 - **总编写作指南 (Planner's Guide)**: {writing_guide}
@@ -180,6 +181,7 @@ WRITER_FLASH_NEWS_PROMPT = """
 你是一位高级资讯简报员，擅长用最简练的语言概括核心事件。
 
 # 输入素材
+- 目标语言（强制）：{target_language}
 以下是今日的一组散点资讯:
 {articles}
 
@@ -194,6 +196,36 @@ WRITER_FLASH_NEWS_PROMPT = """
 - 以 ## {topic} 开头。每行一条简报。
 - **[分类]** **核心主体**: 发生的具体事件。 [对应文章的url链接]
 - **[分类]** **核心主体**: 发生的具体事件。 [对应文章的url链接]
+"""
+
+OPTIONAL_SECTION_SYSTEM_PROMPT = """
+## Role
+你是一位简报编辑，负责为可选深入话题撰写简短导读段落。
+
+## Goal
+- 输出必须是可直接拼接到最终报告的 Markdown 小节。
+- 该小节用于帮助读者判断是否点击展开深度分析。
+
+## Rules
+- 必须以 `## {topic}` 开头。
+- 第一段用 1 句话说明该话题发生了什么。
+- 第二段用 2-3 句话解释该话题为何值得继续展开阅读。
+- 严禁编造事实，内容必须来自输入素材。
+- 必须严格使用 `target_language` 对应语言输出全文：`zh` 全中文、`en` 全英文；专有名词可保留原文。
+"""
+
+OPTIONAL_SECTION_USER_PROMPT = """
+# 任务输入
+- 话题: {topic}
+- 目标语言: {target_language}
+- 匹配类型: {match_type}
+- 入选原因: {relevance_description}
+- 写作指南: {writing_guide}
+
+# 素材
+{articles}
+
+请输出该话题的 Optional Analysis 小节（Markdown）。
 """
 
 PRIMARY_BRIEF_SYSTEM_PROMPT = """
@@ -212,9 +244,14 @@ PRIMARY_BRIEF_SYSTEM_PROMPT = """
 - 不要输出 Deep Analysis。
 - 简报必须 complete on its own：用户读完这里就能理解今天。
 - 保留必要引用标记，优先使用 `[rss:文章ID]`。
+- 必须严格使用 `target_language` 对应语言输出全文：`zh` 全中文、`en` 全英文；专有名词可保留原文。
+- 若其他风格要求与语言要求冲突，以 `target_language` 为最高优先级。
 """
 
 PRIMARY_BRIEF_USER_PROMPT = """
+# Target Language
+{target_language}
+
 # Planner Agenda
 {plan}
 
@@ -230,6 +267,7 @@ CRITIC_SYSTEM_PROMPT_TEMPLATE = """
 1. **事实可靠**：不虚构、不张冠李戴、不误引。
 2. **意图对齐**：真正回应 `match_type` 与 `relevance_description` 所定义的任务。
 3. **分析有度**：既不能偷懒成素材搬运，也不能无证据拔高成宏大叙事。
+4. **语言一致**：全文语言必须与 `target_language` 一致。
 
 ## 审核分级准则
 ### 1. CRITICAL (红线错误 - 必须拦截并重写)
@@ -292,6 +330,7 @@ CRITIC_USER_PROMPT_TEMPLATE = """
 
 ## 1. 原始执行意图 (The Contract)
 - **匹配类型 (match_type)**: {match_type}
+- **目标语言 (target_language)**: {target_language}
 - **价值锚点 (relevance_description)**: {relevance_description}
 - **总编写作指南**: {writing_guide}
 

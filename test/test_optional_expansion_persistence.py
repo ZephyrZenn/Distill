@@ -29,7 +29,7 @@ class OptionalExpansionPersistenceTest(unittest.TestCase):
         sql = cursor.execute.call_args.args[0]
         params = cursor.execute.call_args.args[1]
         self.assertIn("expandable_topics", sql)
-        self.assertIn('"topic_id": "1-ai-pricing"', params[5])
+        self.assertIn('"topic_id": "1-ai-pricing"', params[6])
 
     def test_get_brief_by_id_returns_expandable_topics(self):
         cursor = MagicMock()
@@ -40,6 +40,7 @@ class OptionalExpansionPersistenceTest(unittest.TestCase):
             [7],
             "Summary",
             "Overview",
+            "en",
             [],
             [{"topic_id": "1-ai-pricing", "topic": "AI Pricing"}],
         )
@@ -50,6 +51,7 @@ class OptionalExpansionPersistenceTest(unittest.TestCase):
             brief = brief_service.get_brief_by_id(12)
 
         self.assertEqual(brief.expandable_topics[0]["topic_id"], "1-ai-pricing")
+        self.assertEqual(brief.target_language, "en")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,8 @@ from agent.models import (
 from agent.prompts import (
     PRIMARY_BRIEF_SYSTEM_PROMPT,
     PRIMARY_BRIEF_USER_PROMPT,
+    OPTIONAL_SECTION_SYSTEM_PROMPT,
+    OPTIONAL_SECTION_USER_PROMPT,
     WRITER_FLASH_NEWS_PROMPT,
     WRITER_DEEP_DIVE_SYSTEM_PROMPT_TEMPLATE,
     WRITER_DEEP_DIVE_USER_PROMPT_TEMPLATE,
@@ -54,28 +56,65 @@ async def write_article(
 async def write_primary_brief(
     client: LLMClient,
     plan: dict,
+    target_language: str = "zh",
 ) -> str:
-    prompt = _build_primary_brief_prompt(plan)
+    prompt = _build_primary_brief_prompt(plan, target_language=target_language)
     return await client.completion(prompt)
 
 
-def _build_primary_brief_prompt(plan: dict) -> list[Message]:
+async def write_optional_section(
+    client: LLMClient,
+    writing_material: WritingMaterial,
+) -> str:
+    prompt = _build_optional_section_prompt(writing_material)
+    return await client.completion(prompt)
+
+
+def _build_primary_brief_prompt(plan: dict, target_language: str = "zh") -> list[Message]:
     system_prompt = Message.system(content=PRIMARY_BRIEF_SYSTEM_PROMPT)
     user_prompt = Message.user(
         content=PRIMARY_BRIEF_USER_PROMPT.format(
+            target_language=target_language,
             plan=json.dumps(plan, ensure_ascii=False, indent=2),
         )
     )
     system_prompt.set_priority(0)
     user_prompt.set_priority(0)
     return [system_prompt, user_prompt]
+
+
+def _build_optional_section_prompt(writing_material: WritingMaterial) -> list[Message]:
+    target_language = writing_material.get("target_language", "zh")
+    system_prompt = Message.system(content=OPTIONAL_SECTION_SYSTEM_PROMPT)
+    user_prompt = Message.user(
+        content=OPTIONAL_SECTION_USER_PROMPT.format(
+            topic=writing_material["topic"],
+            target_language=target_language,
+            match_type=writing_material["match_type"],
+            relevance_description=writing_material["relevance_description"],
+            writing_guide=writing_material["writing_guide"],
+            articles=json.dumps(
+                writing_material["articles"],
+                ensure_ascii=False,
+                indent=2,
+                default=str,
+            ),
+        )
+    )
+    system_prompt.set_priority(0)
+    user_prompt.set_priority(0)
+    return [system_prompt, user_prompt]
+
+
 def _build_write_prompt(
     writing_material: WritingMaterial, review: AgentCriticResult | None = None
 ) -> str | list[Message]:
     """构建写作 prompt"""
+    target_language = writing_material.get("target_language", "zh")
     if writing_material["style"] == "FLASH":
         return WRITER_FLASH_NEWS_PROMPT.format(
             topic=writing_material["topic"],
+            target_language=target_language,
             articles=writing_material["articles"],
         )
 
@@ -97,6 +136,7 @@ def _build_write_prompt(
         role="user",
         content=WRITER_DEEP_DIVE_USER_PROMPT_TEMPLATE.format(
             topic=writing_material["topic"],
+            target_language=target_language,
             match_type=writing_material["match_type"],
             relevance_description=writing_material["relevance_description"],
             writing_guide=writing_material["writing_guide"],
@@ -171,6 +211,7 @@ def _build_review_prompt(
             articles=writing_material["articles"],
             ext_info=writing_material.get("ext_info", []),
             history_memories=writing_material.get("history_memory", []),
+            target_language=writing_material.get("target_language", "zh"),
             match_type=writing_material["match_type"],
             relevance_description=writing_material["relevance_description"],
             writing_guide=writing_material["writing_guide"],

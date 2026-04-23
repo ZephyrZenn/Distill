@@ -1,6 +1,6 @@
 import unittest
 
-from agent.workflow.expansion import build_expandable_topics
+from agent.workflow.expansion import build_expandable_topics, build_expansion_state
 
 
 def _point(topic: str, priority: int, generation_mode: str):
@@ -11,7 +11,6 @@ def _point(topic: str, priority: int, generation_mode: str):
         "relevance_description": "This affects AI infrastructure decisions.",
         "strategy": "SUMMARIZE",
         "generation_mode": generation_mode,
-        "brief_summary": f"{topic} happened.",
         "topic_overview": "Downstream budget impact remains uncertain across enterprise planning cycles.",
         "article_ids": [str(priority)],
         "reasoning": "Strategic implication remains unresolved.",
@@ -44,7 +43,6 @@ class ExpandableTopicsTest(unittest.TestCase):
         topic = topics[0]
         self.assertEqual(topic["focal_point"]["topic"], "Optional Topic")
         self.assertEqual(topic["topic_id"], "2-optional-topic")
-        self.assertEqual(topic["focal_point"]["topic_overview"], "Downstream budget impact remains uncertain across enterprise planning cycles.")
         self.assertEqual(topic["focal_point"]["generation_mode"], "OPTIONAL_DEEP")
         self.assertNotIn("articles", topic)
 
@@ -72,11 +70,10 @@ class ExpandableTopicsTest(unittest.TestCase):
             ],
             "discarded_items": [],
         }
-        plan["focal_points"][0]["topic_overview"] = "Worth watching."
 
         topics = build_expandable_topics(plan)
 
-        self.assertEqual(topics, [])
+        self.assertEqual(len(topics), 1)
 
     def test_focal_point_snapshot_does_not_alias_original_plan(self):
         plan = {
@@ -104,7 +101,6 @@ class ExpandableTopicsTest(unittest.TestCase):
                     **_point("Platform Pricing", 6, "OPTIONAL_DEEP"),
                     "article_ids": ["1", "2", "3"],
                     "reasoning": "Pricing and platform changes overlap.",
-                    "topic_overview": "Platform pricing shifts create downstream uncertainty for enterprise budget allocation.",
                 },
             ],
             "discarded_items": [],
@@ -114,6 +110,18 @@ class ExpandableTopicsTest(unittest.TestCase):
 
         self.assertEqual(len(topics), 1)
         self.assertEqual(topics[0]["topic_id"], "5-platform-shift")
+
+    def test_build_expansion_state_preserves_target_language(self):
+        topic = {
+            "topic_id": "1-optional-topic",
+            "focal_point": {
+                **_point("Optional Topic", 1, "OPTIONAL_DEEP"),
+            },
+        }
+
+        state = build_expansion_state(topic, {"1": "content"}, target_language="en")
+
+        self.assertEqual(state["target_language"], "en")
 
 
 if __name__ == "__main__":

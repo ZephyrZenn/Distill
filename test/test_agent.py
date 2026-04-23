@@ -35,12 +35,12 @@ class AgentTest(unittest.TestCase):
         def on_step(message: str):
             print(f"[STEP] {message}")
 
-        result, _, _, _ = asyncio.run(
+        result, _, _, _, _ = asyncio.run(
             agent.summarize(
                 task_id="test",
                 hour_gap=24,
                 group_ids=[5],
-                focus="AI竞争分析",
+                focus="AI Competition Analysis",
                 on_step=on_step,
             )
         )

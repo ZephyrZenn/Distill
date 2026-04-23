@@ -118,6 +118,7 @@ async def execute_brief_generation_task(task_id: str):
             )
             plan = final_state.get("plan") or {}
             overview = plan.get("daily_overview", "") or ""
+            target_language = plan.get("target_language", "zh") or "zh"
             research_items = final_state.get("research_items") or []
 
             # 从 PS Agent 的 research_items 中提取 web 来源素材，作为 ext_info 落库
@@ -149,7 +150,13 @@ async def execute_brief_generation_task(task_id: str):
             # 保存简报到数据库（含 overview）
             from apps.backend.services.brief_service import _insert_brief
 
-            _insert_brief(task.group_ids or [], brief, ext_info=ext_info, overview=overview)
+            _insert_brief(
+                task.group_ids or [],
+                brief,
+                ext_info=ext_info,
+                overview=overview,
+                target_language=target_language,
+            )
         else:
             # 使用原有的 workflow 方式（带素材检查与爬虫兜底）
             try:

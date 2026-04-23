@@ -18,6 +18,7 @@ from agent.tools import (
 from agent.tools.writing_tool import (
     review_article,
     write_article,
+    write_optional_section,
     write_primary_brief,
 )
 from agent.workflow.expansion import build_expandable_topics
@@ -121,8 +122,29 @@ class AgentExecutor:
                 error_result = f"[FAILED] {point['topic']}: {e}"
                 return (error_result, False)
 
+        async def run_optional_point(point: FocalPoint) -> tuple[str, bool]:
+            topic = point.get("topic", "")
+            logger.info("[workflow:executor] optional point start topic=%s", topic[:48])
+            try:
+                result = await self.handle_optional_deep(point, state)
+                logger.info("[workflow:executor] optional point done topic=%s ok=1", topic[:48])
+                return (result, True)
+            except Exception as e:  # noqa: BLE001
+                msg = f"❌ OPTIONAL_DEEP 话题 '{point['topic']}' 执行失败: {e}"
+                log_step(state, msg)
+                logger.exception(
+                    "[workflow:executor] optional point failed topic=%s error=%s",
+                    topic[:48],
+                    e,
+                )
+                return (f"[FAILED_OPTIONAL] {point['topic']}: {e}", False)
+
         log_step(state, "🧾 正在生成 1 分钟简报...")
-        primary_brief = await write_primary_brief(self.client, normalized_plan)
+        primary_brief = await write_primary_brief(
+            self.client,
+            normalized_plan,
+            target_language=state.get("target_language", "zh"),
+        )
 
         tasks = []
         log_step(state, f"🔄 开始生成 {len(auto_deep_points)} 个自动深度分析...")
@@ -144,15 +166,36 @@ class AgentExecutor:
         if failed_sections:
             deep_sections.extend(failed_sections)
 
+        optional_tasks = []
+        if optional_points:
+            log_step(state, f"🪄 开始生成 {len(optional_points)} 个 Optional Analysis...")
+            optional_tasks = [run_optional_point(point) for point in optional_points]
+        optional_results = (
+            await asyncio.gather(*optional_tasks, return_exceptions=False)
+            if optional_tasks
+            else []
+        )
+        optional_sections = [
+            result for result, success in optional_results if success or result
+        ]
+
         final_report = assemble_layered_report(
             primary_brief=primary_brief,
             deep_sections=deep_sections,
-            optional_points=optional_points,
+            optional_sections=optional_sections,
         )
         overall_success = all(success for _, success in results) if results else True
         state["summary_results"] = [final_report]
         state["execution_status"] = [overall_success]
         return [(final_report, overall_success)]
+
+    async def handle_optional_deep(self, point: FocalPoint, state: AgentState) -> str:
+        log_step(state, f"🧩 [OPTIONAL_DEEP] 处理话题: {point['topic']}")
+        writing_material = self.build_writing_material(point, state, "DEEP")
+        log_step(state, "   ↳ 正在生成 Optional Analysis 文本...")
+        result = await write_optional_section(self.client, writing_material)
+        log_step(state, f"   ↳ ✅ Optional 话题 '{point['topic']}' 生成完成")
+        return result
 
     async def handle_summarize(self, point: FocalPoint, state: AgentState) -> str:
         log_step(state, f"📰 [SUMMARIZE] 处理话题: {point['topic']}")
@@ -301,10 +344,11 @@ class AgentExecutor:
             style=style,
             match_type=point["match_type"],
             relevance_description=point["relevance_description"],
-            writing_guide=point["writing_guide"],
+            writing_guide=point.get("writing_guide", ""),
             reasoning=point["reasoning"],
             articles=scored_articles,
             history_memory=history_memory if history_memory else [],
             ext_info=ext_info if ext_info else [],
+            target_language=state.get("target_language", "zh"),
         )
         return writing_material

@@ -32,7 +32,10 @@ def build_expandable_topics(
                     source_priority_by_signature,
                     source_priority_by_topic,
                 ),
-                focal_point={**deepcopy(point), "generation_mode": OPTIONAL_DEEP},
+                focal_point={
+                    **deepcopy(point),
+                    "generation_mode": OPTIONAL_DEEP,
+                },
             )
         )
 
@@ -91,6 +94,7 @@ def build_expansion_state(
     topic: ExpandableTopic,
     fetched_articles: dict[str, str],
     history_memories: dict[int, SummaryMemory] | None = None,
+    target_language: str = "zh",
 ) -> AgentState:
     focal_point = topic["focal_point"]
     scored_articles = [
@@ -108,6 +112,7 @@ def build_expansion_state(
     ]
     return AgentState(
         focus="",
+        target_language=target_language,
         groups=[],
         raw_articles=[],
         scored_articles=scored_articles,

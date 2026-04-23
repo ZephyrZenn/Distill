@@ -190,7 +190,7 @@ def get_briefs(
             if include_content:
                 # 包含完整内容
                 cur.execute(
-                    """SELECT id, content, created_at, group_ids, summary, overview, ext_info, expandable_topics
+                    """SELECT id, content, created_at, group_ids, summary, overview, target_language, ext_info, expandable_topics
                        FROM feed_brief
                        WHERE created_at::date BETWEEN %s AND %s
                        ORDER BY id DESC""",
@@ -204,8 +204,9 @@ def get_briefs(
                         group_ids=row[3],
                         summary=row[4] or "",
                         overview=row[5] or "",
-                        ext_info=row[6] if row[6] else [],
-                        expandable_topics=row[7] if row[7] else [],
+                        target_language=row[6] or "zh",
+                        ext_info=row[7] if row[7] else [],
+                        expandable_topics=row[8] if row[8] else [],
                     )
                     for row in cur.fetchall()
                 ]
@@ -237,7 +238,7 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """SELECT id, content, created_at, group_ids, summary, overview, ext_info, expandable_topics
+                """SELECT id, content, created_at, group_ids, summary, overview, target_language, ext_info, expandable_topics
                    FROM feed_brief
                    WHERE id = %s""",
                 (brief_id,),
@@ -252,8 +253,9 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
                 group_ids=row[3],
                 summary=row[4] or "",
                 overview=row[5] or "",
-                ext_info=row[6] if row[6] else [],
-                expandable_topics=row[7] if row[7] else [],
+                target_language=row[6] or "zh",
+                ext_info=row[7] if row[7] else [],
+                expandable_topics=row[8] if row[8] else [],
             )
 
 
@@ -280,6 +282,7 @@ async def generate_brief_for_groups_async(
     result = await get_agent().summarize(
         task_id=task_id, hour_gap=24, group_ids=group_ids, focus=focus, on_step=on_step
     )
+    target_language = "zh"
     if len(result) == 2:
         brief, ext_info = result
         overview = ""
@@ -287,13 +290,22 @@ async def generate_brief_for_groups_async(
     elif len(result) == 3:
         brief, ext_info, overview = result
         expandable_topics = []
-    else:
+    elif len(result) == 4:
         brief, ext_info, overview, expandable_topics = result
+    else:
+        brief, ext_info, overview, expandable_topics, target_language = result
 
     if not brief:
         logger.warning("No brief generated for groups %s", group_ids)
         return "", 0, []
-    brief_id = _insert_brief(group_ids, brief, ext_info, overview, expandable_topics)
+    brief_id = _insert_brief(
+        group_ids,
+        brief,
+        ext_info,
+        overview,
+        expandable_topics,
+        target_language=target_language,
+    )
     logger.info("Brief generation completed for groups %s", group_ids)
     return brief, brief_id, expandable_topics
 
@@ -304,6 +316,7 @@ def _insert_brief(
     ext_info: list = None,
     overview: str = "",
     expandable_topics: list[dict] | None = None,
+    target_language: str = "zh",
 ):
     """插入简报到数据库
 
@@ -349,14 +362,15 @@ def _insert_brief(
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """INSERT INTO feed_brief (group_ids, content, summary, overview, ext_info, expandable_topics)
-                   VALUES (%s::integer[], %s, %s, %s, %s::jsonb, %s::jsonb)
+                """INSERT INTO feed_brief (group_ids, content, summary, overview, target_language, ext_info, expandable_topics)
+                   VALUES (%s::integer[], %s, %s, %s, %s, %s::jsonb, %s::jsonb)
                    RETURNING id""",
                 (
                     group_ids,
                     brief,
                     summary,
                     overview,
+                    target_language,
                     json.dumps(ext_info_list),
                     json.dumps(expandable_topics_list),
                 ),
@@ -497,7 +511,12 @@ async def expand_optional_topic(brief_id: int, topic_id: str) -> None:
 
         client = auto_build_client()
         executor = AgentExecutor(client)
-        state = build_expansion_state(topic, fetched_articles)
+        brief_target_language = getattr(brief, "target_language", "zh") or "zh"
+        state = build_expansion_state(
+            topic,
+            fetched_articles,
+            target_language=brief_target_language,
+        )
         point = state["plan"]["focal_points"][0]
 
         if point["strategy"] == "SEARCH_ENHANCE":
