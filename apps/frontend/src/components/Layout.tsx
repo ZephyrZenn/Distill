@@ -14,6 +14,7 @@ import {
   Menu,
   Sun,
   Moon,
+  Languages,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -102,6 +103,7 @@ export const Layout = ({
   const shouldShowNewButton = ["/groups", "/sources", "/schedules"].includes(
     activeTab,
   );
+  const alternateLanguage = i18n.resolvedLanguage === "en" ? "zh" : "en";
 
   return (
     <div className="h-screen w-full theme-bg theme-text flex overflow-hidden font-body transition-colors duration-200 bg-noise">
@@ -116,11 +118,10 @@ export const Layout = ({
 
       {/* 侧边栏 - 桌面端固定，移动端抽屉 */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 w-64 theme-surface border-r theme-border flex flex-col shrink-0 theme-shadow-elevated z-50 md:z-auto transform transition-transform duration-300 ease-in-out transition-colors duration-200 ${
-          isMobileMenuOpen
+        className={`fixed md:static inset-y-0 left-0 w-64 theme-surface border-r theme-border flex flex-col shrink-0 theme-shadow-elevated z-50 md:z-auto transform transition-transform duration-300 ease-in-out transition-colors duration-200 ${isMobileMenuOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0"
-        }`}
+          }`}
       >
         <div className="p-8 flex items-center gap-4 border-b theme-border-subtle">
           <div className="relative">
@@ -146,9 +147,8 @@ export const Layout = ({
                 key={item.to}
                 to={item.to}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl theme-transition min-h-[44px] ${
-                  isActive ? "nav-active font-semibold" : "nav-inactive"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl theme-transition min-h-[44px] ${isActive ? "nav-active font-semibold" : "nav-inactive"
+                  }`}
               >
                 <Icon size={18} className="shrink-0" />
                 <span className="text-sm font-body-medium">
@@ -170,9 +170,8 @@ export const Layout = ({
                 key={item.to}
                 to={item.to}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl theme-transition min-h-[44px] ${
-                  isActive ? "nav-active font-semibold" : "nav-inactive"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl theme-transition min-h-[44px] ${isActive ? "nav-active font-semibold" : "nav-inactive"
+                  }`}
               >
                 <Icon size={18} className="shrink-0" />
                 <span className="text-sm font-body-medium">
@@ -191,13 +190,12 @@ export const Layout = ({
           <NavLink
             to="/settings"
             onClick={() => setIsMobileMenuOpen(false)}
-            className={`w-full flex items-center justify-center gap-2 p-3 rounded-2xl theme-transition text-xs font-semibold relative min-h-[44px] ${
-              activeTab === "/settings"
+            className={`w-full flex items-center justify-center gap-2 p-3 rounded-2xl theme-transition text-xs font-semibold relative min-h-[44px] ${activeTab === "/settings"
                 ? "nav-active"
                 : showApiKeyWarning
                   ? "nav-active theme-surface-hover"
                   : "nav-inactive theme-accent-text-hover"
-            }`}
+              }`}
           >
             {showApiKeyWarning ? (
               <AlertTriangle size={16} className="text-amber-500" />
@@ -281,7 +279,7 @@ export const Layout = ({
             )}
             <span className="truncate">{getPageTitle()}</span>
           </div>
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1.5 md:gap-2">
             {shouldShowNewButton && onNewClick && (
               <button
                 onClick={onNewClick}
@@ -291,33 +289,20 @@ export const Layout = ({
                 <span className="hidden sm:inline font-body-medium">{t("layout.new")}</span>
               </button>
             )}
-            <div className="flex items-center rounded-xl border theme-border overflow-hidden">
-              <button
-                type="button"
-                onClick={() => i18n.changeLanguage("en")}
-                className={`px-3 py-2 text-xs font-semibold min-h-[44px] ${
-                  i18n.resolvedLanguage === "en"
-                    ? "theme-primary-bg theme-on-primary"
-                    : "theme-surface-hover theme-text"
-                }`}
-                title={t("layout.switchToEnglish")}
-              >
-                EN
-              </button>
-              <button
-                type="button"
-                onClick={() => i18n.changeLanguage("zh")}
-                className={`px-3 py-2 text-xs font-semibold min-h-[44px] ${
-                  i18n.resolvedLanguage === "zh"
-                    ? "theme-primary-bg theme-on-primary"
-                    : "theme-surface-hover theme-text"
-                }`}
-                title={t("layout.switchToChinese")}
-              >
-                中文
-              </button>
-            </div>
-            <div className="h-8 w-[1px] mx-1 md:mx-2 hidden sm:block rounded-full theme-border-subtle" />
+            <button
+              type="button"
+              onClick={() => i18n.changeLanguage(alternateLanguage)}
+              className="language-switcher theme-text"
+              aria-label="Language switcher"
+              title={
+                alternateLanguage === "en"
+                  ? t("layout.switchToEnglish")
+                  : t("layout.switchToChinese")
+              }
+            >
+              {i18n.resolvedLanguage === "en" ? "中" : "EN"}
+            </button>
+            <div className="h-7 w-[1px] mx-0.5 md:mx-1 hidden sm:block rounded-full theme-border-subtle" />
             <button
               onClick={toggleTheme}
               className="p-2.5 theme-text-muted theme-accent-text-hover theme-surface-hover rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center theme-transition button-press"
