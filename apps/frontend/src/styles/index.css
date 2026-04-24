@@ -2,10 +2,13 @@
 @import "./theme.css";
 
 :root {
-  /* Editorial Intelligence Typography System */
-  --font-display: "Crimson Pro", Georgia, "Times New Roman", serif;
-  --font-body: "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  /* Product typography with coordinated Latin/CJK sans stacks */
+  --font-display: "IBM Plex Sans", "Noto Sans SC", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", "Noto Sans SC", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-reading: "IBM Plex Sans", "Noto Sans SC", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", "Courier New", monospace;
   --type-size-caption: 0.75rem;
   --type-size-label: 0.75rem;
@@ -23,6 +26,7 @@
   background-color: var(--theme-bg);
   line-height: 1.6;
   letter-spacing: 0;
+  font-synthesis: none;
 }
 
 * {

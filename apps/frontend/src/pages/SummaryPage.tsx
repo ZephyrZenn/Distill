@@ -448,7 +448,7 @@ const SummaryPage = () => {
                 className="flex-1 overflow-y-auto px-5 py-6 md:px-10 md:py-10 theme-text custom-scrollbar"
                 id="brief-content"
               >
-                <article className="summary-reader mx-auto w-full max-w-[72ch]">
+                <article className="summary-reader summary-reader-body mx-auto w-full max-w-[72ch]">
                   {/* 日报概览（放在正文容器内顶部） */}
                   <div className="summary-reader-overview mb-8 rounded-lg border theme-overview-border theme-overview-bg">
                     <div className="text-xs font-semibold theme-text-muted uppercase mb-2">

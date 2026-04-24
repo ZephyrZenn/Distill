@@ -618,22 +618,28 @@
   line-height: 1.8;
 }
 
+.summary-reader-body {
+  font-family: var(--font-reading);
+}
+
 .summary-reader-overview {
   padding: 1rem 1.125rem;
 }
 
 .summary-reader-overview p {
   margin: 0;
+  font-family: var(--font-reading);
   line-height: 1.75;
 }
 
 .summary-reader .prose {
   max-width: none;
   color: var(--theme-text);
-  font-family: var(--font-body) !important;
+  font-family: var(--font-reading) !important;
   font-size: 1em !important;
-  font-weight: 400;
-  line-height: 1.82 !important;
+  font-weight: 400 !important;
+  line-height: 1.72 !important;
+  letter-spacing: 0.002em;
 }
 
 .summary-reader .prose > :first-child {
@@ -645,6 +651,17 @@
   margin-top: 0 !important;
   margin-bottom: 1.25em !important;
   font-weight: 400 !important;
+}
+
+.summary-reader-overview > div,
+.summary-reader .prose h1,
+.summary-reader .prose h2,
+.summary-reader .prose h3,
+.summary-reader .prose h4,
+.summary-reader .prose h5,
+.summary-reader .prose h6,
+.summary-reader-expand-pill {
+  font-family: var(--font-body) !important;
 }
 
 .summary-reader .prose h1 {
@@ -688,10 +705,21 @@
   padding-left: 0.15em !important;
 }
 
+.summary-reader .prose li::marker {
+  color: var(--theme-text-muted);
+}
+
 .summary-reader .prose blockquote {
   margin: 1.5em 0 !important;
   padding: 0.1em 0 0.1em 1em !important;
   border-left-width: 3px !important;
+  font-family: var(--font-reading) !important;
+  font-weight: 400 !important;
+}
+
+.summary-reader .prose strong,
+.summary-reader .prose b {
+  font-weight: 600 !important;
 }
 
 .summary-reader .prose pre {
