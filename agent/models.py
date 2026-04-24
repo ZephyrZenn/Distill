@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Callable, Literal, TypedDict
 from typing_extensions import NotRequired
 
+from agent.tracing import TraceEvent, render_trace_message
 from core.models.feed import FeedGroup
 from core.models.search import SearchResult
 
@@ -102,6 +103,7 @@ class WritingMaterial(TypedDict):
 class AgentState(TypedDict):
     focus: str
     target_language: NotRequired[Literal["zh", "en"]]
+    ui_language: NotRequired[Literal["zh", "en"]]
     groups: list[FeedGroup]
     raw_articles: list[RawArticle]
     scored_articles: list[Article]
@@ -120,11 +122,12 @@ class AgentState(TypedDict):
     created_at: datetime
 
 
-def log_step(state: "AgentState", message: str) -> None:
+def log_step(state: "AgentState", message: str | TraceEvent) -> None:
     """记录执行步骤到历史，并触发回调（如果有）"""
-    state["log_history"].append(message)
+    localized_message = render_trace_message(message, state.get("ui_language"))
+    state["log_history"].append(localized_message)
     if "on_step" in state and state["on_step"]:
-        state["on_step"](message)
+        state["on_step"](localized_message)
 
 
 class AgentCriticFinding(TypedDict):

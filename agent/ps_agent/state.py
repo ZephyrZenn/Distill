@@ -20,6 +20,7 @@ from uuid import uuid4
 
 from typing_extensions import NotRequired
 
+from agent.tracing import TraceEvent, render_trace_message
 from core.models.llm import Message
 from core.config.defaults import DEFAULT_AGENT_LIMITS
 
@@ -37,6 +38,7 @@ class PSAgentState(TypedDict):
 
     # User intent
     focus: str
+    ui_language: NotRequired[Literal["zh", "en"]]
     current_date: str
     # Focus dimensions for precise query generation
     focus_dimensions: NotRequired[list[Dimension]]
@@ -121,6 +123,7 @@ def create_initial_state(
     focus: str,
     *,
     on_step: StepCallback | None = None,
+    ui_language: str = "zh",
     max_context_items: int = 15,
     max_iterations: int = DEFAULT_AGENT_LIMITS.max_iterations,
     max_tool_calls: int = DEFAULT_AGENT_LIMITS.max_tool_calls,
@@ -134,6 +137,7 @@ def create_initial_state(
     state = PSAgentState(
         run_id=uuid4().hex[:10],
         focus=focus,
+        ui_language=ui_language,
         current_date=today,
         execution_mode="NORMAL",
         messages=[],
@@ -179,12 +183,13 @@ def create_initial_state(
     return state
 
 
-def log_step(state: PSAgentState, message: str) -> dict:
+def log_step(state: PSAgentState, message: str | TraceEvent) -> dict:
     """Emit a progress message via on_step callback (if configured). No state update."""
     callback = state.get("on_step")
+    localized_message = render_trace_message(message, state.get("ui_language"))
     if callback:
         try:
-            callback(message)
+            callback(localized_message)
         except Exception:
             # Never fail the workflow because UI logging failed.
             pass

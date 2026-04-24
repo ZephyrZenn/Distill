@@ -1,7 +1,7 @@
 
 from datetime import date
 from fastapi import APIRouter, Query, HTTPException
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel
 import asyncio
 
@@ -21,6 +21,7 @@ class GenerateBriefRequest(BaseModel):
     group_ids: list[int]
     focus: str = ""
     agent_mode: bool = False
+    ui_language: Literal["zh", "en"] = "zh"
 
 
 @router.get("/", response_model=FeedBriefListResponse)
@@ -95,7 +96,8 @@ async def generate_brief(request: GenerateBriefRequest):
     task_id = task_service.create_task(
         group_ids=request.group_ids if request.group_ids else [],
         focus=request.focus.strip(),
-        agent_mode=request.agent_mode
+        agent_mode=request.agent_mode,
+        ui_language=request.ui_language,
     )
 
     # 在后台异步执行brief生成任务

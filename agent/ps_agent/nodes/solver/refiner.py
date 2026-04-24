@@ -3,6 +3,7 @@ from agent.ps_agent.prompts.writing import DEEP_WRITER_REFINE_PROMPT, DEEP_WRITE
 from core.llm_client import LLMClient
 from core.models.llm import Message
 from agent.ps_agent.state import PSAgentState, log_step
+from agent.tracing import trace_event
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,10 +22,10 @@ class RefinerNode:
             "[ps_agent] run_id=%s node=refiner entry sections=%d failed=%d",
             run_id, len(sections), len(failed_sections),
         )
-        log_step(state, "[refiner] 开始修订")
+        log_step(state, trace_event("refiner.start"))
         for section in failed_sections:
             section["content"] = await self._refine(section)
-        log_step(state, "[refiner] 完成: 修订完成")
+        log_step(state, trace_event("refiner.completed"))
         return {
             "sections": sections,
             "status": "writing",

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, List, Optional
 
+from agent.tracing import normalize_ui_language, render_trace_message, trace_event
 from apps.backend.services.feed_service import retrieve_new_feeds
 from core.db.pool import get_async_connection
 from core.llm_client import APIKeyNotConfiguredError
@@ -30,12 +31,18 @@ class NoArticlesAvailableError(Exception):
 
 class TaskInfo:
     def __init__(
-        self, task_id: str, group_ids: list[int], focus: str, agent_mode: bool = False
+        self,
+        task_id: str,
+        group_ids: list[int],
+        focus: str,
+        agent_mode: bool = False,
+        ui_language: str = "zh",
     ):
         self.task_id = task_id
         self.group_ids = group_ids
         self.focus = focus
         self.agent_mode = agent_mode
+        self.ui_language = normalize_ui_language(ui_language)
         self.status = TaskStatus.PENDING
         self.logs: List[dict] = []
         self.result: Optional[str] = None
@@ -43,9 +50,14 @@ class TaskInfo:
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
 
-    def add_log(self, message: str):
+    def add_log(self, message):
         """添加日志条目"""
-        self.logs.append({"text": message, "time": datetime.now().isoformat()})
+        self.logs.append(
+            {
+                "text": render_trace_message(message, self.ui_language),
+                "time": datetime.now().isoformat(),
+            }
+        )
         self.updated_at = datetime.now()
 
     def to_dict(self):
@@ -65,10 +77,15 @@ class TaskInfo:
 _tasks: Dict[str, TaskInfo] = {}
 
 
-def create_task(group_ids: list[int], focus: str = "", agent_mode: bool = False) -> str:
+def create_task(
+    group_ids: list[int],
+    focus: str = "",
+    agent_mode: bool = False,
+    ui_language: str = "zh",
+) -> str:
     """创建新任务并返回任务ID"""
     task_id = str(uuid.uuid4())
-    task = TaskInfo(task_id, group_ids, focus, agent_mode)
+    task = TaskInfo(task_id, group_ids, focus, agent_mode, ui_language)
     _tasks[task_id] = task
     logger.info(
         f"Created task {task_id} for groups {group_ids}, agent_mode={agent_mode}"
@@ -90,7 +107,7 @@ async def execute_brief_generation_task(task_id: str):
 
     try:
         task.status = TaskStatus.RUNNING
-        task.add_log("🚀 Agent启动，开始执行任务...")
+        task.add_log(trace_event("task.execution.start"))
 
         # 创建回调函数来记录日志，添加异常处理
         def on_step(message: str):
@@ -114,7 +131,7 @@ async def execute_brief_generation_task(task_id: str):
 
             agent = PlanSolveAgent(lazy_init=True)
             brief, final_state = await agent.run_with_state(
-                focus=task.focus, on_step=on_step
+                focus=task.focus, on_step=on_step, ui_language=task.ui_language
             )
             plan = final_state.get("plan") or {}
             overview = plan.get("daily_overview", "") or ""
@@ -165,12 +182,13 @@ async def execute_brief_generation_task(task_id: str):
                     group_ids=task.group_ids,
                     focus=task.focus,
                     on_step=on_step,
+                    ui_language=task.ui_language,
                 )
             except NoArticlesAvailableError as e:
                 logger.warning(f"Task {task_id} failed: {e}")
                 task.status = TaskStatus.FAILED
                 task.error = str(e)
-                task.add_log("❌ 没有文章可用于生成简报: 请检查分组配置")
+                task.add_log(trace_event("task.no_articles"))
                 return
 
         # 再次检查任务是否存在（可能在执行过程中被清理）
@@ -180,23 +198,28 @@ async def execute_brief_generation_task(task_id: str):
 
         task.result = brief
         task.status = TaskStatus.COMPLETED
-        task.add_log("✅ Agent执行完成，摘要已保存")
+        task.add_log(trace_event("task.execution.completed"))
 
     except asyncio.CancelledError:
         logger.warning(f"Task {task_id} was cancelled")
         if task_id in _tasks:
             task = _tasks[task_id]
             task.status = TaskStatus.FAILED
-            task.error = "任务被取消"
-            task.add_log("❌ 任务被取消")
+            task.error = render_trace_message(
+                trace_event("task.cancelled"), task.ui_language
+            )
+            task.add_log(trace_event("task.cancelled"))
         raise
     except APIKeyNotConfiguredError as e:
         logger.warning(f"Task {task_id} failed: API key not configured - {e}")
         if task_id in _tasks:
             task = _tasks[task_id]
             task.status = TaskStatus.FAILED
-            task.error = f"API Key 未配置。请设置环境变量 {e.env_var}"
-            task.add_log(f"❌ API Key 未配置: 请设置环境变量 {e.env_var}")
+            task.error = render_trace_message(
+                trace_event("task.api_key_missing", env_var=e.env_var),
+                task.ui_language,
+            )
+            task.add_log(trace_event("task.api_key_missing", env_var=e.env_var))
     except ValueError as e:
         # PS Agent 依赖检查失败（如 embedding、tavily 未配置）
         logger.warning(f"Task {task_id} failed: PS Agent requirements - {e}")
@@ -204,7 +227,7 @@ async def execute_brief_generation_task(task_id: str):
             task = _tasks[task_id]
             task.status = TaskStatus.FAILED
             task.error = str(e)
-            task.add_log(f"❌ PS Agent 依赖未配置: {str(e)}")
+            task.add_log(trace_event("task.ps_dependency_missing", error=str(e)))
     except Exception as e:
         logger.exception(f"Task {task_id} failed: {e}")
         # 确保任务状态被更新
@@ -212,7 +235,7 @@ async def execute_brief_generation_task(task_id: str):
             task = _tasks[task_id]
             task.status = TaskStatus.FAILED
             task.error = str(e)
-            task.add_log(f"❌ 执行失败: {str(e)}")
+            task.add_log(trace_event("task.execution.failed", error=str(e)))
 
 
 def cleanup_completed_tasks(max_age_hours: int = 24):
@@ -286,6 +309,7 @@ async def generate_brief_with_material_check(
     group_ids: list[int],
     focus: str = "",
     on_step=None,
+    ui_language: str = "zh",
     min_article_count: int = DEFAULT_MIN_ARTICLE_COUNT,
 ) -> tuple:
     """统一的 workflow 简报生成流程：素材检查 + 爬虫兜底 + 生成简报。
@@ -334,5 +358,6 @@ async def generate_brief_with_material_check(
         group_ids=group_ids,
         focus=focus,
         on_step=on_step,
+        ui_language=ui_language,
     )
     return brief

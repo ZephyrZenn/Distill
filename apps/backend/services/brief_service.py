@@ -260,7 +260,11 @@ def get_brief_by_id(brief_id: int) -> FeedBrief | None:
 
 
 async def generate_brief_for_groups_async(
-    task_id: str, group_ids: list[int], focus: str = "", on_step=None
+    task_id: str,
+    group_ids: list[int],
+    focus: str = "",
+    on_step=None,
+    ui_language: str = "zh",
 ):
     """
     Generate brief for specific groups asynchronously with optional step callback.
@@ -280,7 +284,12 @@ async def generate_brief_for_groups_async(
     from agent import get_agent
 
     result = await get_agent().summarize(
-        task_id=task_id, hour_gap=24, group_ids=group_ids, focus=focus, on_step=on_step
+        task_id=task_id,
+        hour_gap=24,
+        group_ids=group_ids,
+        focus=focus,
+        on_step=on_step,
+        ui_language=ui_language,
     )
     target_language = "zh"
     if len(result) == 2:

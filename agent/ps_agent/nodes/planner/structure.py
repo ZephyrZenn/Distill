@@ -2,6 +2,7 @@ import json
 import logging
 from agent.ps_agent.models import StructurePlan
 from agent.ps_agent.state import PSAgentState, log_step
+from agent.tracing import trace_event
 from agent.ps_agent.prompts import STRUCTURE_SYSTEM_PROMPT, STRUCTURE_USER_PROMPT
 from agent.utils import extract_json
 from core.llm_client import LLMClient
@@ -73,8 +74,7 @@ class StructureNode:
             "[ps_agent] run_id=%s node=structure entry plan_chapters=%d",
             run_id, n_chapters,
         )
-        msg_start = "📐 structuring: 正在生成写作策略..."
-        log_step(state, msg_start)  # 执行前：立即触发 callback，让 UI 先显示
+        log_step(state, trace_event("structure.start"))  # 执行前：立即触发 callback，让 UI 先显示
 
         try:
             response = await self.client.completion(messages)
@@ -86,7 +86,7 @@ class StructureNode:
                 "[structure] Finish plan. Overview: %s", plan.get("daily_overview", "")
             )
 
-            log_step(state, f"[structure] 完成: {summary}")
+            log_step(state, trace_event("structure.completed", summary=summary))
 
             return {
                 "plan": plan,
@@ -96,7 +96,7 @@ class StructureNode:
 
         except Exception as exc:
             logger.exception("[structure] failed")
-            log_step(state, f"[structure] 失败: 规划异常 {exc}")
+            log_step(state, trace_event("structure.failed", error=exc))
             return {
                 "status": "failed",
                 "last_error": str(exc),

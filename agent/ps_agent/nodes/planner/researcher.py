@@ -13,6 +13,7 @@ from agent.ps_agent.prompts import (
     RESEARCH_PLANNER_PATCH_PROMPT,
 )
 from agent.ps_agent.state import PSAgentState, log_step
+from agent.tracing import trace_event
 from agent.ps_agent.tools import get_researcher_tools
 
 logger = logging.getLogger(__name__)
@@ -59,10 +60,13 @@ class ResearchPlannerNode:
 
         # Call LLM with Tools
         try:
-            mode_str = "（改进模式）" if is_patch else "（初始模式）"
             log_step(
                 state,
-                f"🤔 planner: 正在生成搜索查询 {mode_str} (iter={iteration+1})...",
+                trace_event(
+                    "researcher.start",
+                    mode="（改进模式）" if is_patch else "（初始模式）",
+                    iteration=iteration + 1,
+                ),
             )
 
             response = await self.client.completion_with_tools(
@@ -79,7 +83,7 @@ class ResearchPlannerNode:
             tool_calls = response.tool_calls or []
             if not tool_calls:
                 logger.info("[planner] No tool calls generated.")
-                log_step(state, "[planner] 完成: 未生成搜索查询，进入评审")
+                log_step(state, trace_event("researcher.no_queries"))
                 return {
                     "messages": [
                         Message.assistant(response.content or "搜索计划完成。")
@@ -91,7 +95,7 @@ class ResearchPlannerNode:
             rationale = response.content or "Search queries generated"
             assistant_msg = Message.assistant(content=rationale, tool_calls=tool_calls)
 
-            log_step(state, f"[planner] 完成: 已生成 {len(tool_calls)} 个搜索查询")
+            log_step(state, trace_event("researcher.completed", count=len(tool_calls)))
             return {
                 "messages": [assistant_msg],
                 "iteration": iteration + 1,
@@ -102,7 +106,7 @@ class ResearchPlannerNode:
 
         except Exception as exc:
             logger.exception("[planner] failed")
-            log_step(state, f"[planner] 失败: 规划异常 {exc}")
+            log_step(state, trace_event("researcher.failed", error=exc))
             return {
                 "status": "failed",
                 "last_error": str(exc),

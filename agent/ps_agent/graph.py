@@ -31,6 +31,7 @@ from core.config.defaults import DEFAULT_AGENT_LIMITS
 
 
 from .state import PSAgentState, log_step
+from agent.tracing import trace_event
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ def finalize_node(state: PSAgentState) -> dict:
     """Finalize the workflow into a stable completed/failed state."""
     run_id = state.get("run_id", "-")
     status = state.get("status", "")
-    log_step(state, "📌 finalize: 正在完成并生成最终报告...")
+    log_step(state, trace_event("finalize.start"))
     logger.info(
         "[ps_agent] run_id=%s node=finalize entry status=%s",
         run_id, status,
@@ -200,7 +201,7 @@ def finalize_node(state: PSAgentState) -> dict:
                         len(final_report),
                     )
 
-    log_step(state, f"[finalize] 完成: status={status or 'N/A'}")
+    log_step(state, trace_event("finalize.completed", status=status or "N/A"))
     return {
         "status": "completed",
         "final_report": final_report,

@@ -23,6 +23,7 @@ import type {
   UpdateSchedulePayload,
   Memory,
   MemoryResponse,
+  UiLanguage,
 } from '@/types/api';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? '/api';
@@ -61,12 +62,18 @@ export const api = {
   getDefaultBriefs: () => unwrap<FeedBrief[]>(
     client.get<FeedBriefListResponse>('/briefs/default'),
   ),
-  generateBrief: (groupIds: number[], focus: string = '', agentMode: boolean = false) =>
+  generateBrief: (
+    groupIds: number[],
+    focus: string = '',
+    agentMode: boolean = false,
+    uiLanguage: UiLanguage = 'zh',
+  ) =>
     unwrap<{ task_id: string }>(
       client.post<ApiResponse<{ task_id: string }>>('/briefs/generate', {
         group_ids: groupIds,
         focus,
         agent_mode: agentMode,
+        ui_language: uiLanguage,
       })
     ),
   getBriefGenerationStatus: (taskId: string) =>

@@ -4,6 +4,8 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export type UiLanguage = "zh" | "en";
+
 export interface Feed {
   id: number;
   title: string;

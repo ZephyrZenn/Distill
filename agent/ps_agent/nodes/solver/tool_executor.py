@@ -7,6 +7,7 @@ from core.llm_client import LLMClient
 from core.models.llm import Message
 from agent.ps_agent.state import PSAgentState, log_step
 from agent.ps_agent.tools import execute_tool_calls
+from agent.tracing import trace_event
 from .utils import _last_tool_calls
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class ToolExecutorNode:
             run_id, len(tool_calls) if tool_calls else 0,
         )
         if not tool_calls:
-            log_step(state, "[tooling] 完成: 未检测到工具调用，继续研究/写作")
+            log_step(state, trace_event("tooling.none"))
             return {
                 "status": "research",
                 "messages": [
@@ -41,19 +42,18 @@ class ToolExecutorNode:
         try:
             log_step(
                 state,
-                f"[tooling] 正在执行 {len(tool_calls)} 个搜索/检索操作...",
+                trace_event("tooling.start", count=len(tool_calls)),
             )
             updates = await execute_tool_calls(state, tool_calls)
             updates.setdefault("status", "research")
             return updates
         except Exception as exc:  # pragma: no cover - defensive
             logger.exception("[tools] execution failed")
-            log_step(state, f"[tooling] 失败: 工具执行异常 {exc}")
+            log_step(state, trace_event("tooling.failed", error=exc))
             return {
                 "status": "failed",
                 "last_error": str(exc),
                 "messages": [Message.assistant(f"工具执行失败：{exc}")],
             }
-
 
 

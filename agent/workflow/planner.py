@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 import time
 from agent.models import AgentPlanResult, AgentState, Article, RawArticle, log_step
+from agent.tracing import trace_event
 from agent.prompts import PLANNER_USER_PROMPT, PLANNER_SYSTEM_PROMPT
 from agent.utils import extract_json
 from agent.tools import find_keywords_with_llm, search_memory
@@ -25,26 +26,32 @@ class AgentPlanner:
         result = None
         n_raw = len(state.get("raw_articles", []))
         logger.info("[workflow:planner] plan() start raw_articles=%d", n_raw)
-        log_step(state, "🔍 正在评估当前素材")
+        log_step(state, trace_event("planner.materials.evaluating"))
         ranked_articles = await self._rank_articles(
             state["raw_articles"], state["focus"], state
         )
-        log_step(state, f"🔍 已筛选出 {len(ranked_articles)} 篇相关文章")
+        log_step(state, trace_event("planner.articles.filtered", count=len(ranked_articles)))
         state["scored_articles"] = ranked_articles
         logger.info(
             "[workflow:planner] rank_articles done kept=%d", len(ranked_articles)
         )
         keywords = await find_keywords_with_llm(self.client, state["scored_articles"])
-        log_step(state, f"🔍 提取到 {len(keywords)} 个关键词: {keywords}")
+        log_step(
+            state,
+            trace_event("planner.keywords.extracted", count=len(keywords), keywords=keywords),
+        )
         memories = await search_memory(keywords)
         memory_topics = [m["topic"] for m in memories.values()] if memories else []
-        log_step(state, f"🔍 从记忆中找到 {len(memories)} 个相关记忆: {memory_topics}")
+        log_step(
+            state,
+            trace_event("planner.memories.found", count=len(memories), topics=memory_topics),
+        )
         state["history_memories"] = memories
         logger.info(
             "[workflow:planner] keywords=%d memories=%d", len(keywords), len(memories)
         )
 
-        log_step(state, "🤖 正在调用LLM进行规划...")
+        log_step(state, trace_event("planner.llm.start"))
         prompt = await self._build_prompt(state)
         logger.info(
             "[workflow:planner] sending prompt to LLM len=%d",
@@ -53,7 +60,7 @@ class AgentPlanner:
         start_time = time.time()
         response = await self.client.completion(prompt)
         elapsed = time.time() - start_time
-        log_step(state, f"🤖 规划完成：耗时 {elapsed} 秒")
+        log_step(state, trace_event("planner.completed", elapsed=elapsed))
         logger.info(
             "[workflow:planner] LLM response received elapsed=%.2fs response_len=%d",
             elapsed,
@@ -76,17 +83,27 @@ class AgentPlanner:
             discarded = result.get("discarded_items", [])
             log_step(
                 state,
-                f"📝 规划完成：识别出 {len(focal_points)} 个焦点话题，丢弃 {len(discarded)} 篇文章",
+                trace_event(
+                    "planner.summary",
+                    focal_points=len(focal_points),
+                    discarded=len(discarded),
+                ),
             )
             for i, point in enumerate(focal_points, 1):
                 generation_mode = point.get("generation_mode", "BRIEF_ONLY")
                 log_step(
                     state,
-                    f"   {i}. [{generation_mode}/{point['strategy']}] {point['topic']}",
+                    trace_event(
+                        "planner.point.summary",
+                        index=i,
+                        generation_mode=generation_mode,
+                        strategy=point["strategy"],
+                        topic=point["topic"],
+                    ),
                 )
             return result
         except json.JSONDecodeError as e:
-            log_step(state, "❌ 规划失败：无法解析LLM响应")
+            log_step(state, trace_event("planner.parse_failed"))
             logger.error(
                 "[workflow:planner] parse failed response_len=%d error=%s",
                 len(response) if isinstance(response, str) else 0,
@@ -236,7 +253,7 @@ class AgentPlanner:
                         )
                     )
             progress = len(scored_articles) / len(articles)
-            log_step(state, f"审计进度: {progress:.2%}")
+            log_step(state, trace_event("planner.audit.progress", progress=f"{progress:.2%}"))
         # 按分数降序排序
         scored_articles.sort(key=lambda a: a["score"], reverse=True)
         if len(scored_articles) > self.max_article_count:

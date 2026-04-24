@@ -6,6 +6,7 @@ from agent.ps_agent.prompts.bootstrap import (
 )
 from core.llm_client import LLMClient
 from agent.ps_agent.state import PSAgentState, log_step
+from agent.tracing import trace_event
 from agent.ps_agent.prompts import (
     BOOTSTRAP_INTENT_DIMENSIONS_PROMPT,
     BOOTSTRAP_SYSTEM_PROMPT,
@@ -157,8 +158,10 @@ class BootstrapNode:
         run_id = state.get("run_id", "-")
         log_step(
             state,
-            "📌 bootstrap: 正在初始化研究维度与排除规则..."
-            + (" (REPLAN)" if is_replan else ""),
+            trace_event(
+                "bootstrap.start",
+                suffix=" (REPLAN)" if is_replan else "",
+            ),
         )
         logger.info(
             "[ps_agent] run_id=%s node=bootstrap entry focus=%s date=%s is_replan=%s",
@@ -173,7 +176,7 @@ class BootstrapNode:
             is_replan=is_replan,
             replan_diagnosis=replan_diagnosis,
         )
-        log_step(state, "📌 bootstrap: 已生成研究维度，正在生成排除关键词...")
+        log_step(state, trace_event("bootstrap.dimensions.done"))
 
         # 生成排除关键词
         negative_keywords = await _generate_negative_keywords(
@@ -206,7 +209,7 @@ class BootstrapNode:
 
             log_step(
                 state,
-                f"[bootstrap] 完成: REPLAN 完成，重新生成 {len(focus_dimensions)} 个意图维度",
+                trace_event("bootstrap.replan.done", count=len(focus_dimensions)),
             )
             return {
                 "messages": messages,
@@ -223,7 +226,11 @@ class BootstrapNode:
         # 7. Normal bootstrap
         log_step(
             state,
-            f"[bootstrap] 完成: 已建立研究框架 focus='{focus}' dimensions={len(focus_dimensions)}",
+            trace_event(
+                "bootstrap.completed",
+                focus=focus,
+                count=len(focus_dimensions),
+            ),
         )
         return {
             "messages": messages,

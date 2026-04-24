@@ -344,6 +344,7 @@ const InstantLabPage = () => {
         agentMode ? [] : selectedGroupsForGen,
         generationFocus.trim(),
         agentMode,
+        i18n.resolvedLanguage === "en" ? "en" : "zh",
       );
 
       // 保存到 localStorage，以便页面切换后恢复

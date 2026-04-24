@@ -7,6 +7,7 @@ from agent.ps_agent.prompts.writing import (
     DEEP_WRITER_SYSTEM_PROMPT,
 )
 from agent.ps_agent.state import PSAgentState, log_step
+from agent.tracing import trace_event
 from core.llm_client import LLMClient
 from core.models.llm import Message
 
@@ -50,7 +51,7 @@ class DeepWriterNode:
             run_id, len(chapters),
         )
         if not plan:
-            log_step(state, "[writer] 失败: 无写作指南")
+            log_step(state, trace_event("writer.no_plan"))
             return {
                 "status": "failed",
                 "last_error": "No plan found",
@@ -62,8 +63,7 @@ class DeepWriterNode:
         item_map = {item.get("id"): item for item in research_items}
         chapters = plan.get("chapters", [])
 
-        msg_start = f"✍️ writer: 开始滑动窗口式写作 {len(chapters)} 个章节..."
-        log_step(state, msg_start)
+        log_step(state, trace_event("writer.start", count=len(chapters)))
 
         # Sliding window writing
         sections = []
@@ -101,7 +101,7 @@ class DeepWriterNode:
             )
             context["previous_summary"] = summary
 
-        log_step(state, f"[writer] 完成: 滑动窗口写作完成，{len(sections)} 个章节")
+        log_step(state, trace_event("writer.completed", count=len(sections)))
         return {
             "sections": sections,
             "status": "reviewing",  # Next step

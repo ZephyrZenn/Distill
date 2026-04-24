@@ -28,6 +28,7 @@ from agent.workflow.layered import (
     get_optional_deep_points,
     normalize_plan_layers,
 )
+from agent.tracing import trace_event
 from core.llm_client import LLMClient
 from core.models.search import SearchResult
 
@@ -110,8 +111,10 @@ class AgentExecutor:
                 logger.info("[workflow:executor] point done topic=%s ok=1", topic[:48])
                 return (result, True)
             except Exception as e:  # noqa: BLE001
-                msg = f"❌ 话题 '{point['topic']}' 执行失败: {e}"
-                log_step(state, msg)
+                log_step(
+                    state,
+                    trace_event("executor.point.failed", topic=point["topic"], error=e),
+                )
                 logger.exception(
                     "[workflow:executor] point failed topic=%s strategy=%s error=%s",
                     topic[:48],
@@ -130,8 +133,14 @@ class AgentExecutor:
                 logger.info("[workflow:executor] optional point done topic=%s ok=1", topic[:48])
                 return (result, True)
             except Exception as e:  # noqa: BLE001
-                msg = f"❌ OPTIONAL_DEEP 话题 '{point['topic']}' 执行失败: {e}"
-                log_step(state, msg)
+                log_step(
+                    state,
+                    trace_event(
+                        "executor.optional_point.failed",
+                        topic=point["topic"],
+                        error=e,
+                    ),
+                )
                 logger.exception(
                     "[workflow:executor] optional point failed topic=%s error=%s",
                     topic[:48],
@@ -139,7 +148,7 @@ class AgentExecutor:
                 )
                 return (f"[FAILED_OPTIONAL] {point['topic']}: {e}", False)
 
-        log_step(state, "🧾 正在生成 1 分钟简报...")
+        log_step(state, trace_event("executor.primary_brief.start"))
         primary_brief = await write_primary_brief(
             self.client,
             normalized_plan,
@@ -147,7 +156,10 @@ class AgentExecutor:
         )
 
         tasks = []
-        log_step(state, f"🔄 开始生成 {len(auto_deep_points)} 个自动深度分析...")
+        log_step(
+            state,
+            trace_event("executor.auto_deep.start", count=len(auto_deep_points)),
+        )
         for point in auto_deep_points:
             tasks.append(run_point(point))
 
@@ -160,7 +172,7 @@ class AgentExecutor:
             n_ok,
             n_fail,
         )
-        log_step(state, "✨ 所有任务执行完成")
+        log_step(state, trace_event("executor.all_tasks.completed"))
         deep_sections = [result for result, success in results if success]
         failed_sections = [result for result, success in results if not success]
         if failed_sections:
@@ -168,7 +180,10 @@ class AgentExecutor:
 
         optional_tasks = []
         if optional_points:
-            log_step(state, f"🪄 开始生成 {len(optional_points)} 个 Optional Analysis...")
+            log_step(
+                state,
+                trace_event("executor.optional.start", count=len(optional_points)),
+            )
             optional_tasks = [run_optional_point(point) for point in optional_points]
         optional_results = (
             await asyncio.gather(*optional_tasks, return_exceptions=False)
@@ -190,33 +205,33 @@ class AgentExecutor:
         return [(final_report, overall_success)]
 
     async def handle_optional_deep(self, point: FocalPoint, state: AgentState) -> str:
-        log_step(state, f"🧩 [OPTIONAL_DEEP] 处理话题: {point['topic']}")
+        log_step(state, trace_event("optional.process", topic=point["topic"]))
         writing_material = self.build_writing_material(point, state, "DEEP")
-        log_step(state, "   ↳ 正在生成 Optional Analysis 文本...")
+        log_step(state, trace_event("optional.generating"))
         result = await write_optional_section(self.client, writing_material)
-        log_step(state, f"   ↳ ✅ Optional 话题 '{point['topic']}' 生成完成")
+        log_step(state, trace_event("optional.completed", topic=point["topic"]))
         return result
 
     async def handle_summarize(self, point: FocalPoint, state: AgentState) -> str:
-        log_step(state, f"📰 [SUMMARIZE] 处理话题: {point['topic']}")
+        log_step(state, trace_event("summarize.process", topic=point["topic"]))
         writing_material = self.build_writing_material(point, state, "DEEP")
-        log_step(state, "   ↳ 正在撰写深度内容...")
+        log_step(state, trace_event("article.writing.start"))
         result = await self.write_with_review(writing_material, state, point)
-        log_step(state, f"   ↳ ✅ 话题 '{point['topic']}' 撰写完成")
+        log_step(state, trace_event("topic.writing.completed", topic=point["topic"]))
         return result
 
     async def handle_search_enhance(self, point: FocalPoint, state: AgentState) -> str:
-        log_step(state, f"🔍 [SEARCH_ENHANCE] 处理话题: {point['topic']}")
+        log_step(state, trace_event("search.process", topic=point["topic"]))
 
         if is_search_engine_available():
-            log_step(state, f"   ↳ 搜索扩展信息: '{point['search_query']}'")
+            log_step(state, trace_event("search.query", query=point["search_query"]))
             # 不获取 raw_content，仅获取摘要
             search_results = await search_web(
                 point["search_query"], include_raw_content=False
             )
             total = len(search_results)
 
-            log_step(state, f"   ↳ 获取到 {total} 条搜索结果，正在抓取全文...")
+            log_step(state, trace_event("search.results.fetched", count=total))
 
             # 抓取所有搜索结果的全文
             urls = [result["url"] for result in search_results]
@@ -230,33 +245,41 @@ class AgentExecutor:
             search_results = [r for r in search_results if r.get("content")]
             success = len(search_results)
             failed = total - success
-            log_step(state, f"📊 抓取统计: 成功 {success}/{total}, 失败 {failed} 条")
+            log_step(
+                state,
+                trace_event(
+                    "search.fetch.stats",
+                    success=success,
+                    total=total,
+                    failed=failed,
+                ),
+            )
             # 收集外部搜索结果到 state（与已有 ext_info 去重）
             _append_ext_info_deduped(state, search_results)
         else:
-            log_step(state, "   ↳ 搜索引擎不可用，跳过搜索扩展")
+            log_step(state, trace_event("search.skipped"))
             search_results = []
 
         writing_material = self.build_writing_material(
             point, state, "DEEP", search_results
         )
-        log_step(state, "   ↳ 正在撰写深度内容...")
+        log_step(state, trace_event("article.writing.start"))
         result = await self.write_with_review(writing_material, state, point)
-        log_step(state, f"   ↳ ✅ 话题 '{point['topic']}' 撰写完成")
+        log_step(state, trace_event("topic.writing.completed", topic=point["topic"]))
         return result
 
     async def handle_flash_news(self, point: FocalPoint, state: AgentState) -> str:
-        log_step(state, f"⚡ [FLASH_NEWS] 处理话题: {point['topic']}")
+        log_step(state, trace_event("flash.process", topic=point["topic"]))
         raw_articles = [
             article
             for article in state["raw_articles"]
             if article["id"] in point["article_ids"]
         ]
-        log_step(state, f"   ↳ 获取 {len(raw_articles)} 篇文章内容...")
+        log_step(state, trace_event("articles.fetching", count=len(raw_articles)))
         writing_material = self.build_writing_material(point, state, style="FLASH")
-        log_step(state, "   ↳ 正在生成快讯...")
+        log_step(state, trace_event("flash.generating"))
         result = await self._write_article(writing_material)
-        log_step(state, f"   ↳ ✅ 快讯 '{point['topic']}' 生成完成")
+        log_step(state, trace_event("flash.completed", topic=point["topic"]))
         return result
 
     async def write_with_review(
@@ -271,17 +294,26 @@ class AgentExecutor:
                 finding["severity"] == "CRITICAL" for finding in review["findings"]
             )
             if review["status"] == "APPROVED":
-                log_step(state, f"   ↳ ✅ 话题 '{point['topic']}' 通过审查")
+                log_step(state, trace_event("review.approved", topic=point["topic"]))
                 break
             if not has_critical_error and not review["status"] == "REJECTED":
                 log_step(
                     state,
-                    f"   ↳ ✅ 话题 '{point['topic']}' 通过审查,但有优化建议: {review['overall_comment']}",
+                    trace_event(
+                        "review.approved_with_suggestions",
+                        topic=point["topic"],
+                        comment=review["overall_comment"],
+                    ),
                 )
                 break
             log_step(
                 state,
-                f"   ↳ ❌ 话题 '{point['topic']}' 未通过审查，原因: {review['decision_logic']}，重试 {count + 1} 次",
+                trace_event(
+                    "review.rejected_retry",
+                    topic=point["topic"],
+                    reason=review["decision_logic"],
+                    retry=count + 1,
+                ),
             )
             count += 1
         return result
@@ -328,7 +360,7 @@ class AgentExecutor:
             for article in state["scored_articles"]
             if article["id"] in point["article_ids"]
         ]
-        log_step(state, f"   ↳ 获取 {len(scored_articles)} 篇文章内容...")
+        log_step(state, trace_event("articles.fetching", count=len(scored_articles)))
         history_memory_ids = point.get("history_memory_id", [])
         history_memory = [
             state["history_memories"][hid]
@@ -336,9 +368,9 @@ class AgentExecutor:
             if hid in state["history_memories"]
         ]
         if history_memory:
-            log_step(state, "   ↳ 获取到历史记忆，将历史记忆融入到文章中")
+            log_step(state, trace_event("history.incorporating"))
             for memory in history_memory:
-                log_step(state, f"   ↳ 历史记忆: {memory['topic']}")
+                log_step(state, trace_event("history.item", topic=memory["topic"]))
         writing_material = WritingMaterial(
             topic=point["topic"],
             style=style,

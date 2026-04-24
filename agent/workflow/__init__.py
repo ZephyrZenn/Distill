@@ -4,6 +4,7 @@ import logging
 from contextlib import suppress
 from typing import Optional
 from agent.models import AgentState, RawArticle, StepCallback, log_step
+from agent.tracing import trace_event
 from agent.tools import get_recent_group_update, save_current_execution_records
 from agent.tools.constants import DEFAULT_FEED_CANDIDATE_LIMIT
 from agent.workflow.executor import AgentExecutor
@@ -62,6 +63,7 @@ class SummarizeAgenticWorkflow:
         group_ids: Optional[list[int]],
         focus: str = "",
         on_step: Optional[StepCallback] = None,
+        ui_language: str = "zh",
     ):
         # This will raise APIKeyNotConfiguredError if API key is not set
         self._init_client()
@@ -76,7 +78,7 @@ class SummarizeAgenticWorkflow:
 
         if task_id in self._states:
             raise ValueError(f"Task {task_id} already exists")
-        state = self._build_state(groups, articles, focus, on_step)
+        state = self._build_state(groups, articles, focus, on_step, ui_language)
         self._states[task_id] = state
         n_articles = len(state["raw_articles"])
         n_groups = len(groups)
@@ -86,15 +88,15 @@ class SummarizeAgenticWorkflow:
         )
         try:
             state["status"] = "RUNNING"
-            log_step(state, f"🚀 Agent启动，获取到 {n_articles} 篇文章")
-            log_step(state, "📋 开始规划阶段...")
+            log_step(state, trace_event("workflow.start", n_articles=n_articles))
+            log_step(state, trace_event("workflow.planning.start"))
             plan = await self.planner.plan(state)
             n_focal = len(plan.get("focal_points", []))
             logger.info(
                 "[workflow] task_id=%s plan_done focal_points=%d plan_keys=%s",
                 task_id, n_focal, list(plan.keys()) if isinstance(plan, dict) else type(plan).__name__,
             )
-            log_step(state, "⚡ 开始执行阶段...")
+            log_step(state, trace_event("workflow.execution.start"))
             results = await self.executor.execute(state)
             result_strings = [result for result, _ in results]
             success_statuses = [success for _, success in results]
@@ -104,7 +106,7 @@ class SummarizeAgenticWorkflow:
                 "[workflow] task_id=%s execute_done total=%d success=%d fail=%d",
                 task_id, len(results), n_ok, n_fail,
             )
-            log_step(state, f"✅ Agent执行完成，共生成 {n_ok} 篇")
+            log_step(state, trace_event("workflow.completed", n_ok=n_ok))
             if not results:
                 return "", []
             # 使用工具保存执行记录
@@ -142,6 +144,7 @@ class SummarizeAgenticWorkflow:
         articles: list[RawArticle],
         focus: str = "",
         on_step: Optional[StepCallback] = None,
+        ui_language: str = "zh",
     ) -> AgentState:
         state = AgentState(
             groups=groups,
@@ -149,6 +152,7 @@ class SummarizeAgenticWorkflow:
             log_history=[],
             focus=focus,
             target_language=detect_focus_language(focus),
+            ui_language=ui_language,
             created_at=datetime.now(),
             status="PENDING",
         )

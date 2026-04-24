@@ -15,6 +15,7 @@ from agent.ps_agent.models import (
 )
 from agent.ps_agent.state import PSAgentState, log_step
 from agent.ps_agent.prompts import PLAN_REVIEW_PROMPT
+from agent.tracing import trace_event
 from agent.utils import extract_json
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,11 @@ class PlanReviewerNode:
 
         log_step(
             state,
-            f"📌 plan_review: 正在全局评审 ({len(research_items)} 条素材, iter={iteration})...",
+            trace_event(
+                "plan_review.start",
+                count=len(research_items),
+                iteration=iteration,
+            ),
         )
         logger.info(
             "[ps_agent] run_id=%s node=plan_review entry research_items=%d iteration=%d",
@@ -205,7 +210,7 @@ class PlanReviewerNode:
             f"\n进入结构规划阶段。已筛选 {len(key_research_items)} 条高质量素材。\n"
         )
 
-        log_step(state, f"[plan_review] 完成: {reason}，进入结构规划")
+        log_step(state, trace_event("plan_review.ready", reason=reason))
         return {
             "status": "structuring",
             "research_items": key_research_items,
@@ -257,7 +262,7 @@ class PlanReviewerNode:
 
         message += "继续研究。"
 
-        log_step(state, f"[plan_review] 完成: {reason}，执行补丁搜索")
+        log_step(state, trace_event("plan_review.patch", reason=reason))
         return {
             "status": "researching",
             "ready_for_review": False,
@@ -306,7 +311,7 @@ class PlanReviewerNode:
 
         message_parts.append("将重新生成研究维度并清空已有素材。\n")
 
-        log_step(state, f"[plan_review] 完成: {reason}，触发重新规划")
+        log_step(state, trace_event("plan_review.replan", reason=reason))
         return {
             "status": "researching",
             "execution_mode": "REPLAN_MODE",

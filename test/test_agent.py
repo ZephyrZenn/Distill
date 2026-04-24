@@ -42,6 +42,7 @@ class AgentTest(unittest.TestCase):
                 group_ids=[5],
                 focus="AI Competition Analysis",
                 on_step=on_step,
+                ui_language="en",
             )
         )
         print("\n=== 最终结果 ===")

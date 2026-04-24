@@ -11,6 +11,7 @@ import logging
 from typing import Callable, Optional
 
 from agent.tools import is_search_engine_available
+from agent.tracing import render_trace_message, trace_event
 from core.embedding import is_embedding_configured
 from core.llm_client import LLMClient, auto_build_client
 
@@ -69,6 +70,7 @@ class PlanSolveAgent:
         self._graph = None
         self._on_step: Optional[StepCallback] = None
         self._last_state: PSAgentState | None = None
+        self._ui_language = "zh"
 
         self.max_context_items = max_context_items
 
@@ -96,21 +98,30 @@ class PlanSolveAgent:
         self._init_client()
         return self._graph
 
-    async def run(self, focus: str, on_step: Optional[StepCallback] = None) -> str:
+    async def run(
+        self,
+        focus: str,
+        on_step: Optional[StepCallback] = None,
+        ui_language: str = "zh",
+    ) -> str:
         """Run the agent and return the final report markdown."""
         if not focus or not focus.strip():
             raise ValueError("focus 不能为空")
         _ensure_ps_agent_requirements()
 
         self._on_step = on_step
-        self._log_step(f"🚀 启动 Agentic Research Agent: {focus}")
+        self._ui_language = ui_language
+        self._log_step(trace_event("ps.start", focus=focus))
 
         final_state = await self._invoke(focus.strip())
         self._last_state = final_state
         return self._process_result(final_state)
 
     async def run_with_state(
-        self, focus: str, on_step: Optional[StepCallback] = None
+        self,
+        focus: str,
+        on_step: Optional[StepCallback] = None,
+        ui_language: str = "zh",
     ) -> tuple[str, PSAgentState]:
         """Run the agent and return both the report and final state."""
         if not focus or not focus.strip():
@@ -118,7 +129,8 @@ class PlanSolveAgent:
         _ensure_ps_agent_requirements()
 
         self._on_step = on_step
-        self._log_step(f"🚀 启动 Agentic Research Agent: {focus}")
+        self._ui_language = ui_language
+        self._log_step(trace_event("ps.start", focus=focus))
         final_state = await self._invoke(focus.strip())
         self._last_state = final_state
         report = self._process_result(final_state)
@@ -128,6 +140,7 @@ class PlanSolveAgent:
         initial_state = create_initial_state(
             focus,
             on_step=self._on_step,
+            ui_language=self._ui_language,
             max_context_items=self.max_context_items,
         )
         run_id = initial_state.get("run_id", "-")
@@ -147,21 +160,23 @@ class PlanSolveAgent:
             return final_state
         except Exception as exc:  # pragma: no cover - defensive
             logger.exception("[ps_agent] run_id=%s invoke failed error=%s", run_id, exc)
-            self._log_step(f"❌ Agent 执行失败: {exc}")
+            self._log_step(trace_event("ps.failed", error=exc))
             raise RuntimeError(f"Agent 执行失败: {exc}") from exc
 
     def _process_result(self, state: PSAgentState) -> str:
         status = state.get("status", "")
         report = state.get("final_report") or state.get("draft_report") or ""
 
-        self._log_step(f"🧾 run_id={state.get('run_id', '-')}")
+        self._log_step(trace_event("ps.run_id", run_id=state.get("run_id", "-")))
         self._log_step(
-            "📊 运行统计: "
-            f"iterations={state.get('iteration', 0)} "
-            f"tool_calls={state.get('tool_call_count', 0)} "
-            f"curations={state.get('curation_count', 0)} "
-            f"research_items={len(state.get('research_items', []))} "
-            f"discarded={len(state.get('discarded_items', []))}"
+            trace_event(
+                "ps.stats",
+                iterations=state.get("iteration", 0),
+                tool_calls=state.get("tool_call_count", 0),
+                curations=state.get("curation_count", 0),
+                research_items=len(state.get("research_items", [])),
+                discarded=len(state.get("discarded_items", [])),
+            )
         )
 
         # Log the last few assistant messages for traceability.
@@ -169,21 +184,22 @@ class PlanSolveAgent:
             self._log_step(f"🧠 {msg}")
 
         if status == "completed" and report:
-            self._log_step("✅ 报告生成完成")
+            self._log_step(trace_event("ps.completed"))
             return report
 
         if report:
-            self._log_step("⚠️ 未完全完成，但返回当前最优报告")
+            self._log_step(trace_event("ps.partial"))
             return report
 
         error = state.get("last_error") or "Agent 未生成报告"
-        self._log_step(f"❌ {error}")
+        self._log_step(trace_event("ps.error", error=error))
         raise RuntimeError(error)
 
-    def _log_step(self, message: str) -> None:
-        logger.info(message)
+    def _log_step(self, message) -> None:
+        localized_message = render_trace_message(message, self._ui_language)
+        logger.info(localized_message)
         if self._on_step:
-            self._on_step(message)
+            self._on_step(localized_message)
 
 
 def _tail_assistant_messages(state: PSAgentState, *, limit: int = 6) -> list[str]:
@@ -205,13 +221,14 @@ async def run_ps_agent(
     focus: str,
     on_step: Optional[StepCallback] = None,
     *,
+    ui_language: str = "zh",
     max_context_items: int = 15,
 ) -> str:
     """Convenience entrypoint mirroring the class-based API."""
     agent = PlanSolveAgent(
         max_context_items=max_context_items,
     )
-    return await agent.run(focus, on_step=on_step)
+    return await agent.run(focus, on_step=on_step, ui_language=ui_language)
 
 
 __all__ = [

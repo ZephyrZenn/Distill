@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Literal, Optional
 import asyncio
 
 from apps.backend.models.common import success_with_data
@@ -13,6 +13,7 @@ router = APIRouter(prefix="/tasks", tags=["task"])
 class CreateTaskRequest(BaseModel):
     group_ids: list[int]
     focus: str = ""
+    ui_language: Literal["zh", "en"] = "zh"
 
 @router.post("/")
 async def create_task(request: CreateTaskRequest):
@@ -22,7 +23,8 @@ async def create_task(request: CreateTaskRequest):
     
     task_id = task_service.create_task(
         group_ids=request.group_ids,
-        focus=request.focus
+        focus=request.focus,
+        ui_language=request.ui_language,
     )
     
     # 在后台异步执行brief生成任务
