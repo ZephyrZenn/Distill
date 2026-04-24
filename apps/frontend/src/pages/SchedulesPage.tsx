@@ -8,6 +8,7 @@ import {
   Activity,
   Sparkles,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/queryKeys";
 import { useApiQuery } from "@/hooks/useApiQuery";
@@ -67,6 +68,7 @@ interface TimePickerFieldProps {
 }
 
 const TimePickerField = ({ value, onChange }: TimePickerFieldProps) => {
+  const { t } = useTranslation();
   const [activePart, setActivePart] = useState<"hour" | "minute" | null>(null);
   const [draftHour, setDraftHour] = useState(() =>
     toDisplayHour(parseTimeValue(value).hour),
@@ -158,13 +160,13 @@ const TimePickerField = ({ value, onChange }: TimePickerFieldProps) => {
 
   return (
     <div className="time-input-card theme-surface theme-border border shadow-sm">
-      <div className="time-input-row" aria-label="执行时间">
+      <div className="time-input-row" aria-label={t("schedules.timePicker")}>
         <label
           className={`time-input-segment ${
             activePart === "hour" ? "is-active" : ""
           }`}
         >
-          <span className="time-input-segment-label">小时</span>
+          <span className="time-input-segment-label">{t("schedules.hour")}</span>
           <input
             ref={hourInputRef}
             type="text"
@@ -181,7 +183,7 @@ const TimePickerField = ({ value, onChange }: TimePickerFieldProps) => {
             }}
             onKeyDown={(event) => handlePartKeyDown(event, "hour")}
             className="time-input"
-            aria-label="小时"
+            aria-label={t("schedules.hour")}
             maxLength={2}
           />
         </label>
@@ -191,7 +193,7 @@ const TimePickerField = ({ value, onChange }: TimePickerFieldProps) => {
             activePart === "minute" ? "is-active" : ""
           }`}
         >
-          <span className="time-input-segment-label">分钟</span>
+          <span className="time-input-segment-label">{t("schedules.minute")}</span>
           <input
             ref={minuteInputRef}
             type="text"
@@ -210,11 +212,11 @@ const TimePickerField = ({ value, onChange }: TimePickerFieldProps) => {
             }}
             onKeyDown={(event) => handlePartKeyDown(event, "minute")}
             className="time-input"
-            aria-label="分钟"
+            aria-label={t("schedules.minute")}
             maxLength={2}
           />
         </label>
-        <div className="time-period-toggle theme-border" aria-label="上下午">
+        <div className="time-period-toggle theme-border" aria-label={t("schedules.period")}>
           {(["AM", "PM"] as const).map((period) => (
             <button
               key={period}
@@ -235,6 +237,7 @@ const TimePickerField = ({ value, onChange }: TimePickerFieldProps) => {
 };
 
 const SchedulesPage = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: schedules } = useApiQuery<Schedule[]>(
     queryKeys.schedules,
@@ -281,10 +284,10 @@ const SchedulesPage = () => {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
         setIsModalOpen(false);
-        showToast("定时任务创建成功");
+        showToast(t("schedules.createSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "创建定时任务失败", { type: "error" });
+        showToast(error.message || t("schedules.createFailed"), { type: "error" });
       },
     },
   );
@@ -304,10 +307,10 @@ const SchedulesPage = () => {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
         setIsModalOpen(false);
-        showToast("定时任务更新成功");
+        showToast(t("schedules.updateSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "更新定时任务失败", { type: "error" });
+        showToast(error.message || t("schedules.updateFailed"), { type: "error" });
       },
     },
   );
@@ -319,10 +322,10 @@ const SchedulesPage = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
-        showToast("定时任务删除成功");
+        showToast(t("schedules.deleteSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "删除定时任务失败", { type: "error" });
+        showToast(error.message || t("schedules.deleteFailed"), { type: "error" });
       },
     },
   );
@@ -364,10 +367,10 @@ const SchedulesPage = () => {
 
   const handleDeleteSchedule = async (scheduleId: string) => {
     const confirmed = await confirm({
-      title: "删除定时任务",
-      description: "确定要删除此定时任务吗？此操作无法撤销。",
-      confirmLabel: "删除",
-      cancelLabel: "取消",
+      title: t("schedules.deleteTitle"),
+      description: t("schedules.deleteDescription"),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
       tone: "danger",
     });
     if (confirmed) {
@@ -377,15 +380,15 @@ const SchedulesPage = () => {
 
   const handleSaveSchedule = () => {
     if (!editingSchedule || !editingSchedule.time) {
-      showToast("请输入执行时间", { type: "error" });
+      showToast(t("schedules.executionTimeRequired"), { type: "error" });
       return;
     }
     if (!TIME_VALUE_PATTERN.test(editingSchedule.time)) {
-      showToast("请输入有效执行时间（HH:mm）", { type: "error" });
+      showToast(t("schedules.executionTimeInvalid"), { type: "error" });
       return;
     }
     if (editingSchedule.groupIds.length === 0) {
-      showToast("请至少选择一个分组", { type: "error" });
+      showToast(t("schedules.groupRequired"), { type: "error" });
       return;
     }
     if (editingSchedule.id) {
@@ -439,7 +442,7 @@ const SchedulesPage = () => {
                         : "theme-surface-hover theme-text-muted"
                     }`}
                   >
-                    {isActive ? "Next Run" : "Paused"}
+                    {isActive ? t("schedules.nextRun") : t("schedules.paused")}
                   </div>
                 </div>
 
@@ -462,7 +465,7 @@ const SchedulesPage = () => {
                               : "bg-transparent theme-border theme-text-muted"
                           }`}
                         >
-                          {group?.title || `分组 ${gid}`}
+                          {group?.title || t("schedules.groupFallback", { id: gid })}
                         </span>
                       );
                     })}
@@ -480,12 +483,12 @@ const SchedulesPage = () => {
                             : "theme-text-muted opacity-80"
                         }`}
                       >
-                        {task.focus || "默认广度总结模式"}
+                        {task.focus || t("schedules.defaultFocus")}
                       </p>
                       {task.autoExpand && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
                           <Sparkles size={11} />
-                          自动分析
+                          {t("schedules.autoAnalysis")}
                         </span>
                       )}
                     </div>
@@ -530,14 +533,14 @@ const SchedulesPage = () => {
                     <button
                       onClick={() => handleOpenModal(task)}
                       className="p-2 md:p-2.5 theme-text-muted theme-accent-text-hover theme-surface-hover rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
-                      aria-label="编辑定时任务"
+                      aria-label={t("schedules.editAction")}
                     >
                       <Edit3 size={18} />
                     </button>
                     <button
                       onClick={() => handleDeleteSchedule(task.id)}
                       className="p-2 md:p-2.5 theme-text-muted hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
-                      aria-label="删除定时任务"
+                      aria-label={t("schedules.deleteAction")}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -553,7 +556,7 @@ const SchedulesPage = () => {
             className="w-full py-8 md:py-12 border-2 border-dashed theme-border-subtle rounded-2xl md:rounded-[3rem] flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover theme-transition card-hover-subtle animate-entrance gap-2 md:gap-3 min-h-[120px] md:min-h-0"
           >
             <Plus size={32} className="md:w-9 md:h-9" />
-            <span className="type-label uppercase">新建自动化方案</span>
+            <span className="type-label uppercase">{t("schedules.newPlan")}</span>
           </button>
         </div>
       </div>
@@ -562,14 +565,14 @@ const SchedulesPage = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingSchedule?.id ? "编辑策略" : "新建策略"}
+        title={editingSchedule?.id ? t("schedules.editTitle") : t("schedules.createTitle")}
         onConfirm={handleSaveSchedule}
       >
         <div className="space-y-6">
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-[10px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-                执行时间
+                {t("schedules.executionTime")}
               </label>
               <TimePickerField
                 value={editingSchedule?.time || ""}
@@ -584,7 +587,7 @@ const SchedulesPage = () => {
 
           <div>
             <label className="block text-[10px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-              涉及分组 <span className="text-rose-400">*</span>
+              {t("schedules.groups")} <span className="text-rose-400">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
               {allGroups.map((g) => (
@@ -603,14 +606,14 @@ const SchedulesPage = () => {
             </div>
             {editingSchedule?.groupIds.length === 0 && (
               <p className="text-xs text-rose-400 mt-2 ml-1">
-                请至少选择一个分组
+                {t("schedules.groupRequired")}
               </p>
             )}
           </div>
 
           <div>
             <label className="block text-[10px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-              关注点
+              {t("schedules.focus")}
             </label>
             <textarea
               value={editingSchedule?.focus || ""}
@@ -627,10 +630,10 @@ const SchedulesPage = () => {
           <div className="flex items-center justify-between">
             <div>
               <label className="block text-[10px] font-semibold theme-text-muted uppercase ml-1">
-                自动展开所有主题
+                {t("schedules.autoExpandTitle")}
               </label>
               <p className="text-xs theme-text-muted mt-1 ml-1">
-                生成后自动展开所有可扩展主题的深度分析
+                {t("schedules.autoExpandDescription")}
               </p>
             </div>
             <button

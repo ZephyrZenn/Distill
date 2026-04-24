@@ -13,6 +13,7 @@ import {
   Zap,
   Layers,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/queryKeys";
 import { useApiQuery } from "@/hooks/useApiQuery";
@@ -43,6 +44,7 @@ const toFormState = (
     : { modelName: "", provider: "openai", baseUrl: "" };
 
 const SettingsPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: setting } = useApiQuery<Setting>(
@@ -112,10 +114,10 @@ const SettingsPage = () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.settings });
         setShowSaveToast(true);
         setTimeout(() => setShowSaveToast(false), 3000);
-        showToast("配置保存成功");
+        showToast(t("settings.saveSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "保存配置失败", { type: "error" });
+        showToast(error.message || t("settings.saveFailed"), { type: "error" });
       },
     },
   );
@@ -150,7 +152,7 @@ const SettingsPage = () => {
       <div className="space-y-3">
         <div>
           <label className={`flex items-center gap-2 mb-2 ml-1 ${labelCls}`}>
-            Model 名称
+            {t("settings.modelName")}
           </label>
           <input
             type="text"
@@ -159,12 +161,12 @@ const SettingsPage = () => {
               setState((s) => ({ ...s, modelName: e.target.value }))
             }
             className={inputCls}
-            placeholder="如 gpt-4o-mini"
+            placeholder={t("settings.modelPlaceholder")}
           />
         </div>
         <div>
           <label className={`flex items-center gap-2 mb-2 ml-1 ${labelCls}`}>
-            提供商
+            {t("settings.provider")}
           </label>
           <Select
             value={state.provider}
@@ -180,7 +182,7 @@ const SettingsPage = () => {
         {state.provider === "other" && (
           <div>
             <label className={`flex items-center gap-2 mb-2 ml-1 ${labelCls}`}>
-              Base URL
+              {t("settings.baseUrl")}
             </label>
             <input
               type="text"
@@ -196,7 +198,7 @@ const SettingsPage = () => {
         {apiKeyHint && !apiKeyHint.configured && (
           <p className="text-xs theme-accent-text flex items-center gap-1">
             <AlertTriangle size={12} />
-            请配置环境变量{" "}
+            {t("settings.configureEnvVar")}{" "}
             <code className="theme-accent-bg theme-on-accent px-1 rounded font-mono text-[10px]">
               {apiKeyHint.envVar}
             </code>
@@ -218,7 +220,7 @@ const SettingsPage = () => {
               </div>
               <div>
                 <h3 className="text-lg md:text-xl font-semibold theme-text">
-                  模型配置
+                  {t("settings.title")}
                 </h3>
               </div>
             </div>
@@ -232,17 +234,17 @@ const SettingsPage = () => {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs md:text-sm font-semibold opacity-95">
-                    主模型 API Key 未配置
+                    {t("settings.mainApiKeyMissing")}
                   </p>
                   <p className="text-[10px] md:text-xs mt-1 opacity-90">
-                    请设置环境变量{" "}
+                    {t("layout.setEnvVar")}{" "}
                     <code
                       className="opacity-90 px-1.5 py-0.5 rounded font-mono text-[9px] md:text-[10px]"
                       style={{ backgroundColor: "var(--theme-primary-hover)" }}
                     >
                       {setting.model.apiKeyEnvVar}
                     </code>{" "}
-                    以启用 AI 功能。
+                    {t("settings.enableAiFeature")}
                   </p>
                 </div>
               </div>
@@ -250,7 +252,7 @@ const SettingsPage = () => {
 
             <div className="space-y-4">
               {renderModelSection(
-                "主模型 (Model)",
+                t("settings.primaryModel"),
                 <Cpu size={14} className="theme-accent-text" />,
                 modelConfig,
                 setModelConfig,
@@ -260,10 +262,10 @@ const SettingsPage = () => {
                       envVar: setting.model.apiKeyEnvVar,
                     }
                   : undefined,
-                "用于简报生成、Agent 主推理等核心能力。",
+                t("settings.primaryModelDescription"),
               )}
               {renderModelSection(
-                "轻量模型 (Lightweight)（可选）",
+                t("settings.lightweightModel"),
                 <Zap size={14} className="theme-accent-text" />,
                 lightweightConfig,
                 setLightweightConfig,
@@ -273,10 +275,10 @@ const SettingsPage = () => {
                       envVar: setting.lightweightModel.apiKeyEnvVar,
                     }
                   : undefined,
-                "用于处理一些轻量任务，如果没有配置，会直接使用主模型。",
+                t("settings.lightweightModelDescription"),
               )}
               {renderModelSection(
-                "Embedding（可选）",
+                t("settings.embeddingModel"),
                 <Layers size={14} className="theme-accent-text" />,
                 embeddingConfig,
                 setEmbeddingConfig,
@@ -286,7 +288,7 @@ const SettingsPage = () => {
                       envVar: setting.embedding.apiKeyEnvVar,
                     }
                   : undefined,
-                "用于向量检索与语义相关度计算，Agent 模式依赖此项。",
+                t("settings.embeddingModelDescription"),
               )}
             </div>
 
@@ -300,10 +302,10 @@ const SettingsPage = () => {
                 }`}
               >
                 {setting.tavilyConfigured ? (
-                  <span>Tavily（网页搜索）：已配置</span>
+                  <span>{t("settings.tavilyConfigured")}</span>
                 ) : (
                   <span>
-                    Tavily（网页搜索）：未配置。Agent 模式需设置环境变量{" "}
+                    {t("settings.tavilyMissing")}{" "}
                     <code
                       className="opacity-90 px-1.5 py-0.5 rounded font-mono text-xs"
                       style={{
@@ -313,7 +315,7 @@ const SettingsPage = () => {
                     >
                       TAVILY_API_KEY
                     </code>{" "}
-                    以启用网络搜索。
+                    {t("settings.tavilySuffix")}
                   </span>
                 )}
               </div>
@@ -326,11 +328,11 @@ const SettingsPage = () => {
                 onClick={() => navigate("/settings/advanced")}
                 className="flex items-center justify-between w-full py-3 px-3 rounded-xl theme-text theme-surface-hover theme-accent-text-hover transition-colors text-sm font-medium"
               >
-                <span>高级设置</span>
+                <span>{t("settings.advancedSettings")}</span>
                 <ChevronRight size={18} className="theme-text-muted" />
               </button>
               <p className="text-xs theme-text-muted mt-1 ml-3">
-                限流、上下文与 Agent 循环上限等
+                {t("settings.advancedSettingsDescription")}
               </p>
             </div>
           </div>
@@ -346,14 +348,14 @@ const SettingsPage = () => {
                   : "opacity-0 -translate-x-4"
               }`}
             >
-              <Check size={12} className="md:w-[14px] md:h-[14px]" /> 保存成功
+              <Check size={12} className="md:w-[14px] md:h-[14px]" /> {t("settings.saveSuccess")}
             </div>
             <button
               onClick={handleSaveConfig}
               disabled={saveMutation.isPending}
               className="flex items-center gap-2 theme-btn-primary theme-on-primary px-6 md:px-10 py-3 rounded-xl md:rounded-2xl font-semibold shadow-lg transition-all active:scale-95 text-xs md:text-sm uppercase min-h-[44px] disabled:opacity-60"
             >
-              <Save size={16} className="md:w-[18px] md:h-[18px]" /> 保存
+              <Save size={16} className="md:w-[18px] md:h-[18px]" /> {t("settings.saveButton")}
             </button>
           </div>
         </div>

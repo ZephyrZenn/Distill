@@ -10,6 +10,7 @@ import {
   XCircle,
   Loader,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/queryKeys";
@@ -37,6 +38,7 @@ const HISTORY_STORAGE_KEY = "instant_lab_history_tasks";
 const MAX_HISTORY_COUNT = 50; // 最多保存50条历史记录
 
 const InstantLabPage = () => {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { data: groups } = useApiQuery<FeedGroup[]>(
     queryKeys.groups,
@@ -135,7 +137,7 @@ const InstantLabPage = () => {
           // 关闭侧边栏，显示日志视图
           setIsHistoryOpen(false);
         } else {
-          showToast("该任务暂无日志");
+          showToast(t("instantLab.noLogs"));
         }
       } catch (error: any) {
         // 如果是 404，标记为已删除
@@ -146,9 +148,9 @@ const InstantLabPage = () => {
           };
           saveHistoryTask(deletedTask);
           setSelectedHistoryTask(deletedTask);
-          showToast("该记录已从服务器删除", { type: "error" });
+          showToast(t("instantLab.recordDeleted"), { type: "error" });
         } else {
-          showToast("加载任务详情失败", { type: "error" });
+          showToast(t("instantLab.loadTaskFailed"), { type: "error" });
         }
       } finally {
         setLoadingHistoryTask(false);
@@ -250,7 +252,7 @@ const InstantLabPage = () => {
     saveHistoryTask(completedTask);
     setTaskId(null);
     localStorage.removeItem(TASK_STORAGE_KEY);
-    showToast("简报生成成功！");
+    showToast(t("instantLab.generationSuccess"));
     queryClient.invalidateQueries({ queryKey: queryKeys.briefs() });
     queryClient.invalidateQueries({ queryKey: queryKeys.defaultBriefs });
   }, [
@@ -276,7 +278,7 @@ const InstantLabPage = () => {
       saveHistoryTask(failedTask);
       setTaskId(null);
       localStorage.removeItem(TASK_STORAGE_KEY);
-      showToast(`生成失败: ${error}`, { type: "error" });
+      showToast(t("instantLab.generationFailed", { error }), { type: "error" });
     },
     [showToast, taskId, generationFocus, agentMode, saveHistoryTask],
   );
@@ -327,7 +329,7 @@ const InstantLabPage = () => {
   const startGeneration = async () => {
     // Agent Mode 需要填写 focus，Workflow Mode 需要至少选择一个分组
     if (agentMode && !generationFocus.trim()) {
-      showToast("Agent Mode 下必须填写用户关注点", { type: "error" });
+      showToast(t("instantLab.agentFocusRequired"), { type: "error" });
       return;
     }
     if (!agentMode && selectedGroupsForGen.length === 0) return;
@@ -361,7 +363,7 @@ const InstantLabPage = () => {
       setIsGenerating(false);
       // FastAPI 返回的错误格式是 { detail: "error message" }
       const errorMessage =
-        error?.response?.data?.detail || error?.message || "启动任务失败";
+        error?.response?.data?.detail || error?.message || t("instantLab.startTaskFailed");
       showToast(errorMessage, { type: "error" });
     }
   };
@@ -389,7 +391,7 @@ const InstantLabPage = () => {
     return (
       <Layout>
         <div className="h-full overflow-hidden p-4 md:p-12 flex flex-col items-center justify-center">
-          <div className="theme-text-muted text-sm">检查任务状态...</div>
+          <div className="theme-text-muted text-sm">{t("instantLab.checkStatus")}</div>
         </div>
       </Layout>
     );
@@ -407,7 +409,7 @@ const InstantLabPage = () => {
         <div className="p-4 border-b theme-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History size={20} className="theme-accent-text" />
-            <h3 className="font-semibold theme-text">生成历史</h3>
+            <h3 className="font-semibold theme-text">{t("instantLab.generationHistory")}</h3>
           </div>
           <button
             onClick={() => setIsHistoryOpen(false)}
@@ -421,7 +423,7 @@ const InstantLabPage = () => {
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {historyTasks.length === 0 ? (
             <div className="p-8 text-center theme-text-muted text-sm">
-              暂无历史记录
+              {t("instantLab.noHistory")}
             </div>
           ) : (
             <div className="p-2">
@@ -471,14 +473,14 @@ const InstantLabPage = () => {
                             className={`text-xs font-medium ${statusColor}`}
                           >
                             {task.status === "completed"
-                              ? "已完成"
+                              ? t("instantLab.completed")
                               : task.status === "failed"
-                                ? "失败"
+                                ? t("instantLab.failed")
                                 : task.status === "deleted"
-                                  ? "已删除"
+                                  ? t("instantLab.deleted")
                                   : task.status === "running"
-                                    ? "运行中"
-                                    : "等待中"}
+                                    ? t("instantLab.running")
+                                    : t("instantLab.pending")}
                           </span>
                           {task.agentMode && (
                             <span className="text-[10px] theme-accent-bg theme-on-accent px-1.5 py-0.5 rounded font-semibold">
@@ -492,12 +494,15 @@ const InstantLabPage = () => {
                           </p>
                         )}
                         <p className="text-[10px] theme-text-muted">
-                          {date.toLocaleString("zh-CN", {
+                          {date.toLocaleString(
+                            i18n.resolvedLanguage === "zh" ? "zh-CN" : "en-US",
+                            {
                             month: "short",
                             day: "numeric",
                             hour: "2-digit",
                             minute: "2-digit",
-                          })}
+                            },
+                          )}
                         </p>
                       </div>
                     </div>
@@ -524,7 +529,7 @@ const InstantLabPage = () => {
           >
             <History size={18} className="theme-accent-text" />
             <span className="text-xs font-semibold hidden sm:inline font-body-medium">
-              历史
+              {t("instantLab.history")}
             </span>
           </button>
 
@@ -564,7 +569,7 @@ const InstantLabPage = () => {
                   className="flex items-center gap-1 md:gap-2 bg-white/10 hover:bg-white/20 px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-semibold border border-white/10 transition-all min-h-[44px]"
                 >
                   <RotateCcw size={14} />{" "}
-                  <span className="hidden sm:inline">开启新总结</span>
+                    <span className="hidden sm:inline">{t("instantLab.newSummary")}</span>
                 </button>
               )}
             </div>
@@ -613,7 +618,7 @@ const InstantLabPage = () => {
         >
           <History size={18} className="theme-accent-text" />
           <span className="text-xs font-semibold hidden sm:inline font-body-medium">
-            历史
+            {t("instantLab.history")}
           </span>
         </button>
 
@@ -641,10 +646,10 @@ const InstantLabPage = () => {
               </div>
               <div>
                 <h3 className="type-section-title theme-text">
-                  实时 Agent 总结
+                  {t("instantLab.title")}
                 </h3>
                 <p className="theme-text-muted text-xs md:text-sm font-body-medium">
-                  配置偏好并启动即时分析
+                  {t("instantLab.subtitle")}
                 </p>
               </div>
             </div>
@@ -681,7 +686,7 @@ const InstantLabPage = () => {
                     Workflow
                   </p>
                   <p className="mt-0.5 text-[11px] theme-text-muted">
-                    仅根据分组内订阅源的信息生成总结
+                    {t("instantLab.workflowDescription")}
                   </p>
                 </button>
 
@@ -723,9 +728,7 @@ const InstantLabPage = () => {
                     Agent
                   </p>
                   <p className="mt-0.5 text-[11px] theme-text-muted">
-                    根据关注点自主搜索信息，生成总结。
-                    <br />
-                    注意：此模式会消耗较多Token。
+                    {t("instantLab.agentDescription")}
                   </p>
                 </button>
               </div>
@@ -741,7 +744,7 @@ const InstantLabPage = () => {
                 <div className="border-b theme-border theme-surface-hover p-3 md:p-4">
                   <div className="flex items-start gap-3">
                     <div className="pt-1 text-xs font-semibold theme-text whitespace-nowrap">
-                      目标分组 <span className="text-rose-400">*</span>
+                      {t("instantLab.workflowGroups")} <span className="text-rose-400">*</span>
                     </div>
                     <div className="flex-1">
                       <div className="flex flex-wrap gap-2">
@@ -761,7 +764,7 @@ const InstantLabPage = () => {
                       </div>
                       {selectedGroupsForGen.length === 0 && (
                         <div className="mt-2 text-xs text-rose-400">
-                          请至少选择一个分组
+                          {t("schedules.groupRequired")}
                         </div>
                       )}
                     </div>
@@ -773,13 +776,13 @@ const InstantLabPage = () => {
               <div className="px-3 md:px-4 py-3 theme-text">
                 <div className="flex items-center gap-2 mb-1.5">
                   <label className="text-xs font-semibold theme-text shrink-0">
-                    用户关注点
+                    {t("instantLab.focusLabel")}
                   </label>
                   {agentMode && (
                     <span className="text-rose-400 text-xs">*</span>
                   )}
                   {!agentMode && (
-                    <span className="theme-text-muted text-xs">(可选)</span>
+                    <span className="theme-text-muted text-xs">{t("instantLab.optional")}</span>
                   )}
                 </div>
                 <div
@@ -806,8 +809,8 @@ const InstantLabPage = () => {
                     }}
                     placeholder={
                       agentMode
-                        ? "请输入您的关注点..."
-                        : "例如：关注 AI 在移动端的应用..."
+                        ? t("instantLab.focusPlaceholderAgent")
+                        : t("instantLab.focusPlaceholderWorkflow")
                     }
                     rows={1}
                     className="flex-1 min-w-0 min-h-[2.25rem] md:min-h-10 max-h-28 py-2.5 px-3 md:px-4 bg-transparent border-none text-sm outline-none resize-none overflow-x-hidden overflow-y-auto break-words"
@@ -825,7 +828,7 @@ const InstantLabPage = () => {
                 </div>
                 {agentMode && !generationFocus.trim() && (
                   <p className="text-xs text-rose-400 mt-1 ml-1">
-                    Agent Mode 下必须填写用户关注点
+                    {t("instantLab.agentFocusRequired")}
                   </p>
                 )}
               </div>

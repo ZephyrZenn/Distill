@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Gauge, LayoutList, Bot, Save, Check, ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/queryKeys";
 import { useApiQuery } from "@/hooks/useApiQuery";
@@ -41,6 +42,7 @@ const DEFAULT_AGENT_LIMITS: AgentLimitsSetting = {
 };
 
 const SettingsAdvancedPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: setting } = useApiQuery<Setting>(
@@ -79,10 +81,10 @@ const SettingsAdvancedPage = () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.settings });
         setShowSaveToast(true);
         setTimeout(() => setShowSaveToast(false), 3000);
-        showToast("高级配置保存成功");
+        showToast(t("settingsAdvanced.saveSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "保存失败", { type: "error" });
+        showToast(error.message || t("settingsAdvanced.saveFailed"), { type: "error" });
       },
     },
   );
@@ -102,16 +104,16 @@ const SettingsAdvancedPage = () => {
                 type="button"
                 onClick={() => navigate("/settings")}
                 className="p-2 rounded-lg theme-text-muted theme-surface-hover theme-accent-text-hover transition-colors"
-                aria-label="返回设置"
+                aria-label={t("settingsAdvanced.back")}
               >
                 <ArrowLeft size={20} />
               </button>
               <div>
                 <h1 className="text-lg md:text-xl font-semibold theme-text">
-                  高级设置
+                  {t("settingsAdvanced.title")}
                 </h1>
                 <p className="theme-text-muted text-xs font-medium">
-                  限流、上下文与 Agent 循环上限
+                  {t("settingsAdvanced.subtitle")}
                 </p>
               </div>
             </div>
@@ -122,12 +124,12 @@ const SettingsAdvancedPage = () => {
                 <div className="flex items-center gap-2 mb-4">
                   <Gauge size={16} className="theme-accent-text" />
                   <h2 className="text-sm font-semibold theme-text">
-                    限流与重试
+                    {t("settingsAdvanced.rateLimitSection")}
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">
-                    <span className={labelCls}>每分钟最大请求数</span>
+                    <span className={labelCls}>{t("settingsAdvanced.requestsPerMinute")}</span>
                     <input
                       type="number"
                       min={1}
@@ -146,7 +148,7 @@ const SettingsAdvancedPage = () => {
                     />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>令牌桶突发大小</span>
+                    <span className={labelCls}>{t("settingsAdvanced.burstSize")}</span>
                     <input
                       type="number"
                       min={1}
@@ -164,7 +166,7 @@ const SettingsAdvancedPage = () => {
                     />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>最大重试次数</span>
+                    <span className={labelCls}>{t("settingsAdvanced.maxRetries")}</span>
                     <input
                       type="number"
                       min={0}
@@ -182,7 +184,7 @@ const SettingsAdvancedPage = () => {
                     />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>退避基准延迟（秒）</span>
+                    <span className={labelCls}>{t("settingsAdvanced.baseDelay")}</span>
                     <input
                       type="number"
                       min={0}
@@ -201,7 +203,7 @@ const SettingsAdvancedPage = () => {
                     />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>退避最大延迟（秒）</span>
+                    <span className={labelCls}>{t("settingsAdvanced.maxDelay")}</span>
                     <input
                       type="number"
                       min={0}
@@ -232,7 +234,7 @@ const SettingsAdvancedPage = () => {
                           })
                         }
                       />
-                      <span className="text-sm theme-text">启用限流</span>
+                      <span className="text-sm theme-text">{t("settingsAdvanced.enableRateLimit")}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <Checkbox
@@ -247,7 +249,7 @@ const SettingsAdvancedPage = () => {
                           })
                         }
                       />
-                      <span className="text-sm theme-text">失败时自动重试</span>
+                      <span className="text-sm theme-text">{t("settingsAdvanced.enableRetry")}</span>
                     </label>
                   </div>
                 </div>
@@ -257,11 +259,11 @@ const SettingsAdvancedPage = () => {
               <section className="rounded-xl theme-surface p-4 md:p-5 border theme-border">
                 <div className="flex items-center gap-2 mb-4">
                   <LayoutList size={16} className="theme-accent-text" />
-                  <h2 className="text-sm font-semibold theme-text">上下文</h2>
+                  <h2 className="text-sm font-semibold theme-text">{t("settingsAdvanced.contextSection")}</h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">
-                    <span className={labelCls}>上下文最大 token 数</span>
+                    <span className={labelCls}>{t("settingsAdvanced.maxTokens")}</span>
                     <input
                       type="number"
                       min={1000}
@@ -279,7 +281,7 @@ const SettingsAdvancedPage = () => {
                     />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>压缩阈值（0～1）</span>
+                    <span className={labelCls}>{t("settingsAdvanced.compressThreshold")}</span>
                     <input
                       type="number"
                       min={0}
@@ -306,12 +308,12 @@ const SettingsAdvancedPage = () => {
                 <div className="flex items-center gap-2 mb-4">
                   <Bot size={16} className="theme-accent-text" />
                   <h2 className="text-sm font-semibold theme-text">
-                    Agent 循环上限
+                    {t("settingsAdvanced.agentSection")}
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="block">
-                    <span className={labelCls}>研究阶段最大迭代次数</span>
+                    <span className={labelCls}>{t("settingsAdvanced.maxIterations")}</span>
                     <input
                       type="number"
                       min={1}
@@ -329,7 +331,7 @@ const SettingsAdvancedPage = () => {
                     />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>工具调用总次数上限</span>
+                    <span className={labelCls}>{t("settingsAdvanced.maxToolCalls")}</span>
                     <input
                       type="number"
                       min={1}
@@ -347,7 +349,7 @@ const SettingsAdvancedPage = () => {
                     />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>材料整理轮数上限</span>
+                    <span className={labelCls}>{t("settingsAdvanced.maxCurations")}</span>
                     <input
                       type="number"
                       min={1}
@@ -365,7 +367,7 @@ const SettingsAdvancedPage = () => {
                     />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>计划复核轮数上限</span>
+                    <span className={labelCls}>{t("settingsAdvanced.maxPlanReviews")}</span>
                     <input
                       type="number"
                       min={1}
@@ -383,7 +385,7 @@ const SettingsAdvancedPage = () => {
                     />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>草稿润色轮数上限</span>
+                    <span className={labelCls}>{t("settingsAdvanced.maxRefines")}</span>
                     <input
                       type="number"
                       min={1}
@@ -414,7 +416,7 @@ const SettingsAdvancedPage = () => {
                           })
                         }
                       />
-                      <span className="text-sm theme-text">启用硬性上限</span>
+                      <span className="text-sm theme-text">{t("settingsAdvanced.enableHardLimits")}</span>
                     </label>
                   </div>
                 </div>
@@ -433,7 +435,7 @@ const SettingsAdvancedPage = () => {
                   : "opacity-0 -translate-x-4"
               }`}
             >
-              <Check size={14} /> 保存成功
+              <Check size={14} /> {t("settingsAdvanced.saveSuccess")}
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -441,14 +443,14 @@ const SettingsAdvancedPage = () => {
                 onClick={() => navigate("/settings")}
                 className="px-4 py-2.5 rounded-xl theme-text theme-surface-hover theme-accent-text-hover font-medium text-sm transition-colors"
               >
-                返回
+                {t("settingsAdvanced.back")}
               </button>
               <button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
                 className="flex items-center gap-2 theme-btn-primary theme-on-primary px-6 py-2.5 rounded-xl font-semibold shadow-lg transition-all active:scale-95 text-sm disabled:opacity-60"
               >
-                <Save size={16} /> 保存
+                <Save size={16} /> {t("settingsAdvanced.saveButton")}
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { Listbox, Transition } from "@headlessui/react";
 import { Check, ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export interface SelectOption {
   value: string;
@@ -21,11 +22,13 @@ export const Select = ({
   value,
   onChange,
   options,
-  placeholder = "请选择",
+  placeholder,
   className = "",
   direction = "down",
   multiple = false,
 }: SelectProps) => {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t("common.select");
   const isMulti = multiple;
   const listboxValue = isMulti
     ? (Array.isArray(value) ? value : []).filter(Boolean)
@@ -46,8 +49,8 @@ export const Select = ({
           .slice(0, 2)
           .join("、") +
         (selectedOptions.length > 2 ? ` 等${selectedOptions.length}个` : "")
-      : placeholder
-    : selectedOption?.label || placeholder;
+      : resolvedPlaceholder
+    : selectedOption?.label || resolvedPlaceholder;
   const isFilled = isMulti
     ? selectedOptions.length > 0
     : !!(selectedOption && value);

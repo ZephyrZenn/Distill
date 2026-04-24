@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface ModalProps {
   isOpen: boolean;
@@ -16,9 +17,11 @@ export const Modal = ({
   title,
   children,
   onConfirm,
-  confirmText = "保存",
+  confirmText,
   confirmDisabled = false,
 }: PropsWithChildren<ModalProps>) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
@@ -36,7 +39,7 @@ export const Modal = ({
           <button
             onClick={onClose}
             className="p-2 theme-surface-hover rounded-full theme-text-muted transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0"
-            aria-label="关闭"
+            aria-label={t("common.close")}
           >
             <X size={20} />
           </button>
@@ -49,14 +52,14 @@ export const Modal = ({
             onClick={onClose}
             className="flex-1 py-3 rounded-2xl font-semibold theme-text-muted theme-surface-hover transition-all min-h-[44px]"
           >
-            取消
+            {t("common.cancel")}
           </button>
           <button
             onClick={onConfirm}
             disabled={confirmDisabled}
             className="flex-1 py-3 rounded-2xl font-semibold theme-btn-primary theme-on-primary shadow-lg transition-all min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {confirmText}
+            {confirmText ?? t("common.save")}
           </button>
         </div>
       </div>

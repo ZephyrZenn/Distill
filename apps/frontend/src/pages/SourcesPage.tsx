@@ -8,6 +8,7 @@ import {
   Link as LinkIcon,
   FileUp,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/queryKeys";
 import { useApiQuery } from "@/hooks/useApiQuery";
@@ -19,6 +20,7 @@ import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmDialogContext";
 
 const SourcesPage = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: feeds } = useApiQuery<Feed[]>(queryKeys.feeds, api.getFeeds);
   const { data: groups } = useApiQuery<FeedGroup[]>(
@@ -47,9 +49,9 @@ const SourcesPage = () => {
       const group = allGroups.find((g) =>
         g.feeds?.some((f) => f.id === source.id),
       );
-      return { ...source, groupName: group ? group.title : "未分组" };
+      return { ...source, groupName: group ? group.title : t("common.ungrouped") };
     });
-  }, [allFeeds, allGroups]);
+  }, [allFeeds, allGroups, t]);
 
   const createMutation = useApiMutation(
     async () => {
@@ -64,10 +66,10 @@ const SourcesPage = () => {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.feeds });
         setIsModalOpen(false);
-        showToast("订阅源创建成功");
+        showToast(t("sources.createSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "创建订阅源失败", { type: "error" });
+        showToast(error.message || t("sources.createFailed"), { type: "error" });
       },
     },
   );
@@ -85,10 +87,10 @@ const SourcesPage = () => {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.feeds });
         setIsModalOpen(false);
-        showToast("订阅源更新成功");
+        showToast(t("sources.updateSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "更新订阅源失败", { type: "error" });
+        showToast(error.message || t("sources.updateFailed"), { type: "error" });
       },
     },
   );
@@ -100,10 +102,10 @@ const SourcesPage = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.feeds });
-        showToast("订阅源删除成功");
+        showToast(t("sources.deleteSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "删除订阅源失败", { type: "error" });
+        showToast(error.message || t("sources.deleteFailed"), { type: "error" });
       },
     },
   );
@@ -119,10 +121,10 @@ const SourcesPage = () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.feeds });
         setIsImportModalOpen(false);
         setOpmlContent("");
-        showToast("OPML 导入成功");
+        showToast(t("sources.importSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "导入失败，请检查 OPML 格式", {
+        showToast(error.message || t("sources.importFailed"), {
           type: "error",
         });
       },
@@ -146,10 +148,12 @@ const SourcesPage = () => {
   const handleDeleteSource = async (feedId: number) => {
     const feed = allFeeds.find((f) => f.id === feedId);
     const confirmed = await confirm({
-      title: "删除订阅源",
-      description: `确定要删除"${feed?.title ?? "此订阅源"}"吗？此操作无法撤销。`,
-      confirmLabel: "删除",
-      cancelLabel: "取消",
+      title: t("sources.deleteTitle"),
+      description: t("sources.deleteDescription", {
+        name: feed?.title ?? t("sources.deleteFallbackName"),
+      }),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
       tone: "danger",
     });
     if (confirmed) {
@@ -189,7 +193,7 @@ const SourcesPage = () => {
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold theme-text-muted theme-accent-text-hover theme-surface-hover border theme-border transition-colors min-h-[44px]"
           >
             <FileUp size={18} />
-            导入 OPML
+            {t("sources.importOpml")}
           </button>
         </div>
         {/* Grid layout matching t.tsx sources exactly */}
@@ -205,7 +209,11 @@ const SourcesPage = () => {
               {source.status && (
                 <div
                   className="absolute top-4 right-4 z-10"
-                  title={source.status === "active" ? "正常" : "不可访问"}
+                  title={
+                    source.status === "active"
+                      ? t("sources.statusActive")
+                      : t("sources.statusInactive")
+                  }
                 >
                   <div className="relative w-3 h-3">
                     {/* Breathing outer ring */}
@@ -235,7 +243,7 @@ const SourcesPage = () => {
                   {source.title}
                 </h4>
                 <p className="text-[10px] md:text-xs theme-text-muted line-clamp-2 leading-relaxed font-body">
-                  {source.desc || "暂无描述信息"}
+                  {source.desc || t("common.noDescription")}
                 </p>
               </div>
               <div className="mt-3 flex items-center justify-between shrink-0">
@@ -248,7 +256,7 @@ const SourcesPage = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="theme-text-muted theme-accent-text-hover transition-colors shrink-0 p-1"
-                    title="打开订阅源链接"
+                    title={t("sources.openLink")}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ExternalLink size={14} />
@@ -259,7 +267,7 @@ const SourcesPage = () => {
                       handleDeleteSource(source.id);
                     }}
                     className="text-rose-400 hover:text-rose-500 transition-colors flex-shrink-0 p-1"
-                    title="删除订阅源"
+                    title={t("sources.deleteAction")}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -274,7 +282,7 @@ const SourcesPage = () => {
             className="border-2 border-dashed theme-border-subtle rounded-2xl flex flex-col items-center justify-center theme-text-muted theme-accent-text-hover theme-surface-hover min-h-[130px] md:h-[140px] theme-transition card-hover-subtle animate-entrance"
           >
             <Plus size={24} className="mb-2" />
-            <span className="text-[10px] font-semibold uppercase">添加源</span>
+            <span className="text-[10px] font-semibold uppercase">{t("sources.addSource")}</span>
           </button>
         </div>
       </div>
@@ -286,23 +294,22 @@ const SourcesPage = () => {
           setIsImportModalOpen(false);
           setOpmlContent("");
         }}
-        title="导入 OPML"
+        title={t("sources.importTitle")}
         onConfirm={() => importMutation.mutate()}
-        confirmText="导入"
+        confirmText={t("sources.importConfirm")}
         confirmDisabled={!opmlContent.trim() || importMutation.isPending}
       >
         <div className="space-y-4">
           <p className="text-sm theme-text-muted">
-            上传 OPML 文件或粘贴内容，将批量添加订阅源（与现有源重复的 URL
-            会跳过）。
+            {t("sources.importDescription")}
           </p>
           <div>
             <label className="block text-[10px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-              选择文件
+              {t("sources.chooseFile")}
             </label>
             <label className="flex items-center justify-center gap-2 w-full theme-surface theme-border border border-dashed rounded-2xl px-5 py-4 text-sm theme-text-muted theme-accent-text-hover theme-surface-hover cursor-pointer transition-colors min-h-[52px]">
               <FileUp size={18} />
-              <span>点击选择 .opml 文件</span>
+              <span>{t("sources.clickSelectFile")}</span>
               <input
                 type="file"
                 accept=".opml,application/xml,text/xml"
@@ -313,7 +320,7 @@ const SourcesPage = () => {
           </div>
           <div>
             <label className="block text-[10px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-              或粘贴 OPML 内容
+              {t("sources.pasteContent")}
             </label>
             <textarea
               value={opmlContent}
@@ -330,13 +337,13 @@ const SourcesPage = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingSource?.id ? "编辑源" : "加入新源"}
+        title={editingSource?.id ? t("sources.editTitle") : t("sources.createTitle")}
         onConfirm={handleSaveSource}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-[10px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-              别名
+              {t("sources.alias")}
             </label>
             <input
               type="text"
@@ -351,7 +358,7 @@ const SourcesPage = () => {
           </div>
           <div>
             <label className="block text-[10px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-              描述
+              {t("sources.description")}
             </label>
             <textarea
               value={editingSource?.desc || ""}
@@ -366,7 +373,7 @@ const SourcesPage = () => {
           </div>
           <div>
             <label className="block text-[10px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-              RSS URL
+              {t("sources.rssUrl")}
             </label>
             <div className="relative">
               <LinkIcon

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Edit3, FolderPlus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/queryKeys";
 import { useApiQuery } from "@/hooks/useApiQuery";
@@ -13,6 +14,7 @@ import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmDialogContext";
 
 const GroupsPage = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: groups } = useApiQuery<FeedGroup[]>(
     queryKeys.groups,
@@ -47,10 +49,10 @@ const GroupsPage = () => {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.groups });
         setIsModalOpen(false);
-        showToast("分组创建成功");
+        showToast(t("groups.createSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "创建分组失败", { type: "error" });
+        showToast(error.message || t("groups.createFailed"), { type: "error" });
       },
     },
   );
@@ -68,10 +70,10 @@ const GroupsPage = () => {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.groups });
         setIsModalOpen(false);
-        showToast("分组更新成功");
+        showToast(t("groups.updateSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "更新分组失败", { type: "error" });
+        showToast(error.message || t("groups.updateFailed"), { type: "error" });
       },
     },
   );
@@ -83,10 +85,10 @@ const GroupsPage = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: queryKeys.groups });
-        showToast("分组删除成功");
+        showToast(t("groups.deleteSuccess"));
       },
       onError: (error) => {
-        showToast(error.message || "删除分组失败", { type: "error" });
+        showToast(error.message || t("groups.deleteFailed"), { type: "error" });
       },
     },
   );
@@ -109,10 +111,12 @@ const GroupsPage = () => {
   const handleDeleteGroup = async (groupId: number) => {
     const group = allGroups.find((g) => g.id === groupId);
     const confirmed = await confirm({
-      title: "删除分组",
-      description: `确定要删除"${group?.title ?? "此分组"}"吗？此操作无法撤销。`,
-      confirmLabel: "删除",
-      cancelLabel: "取消",
+      title: t("groups.deleteTitle"),
+      description: t("groups.deleteDescription", {
+        name: group?.title ?? t("groups.deleteFallbackName"),
+      }),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
       tone: "danger",
     });
     if (confirmed) {
@@ -176,12 +180,12 @@ const GroupsPage = () => {
                 {group.title}
               </h3>
               <p className="text-xs theme-text-muted leading-relaxed line-clamp-3 mb-4 font-body">
-                {group.desc || "暂无描述信息"}
+                {group.desc || t("common.noDescription")}
               </p>
             </div>
             <div className="mt-auto pt-5 border-t theme-border-subtle flex items-center justify-between shrink-0 relative z-10">
               <span className="type-caption theme-accent-text italic">
-                {group.feeds?.length || 0} 个订阅源
+                {t("groups.sourcesCount", { count: group.feeds?.length || 0 })}
               </span>
               <button
                 onClick={() => handleOpenModal(group)}
@@ -206,7 +210,7 @@ const GroupsPage = () => {
               strokeWidth={1.5}
             />
           </div>
-          <span className="type-label uppercase">新建分组</span>
+          <span className="type-label uppercase">{t("groups.newGroup")}</span>
         </button>
       </div>
 
@@ -214,14 +218,14 @@ const GroupsPage = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingGroup?.id ? "编辑分组" : "新建订阅分组"}
+        title={editingGroup?.id ? t("groups.editTitle") : t("groups.createTitle")}
         onConfirm={handleSaveGroup}
       >
         <div className="space-y-6">
           <div className="space-y-4">
             <div>
               <label className="block text-[12px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-                分组名称
+                {t("groups.groupName")}
               </label>
               <input
                 type="text"
@@ -236,7 +240,7 @@ const GroupsPage = () => {
             </div>
             <div>
               <label className="block text-[12px] font-semibold theme-text-muted uppercase mb-2 ml-1">
-                描述
+                {t("groups.description")}
               </label>
               <textarea
                 value={editingGroup?.description || ""}
@@ -253,7 +257,7 @@ const GroupsPage = () => {
 
           <div className="pt-4 border-t theme-border">
             <label className="text-[12px] font-semibold theme-text-muted uppercase ml-1 mb-4 block">
-              下属源管理
+              {t("groups.sourceManagement")}
             </label>
             <div className="space-y-1.5 mb-4 max-h-64 overflow-y-auto custom-scrollbar">
               {(editingGroup?.sources || []).map((sourceId) => {
@@ -288,7 +292,7 @@ const GroupsPage = () => {
                     )
                   }
                   multiple
-                  placeholder="关联已有源..."
+                  placeholder={t("groups.linkExistingSource")}
                   direction="up"
                   options={[
                     ...allFeeds

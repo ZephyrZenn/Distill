@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import { useTranslation } from "react-i18next";
 import { api } from "@/api/client";
 import { Layout } from "@/components/Layout";
 import { useToast } from "@/context/ToastContext";
@@ -11,6 +12,7 @@ import type { Memory } from "@/types/api";
 import { formatDate } from "@/utils/date";
 
 const MemoryPage = () => {
+  const { t } = useTranslation();
   const { id: memoryIdParam } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -34,7 +36,7 @@ const MemoryPage = () => {
               error?.response?.data?.detail ||
               error?.response?.data?.message ||
               error?.message ||
-              "加载历史记忆失败";
+              t("memory.loadFailed");
             showToast(errorMessage, { type: "error" });
             setIsLoading(false);
             // 延迟导航，让用户看到错误提示
@@ -43,7 +45,7 @@ const MemoryPage = () => {
             }, 1500);
           });
       } else {
-        showToast("无效的历史记忆ID", { type: "error" });
+        showToast(t("memory.invalidId"), { type: "error" });
         navigate("/", { replace: true });
       }
     }
@@ -137,7 +139,7 @@ const MemoryPage = () => {
     return (
       <Layout>
         <div className="h-full flex items-center justify-center">
-          <div className="text-slate-400 text-sm">加载中...</div>
+          <div className="text-slate-400 text-sm">{t("common.loading")}</div>
         </div>
       </Layout>
     );
@@ -147,7 +149,7 @@ const MemoryPage = () => {
     return (
       <Layout>
         <div className="h-full flex items-center justify-center">
-          <div className="text-slate-400 text-sm">历史记忆不存在</div>
+          <div className="text-slate-400 text-sm">{t("memory.notFound")}</div>
         </div>
       </Layout>
     );
@@ -167,7 +169,7 @@ const MemoryPage = () => {
                   </div>
                   <div>
                     <h1 className="text-xl md:text-2xl font-semibold text-slate-800">
-                      历史记忆
+                      {t("memory.title")}
                     </h1>
                     <div className="flex items-center gap-2 text-xs md:text-sm text-slate-400 mt-1">
                       <Clock size={14} />

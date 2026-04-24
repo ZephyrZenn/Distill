@@ -22,6 +22,7 @@ import ReactMarkdown from "react-markdown";
 import { useNavigate, useParams } from "react-router-dom";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
+import { useTranslation } from "react-i18next";
 
 // 简单 slug 生成，供标题锚点使用
 const slugify = (text: string) =>
@@ -103,7 +104,7 @@ const extractKeyPoints = (content: string, maxItems = 4): string[] => {
     points.push(...sentences.slice(0, needed));
   }
 
-  return points.length > 0 ? points : ["暂无内容预览"];
+  return points.length > 0 ? points : [];
 };
 
 const getTodayString = () => {
@@ -112,6 +113,7 @@ const getTodayString = () => {
 };
 
 const SummaryPage = () => {
+  const { t } = useTranslation();
   const { id: briefIdParam } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -250,7 +252,7 @@ const SummaryPage = () => {
               error?.response?.data?.detail ||
               error?.response?.data?.message ||
               error?.message ||
-              "加载简报详情失败";
+              t("summary.loadFailed");
 
             // 显示错误提示
             showToast(errorMessage, { type: "error" });
@@ -262,7 +264,7 @@ const SummaryPage = () => {
           });
       } else {
         // 无效的 ID
-        showToast("无效的简报ID", { type: "error" });
+        showToast(t("summary.invalidId"), { type: "error" });
         navigate("/", { replace: true });
       }
     } else {
@@ -326,7 +328,7 @@ const SummaryPage = () => {
         error?.response?.data?.detail ||
         error?.response?.data?.message ||
         error?.message ||
-        "加载简报详情失败";
+        t("summary.loadFailed");
       showToast(errorMessage, { type: "error" });
     }
   };
@@ -343,11 +345,11 @@ const SummaryPage = () => {
     try {
       await navigator.clipboard.writeText(selectedBrief.content);
       setCopied(true);
-      showToast("内容已复制到剪贴板", { type: "success" });
+      showToast(t("summary.copied"), { type: "success" });
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error("Failed to copy content:", error);
-      showToast("复制失败，请重试", { type: "error" });
+      showToast(t("summary.copyFailed"), { type: "error" });
     }
   };
 
@@ -356,9 +358,9 @@ const SummaryPage = () => {
     try {
       await api.expandOptionalTopic(selectedBrief.id, topicId);
       queryClient.invalidateQueries({ queryKey: ["briefs", "expanding", selectedBrief.id] });
-      showToast("正在生成深度分析，完成后将自动更新");
+      showToast(t("summary.analysisQueued"));
     } catch {
-      showToast("触发失败，请稍后重试");
+      showToast(t("summary.analysisTriggerFailed"));
     }
   };
 
@@ -370,7 +372,7 @@ const SummaryPage = () => {
     return (
       <Layout>
         <div className="h-full flex items-center justify-center">
-          <div className="theme-text-muted text-sm">加载中...</div>
+          <div className="theme-text-muted text-sm">{t("common.loading")}</div>
         </div>
       </Layout>
     );
@@ -408,7 +410,7 @@ const SummaryPage = () => {
                       ))
                     ) : (
                       <span className="px-3 py-1.5 theme-surface theme-border border theme-text-muted rounded-lg text-xs opacity-90">
-                        未分组
+                        {t("common.ungrouped")}
                       </span>
                     )}
                   </div>
@@ -422,8 +424,8 @@ const SummaryPage = () => {
                   <button
                     onClick={handleCopyContent}
                     className="p-2 rounded-lg theme-text-muted theme-accent-text-hover theme-surface-hover transition-colors"
-                    title="复制内容"
-                    aria-label="复制内容"
+                    title={t("summary.copyContent")}
+                    aria-label={t("summary.copyContent")}
                   >
                     {copied ? (
                       <Check size={18} className="text-green-600" />
@@ -450,12 +452,12 @@ const SummaryPage = () => {
                   {/* 日报概览（放在正文容器内顶部） */}
                   <div className="summary-reader-overview mb-8 rounded-lg border theme-overview-border theme-overview-bg">
                     <div className="text-xs font-semibold theme-text-muted uppercase mb-2">
-                      日报概览
+                      {t("summary.dailyOverview")}
                     </div>
                     {selectedBrief.overview ? (
                       <p className="theme-text">{selectedBrief.overview}</p>
                     ) : (
-                      <p className="theme-text-muted italic">暂无日报概览</p>
+                      <p className="theme-text-muted italic">{t("summary.dailyOverviewEmpty")}</p>
                     )}
                   </div>
 
@@ -493,7 +495,9 @@ const SummaryPage = () => {
                                   handleExpandTopic(expandableTopic.topicId)
                                 }
                                 disabled={expandingTopicSet.has(expandableTopic.topicId)}
-                                aria-label={`生成「${expandableTopic.topic}」的深度分析`}
+                                aria-label={t("summary.analysisHelp", {
+                                  topic: expandableTopic.topic,
+                                })}
                                 className="summary-reader-expand-pill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-interactive)] disabled:opacity-60 disabled:cursor-not-allowed"
                               >
                                 {expandingTopicSet.has(expandableTopic.topicId) ? (
@@ -509,14 +513,20 @@ const SummaryPage = () => {
                                     className="summary-reader-expand-pill-icon shrink-0"
                                   />
                                 )}
-                                <span>{expandingTopicSet.has(expandableTopic.topicId) ? "分析中…" : "分析"}</span>
+                                <span>
+                                  {expandingTopicSet.has(expandableTopic.topicId)
+                                    ? t("summary.analyzing")
+                                    : t("summary.analyze")}
+                                </span>
                               </button>
                               <div className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-56 rounded-lg border theme-border theme-surface shadow-lg px-3 py-2 text-xs theme-text leading-relaxed opacity-0 group-hover/expand:opacity-100 transition-opacity duration-150">
                                 <p className="font-semibold theme-accent-text mb-1">
-                                  深度分析可用
+                                  {t("summary.analysisAvailable")}
                                 </p>
                                 <p className="theme-text-muted">
-                                  {`点击生成「${expandableTopic.topic}」的完整深度分析，内容将直接更新到文章中。`}
+                                  {t("summary.analysisHelp", {
+                                    topic: expandableTopic.topic,
+                                  })}
                                 </p>
                               </div>
                             </div>
@@ -621,13 +631,13 @@ const SummaryPage = () => {
                     <div className="flex items-center justify-between gap-3 mb-4">
                       <h3 className="text-xs font-semibold theme-text uppercase flex items-center gap-2">
                         <List size={14} />
-                        文章大纲
+                        {t("summary.outline")}
                       </h3>
                       <button
                         onClick={() => setShowOutline(false)}
                         className="theme-text-muted theme-accent-text-hover transition-colors text-xs"
                       >
-                        隐藏
+                        {t("summary.hide")}
                       </button>
                     </div>
                     <nav className="space-y-1">
@@ -670,12 +680,12 @@ const SummaryPage = () => {
               <button
                 onClick={() => setShowOutline(true)}
                 className="fixed md:absolute right-4 md:right-2 bottom-20 md:bottom-auto md:top-1/2 md:-translate-y-1/2 w-12 h-12 md:w-10 md:h-20 theme-surface backdrop-blur-sm border theme-border rounded-lg md:rounded-l-lg shadow-xl flex flex-col items-center justify-center gap-1 theme-text theme-accent-text-hover theme-surface-hover transition-all z-50 min-w-[44px] min-h-[44px]"
-                title="显示大纲"
-                aria-label="显示大纲"
+                title={t("summary.show")}
+                aria-label={t("summary.show")}
               >
                 <List size={18} className="md:w-5 md:h-5" />
                 <span className="text-[10px] font-medium hidden md:inline">
-                  显示
+                  {t("summary.show")}
                 </span>
               </button>
             )}
@@ -690,7 +700,7 @@ const SummaryPage = () => {
     return (
       <Layout>
         <div className="h-full flex items-center justify-center">
-          <div className="theme-text-muted text-sm">加载中...</div>
+          <div className="theme-text-muted text-sm">{t("common.loading")}</div>
         </div>
       </Layout>
     );
@@ -699,11 +709,13 @@ const SummaryPage = () => {
   // Empty state
   if (!displayBriefs || displayBriefs.length === 0) {
     const emptyMessage =
-      startDate || endDate ? "所选时间段内未找到摘要" : "暂无今日摘要";
+      startDate || endDate
+        ? t("summary.emptyRangeTitle")
+        : t("summary.emptyTodayTitle");
     const emptyDetail =
       startDate || endDate
-        ? "请调整时间范围或返回查看今日摘要。"
-        : "系统尚未生成今日的 AI 摘要。您可以前往「AI 实时总结」手动生成，或等待定时任务自动执行。";
+        ? t("summary.emptyRangeDetail")
+        : t("summary.emptyTodayDetail");
 
     return (
       <Layout>
@@ -767,7 +779,9 @@ const SummaryPage = () => {
                     .filter((line) => line.trim())
                     .slice(0, 4)
                 : extractKeyPoints(brief.content || "");
-              const groupTitle = brief.groups?.[0]?.title || "分组";
+              const groupTitle = brief.groups?.[0]?.title || t("common.ungrouped");
+              const pointsToRender =
+                keyPoints.length > 0 ? keyPoints : [t("summary.previewFallback")];
 
               return (
                 <button
@@ -794,7 +808,7 @@ const SummaryPage = () => {
 
                     {/* 要点列表 */}
                     <ul className="space-y-3 flex-1 text-sm leading-relaxed theme-text font-body">
-                      {keyPoints.map((point, i) => (
+                      {pointsToRender.map((point, i) => (
                         <li key={i} className="flex gap-3">
                           <span className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full theme-accent-bg opacity-80" />
                           <span className="line-clamp-2">{point}</span>
@@ -805,7 +819,7 @@ const SummaryPage = () => {
                     {/* 进入箭头 */}
                     <div className="mt-5 pt-4 border-t theme-border-subtle flex justify-end items-center theme-text-muted group-hover:theme-accent-text transition-colors">
                       <span className="text-xs font-medium mr-2 font-body-medium">
-                        查看全文
+                        {t("summary.viewFull")}
                       </span>
                       <ChevronRight
                         size={16}

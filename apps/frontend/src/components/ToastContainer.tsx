@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { Check, AlertCircle, X, type LucideIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export type ToastType = "success" | "error";
 
@@ -23,6 +24,8 @@ export const ToastContainer: FC<ToastContainerProps> = ({
   toasts,
   onDismiss,
 }) => {
+  const { t } = useTranslation();
+
   if (toasts.length === 0) {
     return null;
   }
@@ -47,7 +50,7 @@ export const ToastContainer: FC<ToastContainerProps> = ({
               type="button"
               className="ml-2 p-1 hover:bg-white/20 rounded-full transition-colors"
               onClick={() => onDismiss(toast.id)}
-              aria-label="关闭通知"
+              aria-label={t("common.close")}
             >
               <X size={14} />
             </button>

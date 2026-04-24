@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export type ConfirmDialogOptions = {
   title?: string;
@@ -22,15 +23,17 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useTranslation();
+
   if (!open || !options) {
     return null;
   }
 
   const {
-    title = "确认操作",
-    description = "请确认是否继续此操作。",
-    confirmLabel = "确认",
-    cancelLabel = "取消",
+    title = t("confirmDialog.title"),
+    description = t("confirmDialog.description"),
+    confirmLabel = t("common.confirm"),
+    cancelLabel = t("common.cancel"),
     tone = "default",
   } = options;
 

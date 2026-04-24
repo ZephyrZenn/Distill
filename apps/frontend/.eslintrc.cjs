@@ -14,7 +14,6 @@ module.exports = {
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
-    'plugin:react-refresh/recommended',
     'prettier',
   ],
   settings: {
@@ -25,5 +24,6 @@ module.exports = {
   rules: {
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: false }],
+    'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
   },
 };

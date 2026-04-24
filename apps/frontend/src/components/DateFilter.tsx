@@ -1,8 +1,9 @@
 import { Calendar, X } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { DayPicker, DateRange } from "react-day-picker";
-import { format, isAfter, isBefore, startOfDay, subDays } from "date-fns";
-import { zhCN } from "date-fns/locale";
+import { format, isAfter, subDays } from "date-fns";
+import { enUS, zhCN } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import "react-day-picker/style.css";
 
 interface DateFilterProps {
@@ -31,9 +32,11 @@ export const DateFilter = ({
   onStartDateChange,
   onEndDateChange,
 }: DateFilterProps) => {
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string>("");
   const popoverRef = useRef<HTMLDivElement>(null);
+  const calendarLocale = i18n.resolvedLanguage === "zh" ? zhCN : enUS;
 
   // 默认设置为今天
   useEffect(() => {
@@ -50,7 +53,7 @@ export const DateFilter = ({
       const start = parseDate(startDate);
       const end = parseDate(endDate);
       if (isAfter(start, end)) {
-        setError("开始日期不能晚于结束日期");
+        setError(t("dateFilter.invalidRange"));
       } else {
         setError("");
       }
@@ -100,7 +103,7 @@ export const DateFilter = ({
       : undefined;
 
   const displayText =
-    startDate && endDate ? `${startDate} → ${endDate}` : "选择日期范围";
+    startDate && endDate ? `${startDate} → ${endDate}` : t("dateFilter.selectRange");
 
   // 快捷选项处理函数
   const handleToday = () => {
@@ -136,7 +139,7 @@ export const DateFilter = ({
         <div className="flex items-center gap-3 theme-accent-bg px-4 py-2 rounded-2xl border theme-border theme-on-accent">
           <Calendar size={16} className="theme-on-accent" />
           <span className="text-[11px] font-semibold uppercase theme-on-accent">
-            时间筛选
+            {t("dateFilter.title")}
           </span>
         </div>
 
@@ -150,7 +153,7 @@ export const DateFilter = ({
                 : "theme-surface border theme-border theme-text theme-accent-text-hover"
             }`}
           >
-            当日
+            {t("dateFilter.today")}
           </button>
           <button
             onClick={handleLastWeek}
@@ -160,7 +163,7 @@ export const DateFilter = ({
                 : "theme-surface border theme-border theme-text theme-accent-text-hover"
             }`}
           >
-            最近一周
+            {t("dateFilter.lastWeek")}
           </button>
         </div>
 
@@ -193,7 +196,7 @@ export const DateFilter = ({
                   selected={selectedRange}
                   onSelect={handleRangeSelect}
                   disabled={{ after: new Date() }}
-                  locale={zhCN}
+                  locale={calendarLocale}
                   numberOfMonths={1}
                   classNames={{
                     root: "day-picker-custom",
