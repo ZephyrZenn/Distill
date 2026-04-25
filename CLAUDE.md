@@ -49,7 +49,7 @@ For multi-step tasks, state a brief plan:
 
 ## Project Overview
 
-FlashAiNews (package name: `distill`) is an AI-powered news briefing system. It aggregates RSS feeds, uses LLMs to generate concise topic-grouped summaries, and provides intelligent news curation via a multi-phase agent workflow.
+Distill (repository directory: `Distill`, package name: `distill`) is an AI-powered news briefing system. It aggregates RSS feeds, uses LLMs to generate concise topic-grouped summaries, and provides intelligent news curation via legacy and Plan-Solve agent workflows.
 
 **Architecture:**
 ```
@@ -63,7 +63,7 @@ Frontend (React/Vite) ↔ Backend API (FastAPI) ↔ External LLM APIs
 
 **Backend:** FastAPI, PostgreSQL + pgvector, Python 3.10+, LangGraph, APScheduler
 
-**Frontend:** React 18.3 + TypeScript, Vite, TailwindCSS, TanStack Query, i18next (en/zh)
+**Frontend:** React 18.3 + TypeScript, Vite, TailwindCSS, TanStack Query, React Router, Headless UI, lucide-react, i18next/react-i18next (en/zh)
 
 **AI/ML:** OpenAI / DeepSeek / Gemini APIs, Tavily (web search), pgvector (embeddings)
 
@@ -73,7 +73,7 @@ Frontend (React/Vite) ↔ Backend API (FastAPI) ↔ External LLM APIs
 apps/
   backend/          FastAPI service
     main.py           Entry point (lifespan, CORS, middleware)
-    router/           API endpoints: brief, feed, group, schedule, memory, setting, task
+    router/           API endpoints: brief, feed, group, schedule, memory, setting
     services/         Business logic: brief_service, feed_service, group_service, ...
     models/           Pydantic request/response models
     config/           Thread pool setup
@@ -84,24 +84,26 @@ apps/
     src/pages/        SummaryPage, SourcesPage, GroupsPage, SchedulesPage,
                       SettingsPage, SettingsAdvancedPage, MemoryPage, InstantLabPage
     src/components/   Layout, Modal, DateFilter, ConfirmDialog, ToastContainer, ui/
-    src/context/      ThemeContext, LanguageContext, ToastContext, ConfirmDialogContext
+    src/context/      ThemeContext, ToastContext, ConfirmDialogContext
     src/hooks/        useApiQuery, useApiMutation, useTaskPolling
     src/api/          Axios client, React Query key definitions
     src/i18n/         i18next setup with en.json, zh.json locales
+    src/styles/       Split CSS bundles for app, layout, forms, cards, content, etc.
     src/types/        TypeScript API type definitions
 
 agent/
   __init__.py         Agent singleton (SummarizeAgenticWorkflow)
+  workflow/           Legacy planner/executor summarization flow
   tools/              db_tool, search_tool, filter_tool, memory_tool, writing_tool
   ps_agent/           Plan & Solve Agent (LangGraph workflow)
     graph.py            Workflow definition + routers
     state.py            PSAgentState (TypedDict)
     models.py           Pydantic models (StructurePlan, SectionUnit, etc.)
     config/thresholds.py  Configurable limits
-    nodes/planner/      bootstrap, research_planner, structure
+    nodes/planner/      bootstrap, researcher, structure
     nodes/solver/       tool_executor, writer, refiner
-    nodes/evaluator/    material_curation, plan_reviewer, summary_reviewer
-    prompts/            Prompt templates (structure, full_audit, audit_analysis)
+    nodes/evaluator/    material_curation, plan_reviewer, summary_reviewer, audit_analyzer, batch_audit
+    prompts/            Prompt templates (bootstrap, research, structure, writing, review, full/snippet audit, audit_analysis)
     audit/              Result parsing, batch processing
     utils/              content_fetcher
 
@@ -132,7 +134,7 @@ run-backend.py        Dev server entry point
 ```bash
 # Backend
 uv sync                                              # Install dependencies
-python run-backend.py                                 # Dev server (auto-reload, port 8000)
+uv run python run-backend.py                          # Dev server (auto-reload, port 8000)
 
 # Frontend
 cd apps/frontend && npm install && npm run dev        # Dev server
@@ -140,18 +142,20 @@ cd apps/frontend && npm run build                     # Production build
 cd apps/frontend && npm run lint                      # ESLint
 
 # Testing
-python -m unittest discover -s test -p "test*.py"
-python -m unittest test.test_ps_agent                 # Specific test
+uv run python -m unittest discover -s test -p "test*.py"
+uv run python -m unittest test.test_ps_agent          # Specific test
 
 # Docker
-cd infra/docker && docker compose up --build -d       # Full stack (backend + frontend + PostgreSQL)
+cd infra/docker && docker compose up --build -d       # Full stack (backend:8000 + frontend:80 + PostgreSQL:5432)
 ```
 
-### Required Environment Variables
+### Environment Variables
 
 ```bash
 POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=distill POSTGRES_HOST=localhost POSTGRES_PORT=5432
 OPENAI_API_KEY=sk-...          # or DEEPSEEK_API_KEY / GEMINI_API_KEY / MODEL_API_KEY
+TAVILY_API_KEY=...             # optional; enables web search
+EMBEDDING_API_KEY=...          # optional; required when [embedding] is configured
 ENV=dev                        # dev | prod | test
 ```
 
@@ -205,9 +209,13 @@ The core agent is a LangGraph `StateGraph` with three phases:
 Key fields in the TypedDict:
 
 - `focus`, `current_date` — User intent and date context
+- `ui_language` — Optional UI language (`"zh"` or `"en"`) for progress messages
 - `execution_mode` — `"NORMAL"` | `"PATCH_MODE"` | `"REPLAN_MODE"` | `"READY_TO_WRITE"`
 - `messages` — Conversation history (annotated with `add`)
 - `research_items`, `discarded_items` — Curated research materials
+- `audit_analysis`, `audit_stage`, `audit_batch_size`, `audit_memo` — Two-stage material audit state
+- `ready_for_review`, `ready_for_write` — Routing flags for plan review and writing
+- `patch_diagnosis`, `replan_diagnosis` — Plan review diagnostics
 - `plan` — `StructurePlan` with writing guides
 - `sections` — List of `SectionUnit` (draft sections)
 - `final_report` — Assembled output
@@ -256,7 +264,7 @@ async with get_db_connection() as conn:
 ## Frontend Patterns
 
 - **Data fetching:** TanStack Query with `useApiQuery` / `useApiMutation` hooks
-- **State:** React Context for theme, language, toast, confirm dialog
-- **i18n:** i18next with `en.json` and `zh.json`, browser language detection
-- **Styling:** TailwindCSS with `clsx` + `tailwind-merge` for class composition
+- **State:** React Context for theme, toast, and confirm dialog; language state is managed by i18next/react-i18next
+- **i18n:** i18next with `en.json` and `zh.json`, browser language detection, and localStorage key `language`
+- **Styling:** TailwindCSS with `clsx` + `tailwind-merge`, plus modular CSS files under `apps/frontend/src/styles/`
 - **API client:** Axios with `/api` base path, backend served at `root_path="/api"`
