@@ -206,7 +206,10 @@ Return audit results in JSON format.
             Message.user(user_prompt),
         ]
 
-        response = await self.client.completion(messages)
+        response = await self.client.completion(
+            messages,
+            json_format=True,
+        )
         res = extract_json(response)
         return res["results"]
 
@@ -308,7 +311,11 @@ Return audit results in JSON format. Keep each audit_report brief (see Length Co
             Message.user(user_prompt),
         ]
 
-        response = await self.client.completion(messages, max_tokens=max_output_tokens)
+        response = await self.client.completion(
+            messages,
+            max_tokens=max_output_tokens,
+            json_format=True,
+        )
         res = extract_json(response)
         return res["results"]
 

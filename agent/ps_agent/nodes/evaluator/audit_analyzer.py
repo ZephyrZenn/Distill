@@ -65,7 +65,10 @@ class AuditAnalyzer:
             Message.system(AUDIT_ANALYSIS_PROMPT),
             Message.user(user_prompt),
         ]
-        response = await self.client.completion(messages)
+        response = await self.client.completion(
+            messages,
+            json_format=True,
+        )
         result = extract_json(response)
         return result
         

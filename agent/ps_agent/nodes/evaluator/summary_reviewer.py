@@ -69,6 +69,9 @@ class SummaryReviewerNode:
             Message.system(SUMMARY_REVIEWER_SYSTEM_PROMPT),
             Message.user(user_prompt),
         ]
-        response = await self.client.completion(messages)
+        response = await self.client.completion(
+            messages,
+            json_format=True,
+        )
         result: ReviewResult = extract_json(response)
         return result

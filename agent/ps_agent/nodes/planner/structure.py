@@ -77,7 +77,10 @@ class StructureNode:
         log_step(state, trace_event("structure.start"))  # 执行前：立即触发 callback，让 UI 先显示
 
         try:
-            response = await self.client.completion(messages)
+            response = await self.client.completion(
+                messages,
+                json_format=True,
+            )
 
             plan: StructurePlan = extract_json(response)
 

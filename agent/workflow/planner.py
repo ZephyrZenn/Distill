@@ -14,6 +14,7 @@ from core.models.llm import Message
 
 logger = logging.getLogger(__name__)
 
+
 class AgentPlanner:
     def __init__(
         self, client: LLMClient, batch_size: int = 20, max_article_count: int = 30
@@ -30,7 +31,9 @@ class AgentPlanner:
         ranked_articles = await self._rank_articles(
             state["raw_articles"], state["focus"], state
         )
-        log_step(state, trace_event("planner.articles.filtered", count=len(ranked_articles)))
+        log_step(
+            state, trace_event("planner.articles.filtered", count=len(ranked_articles))
+        )
         state["scored_articles"] = ranked_articles
         logger.info(
             "[workflow:planner] rank_articles done kept=%d", len(ranked_articles)
@@ -38,13 +41,17 @@ class AgentPlanner:
         keywords = await find_keywords_with_llm(self.client, state["scored_articles"])
         log_step(
             state,
-            trace_event("planner.keywords.extracted", count=len(keywords), keywords=keywords),
+            trace_event(
+                "planner.keywords.extracted", count=len(keywords), keywords=keywords
+            ),
         )
         memories = await search_memory(keywords)
         memory_topics = [m["topic"] for m in memories.values()] if memories else []
         log_step(
             state,
-            trace_event("planner.memories.found", count=len(memories), topics=memory_topics),
+            trace_event(
+                "planner.memories.found", count=len(memories), topics=memory_topics
+            ),
         )
         state["history_memories"] = memories
         logger.info(
@@ -58,7 +65,10 @@ class AgentPlanner:
             len(prompt) if isinstance(prompt, (str, list)) else 0,
         )
         start_time = time.time()
-        response = await self.client.completion(prompt)
+        response = await self.client.completion(
+            prompt,
+            json_format=True,
+        )
         elapsed = time.time() - start_time
         log_step(state, trace_event("planner.completed", elapsed=elapsed))
         logger.info(
@@ -201,7 +211,10 @@ class AgentPlanner:
 """
 
             try:
-                response = await self.client.completion([Message.user(content=prompt)])
+                response = await self.client.completion(
+                    [Message.user(content=prompt)],
+                    json_format=True,
+                )
                 scores_data = extract_json(response)
                 res = {
                     s["id"]: {"score": s["score"], "reasoning": s["reasoning"]}
@@ -253,7 +266,9 @@ class AgentPlanner:
                         )
                     )
             progress = len(scored_articles) / len(articles)
-            log_step(state, trace_event("planner.audit.progress", progress=f"{progress:.2%}"))
+            log_step(
+                state, trace_event("planner.audit.progress", progress=f"{progress:.2%}")
+            )
         # 按分数降序排序
         scored_articles.sort(key=lambda a: a["score"], reverse=True)
         if len(scored_articles) > self.max_article_count:

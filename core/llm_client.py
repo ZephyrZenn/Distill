@@ -51,6 +51,11 @@ def _messages_summary(messages: list[Message]) -> str:
     return ",".join(parts)
 
 
+def _without_none_values(params: dict) -> dict:
+    """Return request params without explicit None values."""
+    return {key: value for key, value in params.items() if value is not None}
+
+
 class APIKeyNotConfiguredError(Exception):
     """Raised when API key is not configured for the current provider."""
 
@@ -178,7 +183,13 @@ class LLMClient(ABC):
         raise RuntimeError(f"Retry loop completed without result in {func.__name__}")
 
     @abstractmethod
-    async def completion(self, prompt, **kwargs) -> str:
+    async def completion(
+        self,
+        prompt,
+        max_tokens: Optional[int] = None,
+        json_format: Optional[bool] = False,
+        **kwargs,
+    ) -> str:
         raise NotImplementedError()
 
     @abstractmethod
@@ -187,6 +198,8 @@ class LLMClient(ABC):
         messages: Union[list[Message], list[dict]],
         tools: Union[list[Tool], list[dict]] | None = None,
         tool_choice: ToolChoice = "auto",
+        max_tokens: Optional[int] = None,
+        json_format: Optional[bool] = False,
         **kwargs,
     ) -> Union[CompletionResponse, dict]:
         """支持 function calling 的 completion 方法
@@ -232,20 +245,29 @@ class GeminiClient(LLMClient):
             http_options=types.HttpOptions(api_version="v1alpha"),
         )
 
-    async def completion(self, prompt, **kwargs) -> str:
+    async def completion(
+        self,
+        prompt,
+        max_tokens: Optional[int] = None,
+        json_format: Optional[bool] = False,
+        **kwargs,
+    ) -> str:
         try:
             # Apply rate limiting
             await self._apply_rate_limit()
 
-            max_tokens = kwargs.get("max_tokens")
             request_params = {
                 "model": self.model,
                 "contents": prompt,
             }
+            config_params = {}
             if max_tokens is not None:
-                request_params["config"] = types.GenerateContentConfig(
-                    max_output_tokens=max_tokens
-                )
+                config_params["max_output_tokens"] = max_tokens
+            if json_format:
+                config_params["response_mime_type"] = "application/json"
+            if config_params:
+                request_params["config"] = types.GenerateContentConfig(**config_params)
+            request_params.update(_without_none_values(kwargs))
 
             async def _do_completion():
                 resp = await self.client.aio.models.generate_content(**request_params)
@@ -267,6 +289,8 @@ class GeminiClient(LLMClient):
         messages: Union[list[Message], list[dict]],
         tools: Union[list[Tool], list[dict]] | None = None,
         tool_choice: ToolChoice = "auto",
+        max_tokens: Optional[int] = None,
+        json_format: Optional[bool] = False,
         **kwargs,
     ) -> Union[CompletionResponse, dict]:
         """支持 function calling 的 completion 方法（Gemini 格式）"""
@@ -289,7 +313,7 @@ class GeminiClient(LLMClient):
 
         async def _do_completion_with_tools():
             return await self._gemini_completion_with_tools_impl(
-                msg_objects, tool_objects, tool_choice, **kwargs
+                msg_objects, tool_objects, tool_choice, max_tokens, json_format, **kwargs
             )
 
         try:
@@ -309,6 +333,8 @@ class GeminiClient(LLMClient):
         messages: list[Message],
         tools: list[Tool] | None = None,
         tool_choice: ToolChoice = "auto",  # noqa: ARG002
+        max_tokens: Optional[int] = None,
+        json_format: Optional[bool] = False,
         **kwargs,
     ) -> CompletionResponse:
         """Internal implementation for completion_with_tools."""
@@ -387,12 +413,19 @@ class GeminiClient(LLMClient):
                 "model": self.model,
                 "contents": gemini_contents,
             }
+            config_params = {}
+            if max_tokens is not None:
+                config_params["max_output_tokens"] = max_tokens
+            if json_format:
+                config_params["response_mime_type"] = "application/json"
+            if config_params:
+                request_params["config"] = types.GenerateContentConfig(**config_params)
 
             if gemini_tools:
                 request_params["tools"] = gemini_tools
 
             # 添加其他 kwargs
-            request_params.update(kwargs)
+            request_params.update(_without_none_values(kwargs))
 
             resp = await self.client.aio.models.generate_content(**request_params)
 
@@ -469,11 +502,20 @@ class OpenAIClient(LLMClient):
         # 创建异步客户端实例，避免每次调用都创建
         self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
 
-    async def completion(self, prompt: Union[str, list[Message]], **kwargs) -> str:
-        """Completion 方法，支持字符串或消息列表
+    async def completion(
+        self,
+        prompt: Union[str, list[Message]],
+        max_tokens: Optional[int] = None,
+        json_format: Optional[bool] = False,
+        **kwargs,
+    ) -> str:
+        """
+        Completion 方法，支持字符串或消息列表
 
         Args:
             prompt: 如果是字符串，将构造为 user message；如果是消息列表，直接使用
+            max_tokens: 最大输出 token 数
+            json_format: 是否要求 JSON 格式响应
             **kwargs: 其他参数
 
         Returns:
@@ -482,7 +524,6 @@ class OpenAIClient(LLMClient):
         try:
             # Apply rate limiting
             await self._apply_rate_limit()
-
             # 处理输入参数：如果是字符串，转换为 Message 列表
             if isinstance(prompt, str):
                 messages = [Message.user(prompt)]
@@ -492,13 +533,18 @@ class OpenAIClient(LLMClient):
             # 转换为字典格式
             messages_dict = [msg.to_dict() for msg in messages]
 
+            request_params = {
+                "model": self.model,
+                "messages": messages_dict,
+                "stream": False,
+                "max_tokens": max_tokens if max_tokens is not None else 8192,
+            }
+            request_params.update(_without_none_values(kwargs))
+            if json_format:
+                request_params["response_format"] = {"type": "json_object"}
+
             async def _do_completion():
-                resp = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages_dict,
-                    stream=False,
-                    max_tokens=kwargs.get("max_tokens", 8192),
-                )
+                resp = await self.client.chat.completions.create(**request_params)
                 content = resp.choices[0].message.content or ""
                 logger.info(
                     "OpenAIClient completion finish=%s usage=%s content_chars=%d preview=%s",
@@ -520,6 +566,8 @@ class OpenAIClient(LLMClient):
         messages: Union[list[Message], list[dict]],
         tools: Union[list[Tool], list[dict]] | None = None,
         tool_choice: ToolChoice = "auto",
+        max_tokens: Optional[int] = None,
+        json_format: Optional[bool] = False,
         **kwargs,
     ) -> Union[CompletionResponse, dict]:
         """支持 function calling 的 completion 方法"""
@@ -542,7 +590,7 @@ class OpenAIClient(LLMClient):
 
         async def _do_completion_with_tools():
             return await self._openai_completion_with_tools_impl(
-                msg_objects, tool_objects, tool_choice, **kwargs
+                msg_objects, tool_objects, tool_choice, max_tokens, json_format, **kwargs
             )
 
         try:
@@ -562,6 +610,8 @@ class OpenAIClient(LLMClient):
         messages: list[Message],
         tools: list[Tool] | None = None,
         tool_choice: ToolChoice = "auto",
+        max_tokens: Optional[int] = None,
+        json_format: Optional[bool] = False,
         **kwargs,
     ) -> CompletionResponse:
         """Internal implementation for completion_with_tools."""
@@ -583,6 +633,10 @@ class OpenAIClient(LLMClient):
             "messages": messages_dict,
             "stream": False,
         }
+        if max_tokens is not None:
+            request_params["max_tokens"] = max_tokens
+        if json_format:
+            request_params["response_format"] = {"type": "json_object"}
 
         # 如果有工具，添加 tools 和 tool_choice 参数
         if tools:
@@ -591,7 +645,7 @@ class OpenAIClient(LLMClient):
                 request_params["tool_choice"] = tool_choice_param
 
         # 添加其他 kwargs
-        request_params.update(kwargs)
+        request_params.update(_without_none_values(kwargs))
 
         resp = await self.client.chat.completions.create(**request_params)
 
@@ -625,7 +679,9 @@ class OpenAIClient(LLMClient):
         )
 
 
-def auto_build_client(key: Literal["model", "lightweight_model"] = "model") -> LLMClient:
+def auto_build_client(
+    key: Literal["model", "lightweight_model"] = "model",
+) -> LLMClient:
     """Build an AI client based on current configuration.
 
     Raises:

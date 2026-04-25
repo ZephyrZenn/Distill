@@ -176,7 +176,10 @@ async def review_article(
     """
     prompt = _build_review_prompt(draft_content, writing_material)
 
-    response = await client.completion(prompt)
+    response = await client.completion(
+        prompt,
+        json_format=True,
+    )
     try:
         result: AgentCriticResult = extract_json(response)
         logger.info(

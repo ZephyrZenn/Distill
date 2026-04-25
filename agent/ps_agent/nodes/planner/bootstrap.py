@@ -79,7 +79,10 @@ async def _generate_intent_dimensions(
                 Message.user(f"Focus: {focus}").set_priority(0),
             ]
 
-        response = await client.completion(messages)
+        response = await client.completion(
+            messages,
+            json_format=True,
+        )
         data = extract_json(response)
         dimensions_dict = data.get("dimensions", [])
 
@@ -123,7 +126,10 @@ async def _generate_negative_keywords(
                 f"Dimensions: {json.dumps(dimensions_dict, ensure_ascii=False)}"
             ).set_priority(0),
         ]
-        response = await client.completion(exclusion_messages)
+        response = await client.completion(
+            exclusion_messages,
+            json_format=True,
+        )
         data = extract_json(response)
         exclusions = data.get("exclusions", [])
 

@@ -63,7 +63,10 @@ class PlanReviewerNode:
 
         try:
             # Call LLM for global review
-            response = await self.client.completion(messages)
+            response = await self.client.completion(
+                messages,
+                json_format=True,
+            )
             review_result: PlanReviewResult = extract_json(response)
 
             status = review_result.get("status", "PATCH")
