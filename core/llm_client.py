@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 This module provides an abstract base class for AI clients and concrete implementations"""
 
 LOG_PREVIEW_CHARS = 360
+DEFAULT_MAX_TOKENS = 16000
 
 
 def _preview_text(text: str | None, *, limit: int = LOG_PREVIEW_CHARS) -> str:
@@ -186,7 +187,7 @@ class LLMClient(ABC):
     async def completion(
         self,
         prompt,
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = DEFAULT_MAX_TOKENS,
         json_format: Optional[bool] = False,
         **kwargs,
     ) -> str:
@@ -198,7 +199,7 @@ class LLMClient(ABC):
         messages: Union[list[Message], list[dict]],
         tools: Union[list[Tool], list[dict]] | None = None,
         tool_choice: ToolChoice = "auto",
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = DEFAULT_MAX_TOKENS,
         json_format: Optional[bool] = False,
         **kwargs,
     ) -> Union[CompletionResponse, dict]:
@@ -248,7 +249,7 @@ class GeminiClient(LLMClient):
     async def completion(
         self,
         prompt,
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = DEFAULT_MAX_TOKENS,
         json_format: Optional[bool] = False,
         **kwargs,
     ) -> str:
@@ -289,7 +290,7 @@ class GeminiClient(LLMClient):
         messages: Union[list[Message], list[dict]],
         tools: Union[list[Tool], list[dict]] | None = None,
         tool_choice: ToolChoice = "auto",
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = DEFAULT_MAX_TOKENS,
         json_format: Optional[bool] = False,
         **kwargs,
     ) -> Union[CompletionResponse, dict]:
@@ -333,7 +334,7 @@ class GeminiClient(LLMClient):
         messages: list[Message],
         tools: list[Tool] | None = None,
         tool_choice: ToolChoice = "auto",  # noqa: ARG002
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = DEFAULT_MAX_TOKENS,
         json_format: Optional[bool] = False,
         **kwargs,
     ) -> CompletionResponse:
@@ -505,7 +506,7 @@ class OpenAIClient(LLMClient):
     async def completion(
         self,
         prompt: Union[str, list[Message]],
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = DEFAULT_MAX_TOKENS,
         json_format: Optional[bool] = False,
         **kwargs,
     ) -> str:
@@ -537,7 +538,7 @@ class OpenAIClient(LLMClient):
                 "model": self.model,
                 "messages": messages_dict,
                 "stream": False,
-                "max_tokens": max_tokens if max_tokens is not None else 8192,
+                "max_tokens": max_tokens,
             }
             request_params.update(_without_none_values(kwargs))
             if json_format:
@@ -566,7 +567,7 @@ class OpenAIClient(LLMClient):
         messages: Union[list[Message], list[dict]],
         tools: Union[list[Tool], list[dict]] | None = None,
         tool_choice: ToolChoice = "auto",
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = DEFAULT_MAX_TOKENS,
         json_format: Optional[bool] = False,
         **kwargs,
     ) -> Union[CompletionResponse, dict]:
@@ -610,7 +611,7 @@ class OpenAIClient(LLMClient):
         messages: list[Message],
         tools: list[Tool] | None = None,
         tool_choice: ToolChoice = "auto",
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = DEFAULT_MAX_TOKENS,
         json_format: Optional[bool] = False,
         **kwargs,
     ) -> CompletionResponse:
